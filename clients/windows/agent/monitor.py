@@ -1,5 +1,6 @@
 """Application monitoring."""
 import os
+import sys
 import psutil
 import time
 from typing import Dict, Set, Optional
@@ -87,7 +88,14 @@ class AppMonitor:
 
     def _get_cache_path(self):
         """Get path for usage cache file."""
-        return os.path.join(os.path.dirname(__file__), 'usage_cache.json')
+        if getattr(sys, 'frozen', False):
+            # Use ProgramData for cache
+            program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+            base_dir = os.path.join(program_data, 'FamilyEye', 'Agent')
+            os.makedirs(base_dir, exist_ok=True)
+            return os.path.join(base_dir, 'usage_cache.json')
+        else:
+            return os.path.join(os.path.dirname(__file__), 'usage_cache.json')
         
     def _save_usage_cache(self):
         """Save current usage stats to local cache."""

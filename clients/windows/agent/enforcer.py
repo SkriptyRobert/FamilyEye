@@ -62,7 +62,15 @@ class RuleEnforcer:
         
     def _get_cache_path(self):
         """Get path for rules cache file."""
-        return os.path.join(os.path.dirname(__file__), 'rules_cache.json')
+        import sys
+        if getattr(sys, 'frozen', False):
+            # Use ProgramData for cache
+            program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+            base_dir = os.path.join(program_data, 'FamilyEye', 'Agent')
+            os.makedirs(base_dir, exist_ok=True)
+            return os.path.join(base_dir, 'rules_cache.json')
+        else:
+            return os.path.join(os.path.dirname(__file__), 'rules_cache.json')
         
     def _save_rules_cache(self):
         """Save current rules to local cache."""

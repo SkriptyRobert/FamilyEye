@@ -64,12 +64,16 @@ class EnterpriseLogger:
                 import os
                 # Get root dir (next to the executable when frozen, or next to main.py when scripts)
                 if getattr(sys, 'frozen', False):
-                    root_dir = os.path.dirname(sys.executable)
+                    # Running as compiled exe
+                    # Use ProgramData for logging to avoid permission issues
+                    program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+                    log_dir = os.path.join(program_data, 'FamilyEye', 'Agent')
                 else:
-                    # agent/logger.py -> agent/ -> root/
-                    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    # Dev mode
+                    log_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 
-                log_path = os.path.join(root_dir, 'agent.log')
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, 'agent.log')
                 file_handler = logging.FileHandler(log_path, encoding='utf-8')
                 file_handler.setLevel(level)
                 file_formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s')

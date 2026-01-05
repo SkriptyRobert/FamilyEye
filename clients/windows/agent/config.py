@@ -10,14 +10,30 @@ import sys
 try:
     if getattr(sys, 'frozen', False):
         # Running as compiled exe
-        BASE_DIR = Path(sys.executable).parent
+        # Use ProgramData for config to allow sharing between Service and User
+        program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+        BASE_DIR = Path(program_data) / "FamilyEye" / "Agent"
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Migration: If invalid/missing in ProgramData, check Program Files (Legacy)
+        CONFIG_FILE = BASE_DIR / "config.json"
+        
+        legacy_dir = Path(sys.executable).parent
+        legacy_config = legacy_dir / "config.json"
+        
+        if not CONFIG_FILE.exists() and legacy_config.exists():
+            try:
+                # Copy legacy config to new location
+                with open(legacy_config, 'r') as src, open(CONFIG_FILE, 'w') as dst:
+                    dst.write(src.read())
+                print(f"[CONFIG] Migrated legacy config to {CONFIG_FILE}")
+            except Exception as e:
+                print(f"[CONFIG] Failed to migrate legacy config: {e}")
+
     else:
         # Running as script
         BASE_DIR = Path(__file__).parent.parent
-    
-    CONFIG_FILE = BASE_DIR / "config.json"
-    
-    CONFIG_FILE = BASE_DIR / "config.json"
+        CONFIG_FILE = BASE_DIR / "config.json"
         
 except Exception as e:
     BASE_DIR = Path(".")
