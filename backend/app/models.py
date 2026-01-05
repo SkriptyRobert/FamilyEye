@@ -1,0 +1,155 @@
+"""SQLAlchemy database models."""
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Float, Text, Index
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from .database import Base
+import uuid
+
+
+class User(Base):
+    """User model for parents and children."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False)  # 'parent' or 'child'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    parent_devices = relationship("Device", foreign_keys="Device.parent_id", back_populates="parent")
+    child_devices = relationship("Device", foreign_keys="Device.child_id", back_populates="child")
+
+
+class Device(Base):
+    """Device model for managed devices."""
+    __tablename__ = "devices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    device_type = Column(String, nullable=False)  # 'windows', 'android'
+    mac_address = Column(String, unique=True, index=True, nullable=False)
+    device_id = Column(String, unique=True, index=True, nullable=False)  # Unique device identifier
+    parent_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    child_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Null for multi-device mode
+    api_key = Column(String, unique=True, index=True, nullable=False)  # For agent authentication
+    paired_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_seen = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    current_processes = Column(Text, nullable=True)  # JSON list of running processes
+    screenshot_requested = Column(Boolean, default=False)
+    last_screenshot = Column(String, nullable=True) # Path or Base64 of last screenshot
+    
+    # Relationships
+    parent = relationship("User", foreign_keys=[parent_id], back_populates="parent_devices")
+    child = relationship("User", foreign_keys=[child_id], back_populates="child_devices")
+    rules = relationship("Rule", back_populates="device", cascade="all, delete-orphan")
+    usage_logs = relationship("UsageLog", back_populates="device", cascade="all, delete-orphan")
+    
+    @property
+    def is_online(self) -> bool:
+        """Check if device is online (seen in last 5 minutes)."""
+        if not self.last_seen:
+            return False
+            
+        from datetime import datetime, timezone, timedelta
+        
+        # Current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Process last_seen
+        last_seen = self.last_seen
+        
+        # SQLite often stores naive datetimes. If naive, assume it implies UTC.
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        else:
+            # If already aware, convert to UTC to be safe
+            last_seen = last_seen.astimezone(timezone.utc)
+
+        # Threshold check (2 minutes)
+        # Using abs() to handle potential slight clock skews
+        return (now - last_seen) < timedelta(minutes=2)
+
+    @property
+    def has_lock_rule(self) -> bool:
+        """Check if device has an active lock rule."""
+        if not self.rules:
+            return False
+        return any(r.rule_type == "lock_device" and r.enabled for r in self.rules)
+    
+    @property
+    def has_network_block(self) -> bool:
+        """Check if device has an active network block rule."""
+        if not self.rules:
+            return False
+        return any(r.rule_type == "network_block" and r.enabled for r in self.rules)
+
+
+
+class Rule(Base):
+    """Rule model for device restrictions."""
+    __tablename__ = "rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    rule_type = Column(String, nullable=False)  # 'app_block', 'time_limit', 'daily_limit', 'website_block', 'schedule'
+    app_name = Column(String, nullable=True)  # Null for daily limits
+    website_url = Column(String, nullable=True)  # For website blocks
+    time_limit = Column(Integer, nullable=True)  # Minutes per day
+    enabled = Column(Boolean, default=True)
+    
+    # Schedule fields
+    schedule_start_time = Column(String, nullable=True)  # HH:MM format
+    schedule_end_time = Column(String, nullable=True)  # HH:MM format
+    schedule_days = Column(String, nullable=True)  # Comma-separated: "0,1,2,3,4,5,6" (Mon-Sun)
+    
+    # Network control
+    block_network = Column(Boolean, default=False)  # Block network access for app
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    device = relationship("Device", back_populates="rules")
+
+
+class UsageLog(Base):
+    """Usage log for tracking device activity."""
+    __tablename__ = "usage_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    app_name = Column(String, nullable=False)
+    window_title = Column(String, nullable=True)
+    exe_path = Column(String, nullable=True)
+    duration = Column(Integer, nullable=False)  # Seconds
+    is_focused = Column(Boolean, default=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    # Relationships
+    device = relationship("Device", back_populates="usage_logs")
+    
+    # Optimized indexes for statistics queries
+    __table_args__ = (
+        Index('idx_usage_device_timestamp', 'device_id', 'timestamp'),
+        Index('idx_usage_device_app', 'device_id', 'app_name'),
+    )
+
+
+class PairingToken(Base):
+    """Temporary pairing tokens for device registration."""
+    __tablename__ = "pairing_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True, nullable=False)
+    parent_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=True)  # Set after pairing
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    parent = relationship("User")
+    device = relationship("Device")
+

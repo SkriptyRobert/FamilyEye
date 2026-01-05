@@ -1,0 +1,188 @@
+"""Pydantic schemas for request/response validation."""
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from typing import Optional, List, Dict
+
+
+# User schemas
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    role: str  # 'parent' or 'child'
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    role: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Auth schemas
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# Device schemas
+class DeviceCreate(BaseModel):
+    name: str
+    device_type: str
+    mac_address: str
+    device_id: str
+
+
+class DeviceUpdate(BaseModel):
+    name: Optional[str] = None
+
+
+class DeviceResponse(BaseModel):
+    id: int
+    name: str
+    device_type: str
+    mac_address: str
+    device_id: str
+    parent_id: int
+    child_id: Optional[int]
+    api_key: str  # Include API key in response for agent setup
+    paired_at: datetime
+    last_seen: Optional[datetime]
+    is_active: bool
+    is_online: bool
+    # State flags for UI
+    has_lock_rule: bool = False
+    has_network_block: bool = False
+    current_processes: Optional[str] = None  # JSON string of running processes
+    # Screenshot support
+    screenshot_requested: bool = False
+    last_screenshot: Optional[str] = None  # Base64 data URI
+
+    class Config:
+        from_attributes = True
+
+
+# Rule schemas
+class RuleCreate(BaseModel):
+    device_id: int
+    rule_type: str
+    app_name: Optional[str] = None
+    website_url: Optional[str] = None
+    time_limit: Optional[int] = None
+    enabled: bool = True
+    schedule_start_time: Optional[str] = None
+    schedule_end_time: Optional[str] = None
+    schedule_days: Optional[str] = None
+    block_network: bool = False
+
+
+class RuleResponse(BaseModel):
+    id: int
+    device_id: int
+    rule_type: str
+    app_name: Optional[str]
+    website_url: Optional[str]
+    time_limit: Optional[int]
+    enabled: bool
+    schedule_start_time: Optional[str]
+    schedule_end_time: Optional[str]
+    schedule_days: Optional[str]
+    block_network: bool
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+# Usage log schemas
+class UsageLogCreate(BaseModel):
+    device_id: int
+    app_name: str
+    duration: int  # Seconds
+
+
+class UsageLogResponse(BaseModel):
+    id: int
+    device_id: int
+    app_name: str
+    window_title: Optional[str] = None
+    exe_path: Optional[str] = None
+    duration: int
+    timestamp: datetime
+    # Enhanced Metadata (populated by app_filter)
+    friendly_name: Optional[str] = None
+    category: Optional[str] = None
+    icon_type: Optional[str] = "app"
+
+    class Config:
+        from_attributes = True
+
+
+# Pairing schemas
+class PairingTokenResponse(BaseModel):
+    token: str
+    expires_at: datetime
+    pairing_url: str
+
+
+class PairingRequest(BaseModel):
+    token: str
+    device_name: str
+    device_type: str
+    mac_address: str
+    device_id: str
+
+
+class PairingResponse(BaseModel):
+    device_id: str  # String device_id from database (not database ID)
+    api_key: str
+    backend_url: str
+
+
+# Agent schemas
+class AgentRulesRequest(BaseModel):
+    device_id: str
+    api_key: str
+
+
+class AgentRulesResponse(BaseModel):
+    rules: List[RuleResponse]
+    daily_usage: int  # Total seconds used today
+    usage_by_app: Dict[str, int] = {}  # App name -> duration seconds
+
+
+class AgentUsageLogCreate(BaseModel):
+    app_name: str
+    window_title: Optional[str] = None
+    exe_path: Optional[str] = None
+    duration: int  # Seconds
+    is_focused: bool = False
+    timestamp: Optional[datetime] = None  # Optional client timestamp
+
+
+class AgentReportRequest(BaseModel):
+    device_id: str
+    api_key: str
+    usage_logs: List[AgentUsageLogCreate]
+    client_timestamp: Optional[datetime] = None  # Optional client timestamp (system time)
+    running_processes: Optional[List[str]] = None  # NEW: list of currently running apps
+
+
+# Critical Event schemas (for immediate reporting)
+class CriticalEventRequest(BaseModel):
+    device_id: str
+    api_key: str
+    event_type: str  # 'limit_exceeded', 'app_blocked', 'daily_limit_exceeded'
+    app_name: Optional[str] = None
+    used_seconds: Optional[int] = None
+    limit_seconds: Optional[int] = None
+    message: Optional[str] = None
+    timestamp: Optional[datetime] = None

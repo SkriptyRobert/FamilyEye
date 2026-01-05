@@ -1,0 +1,1733 @@
+# Session 0 Service Architecture - Implementation Walkthrough
+
+## Summary
+
+Implemented two-component architecture to solve Session 0 UI limitation:
+- **BOSS** (Windows Service, Session 0): Core logic, enforcement, IPC server
+- **MESSENGER** (ChildAgent, User Session): UI display via IPC client
+
+---
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Session 0 - Windows Service
+        BOSS[ParentalControlAgent]
+        IPC[IPCServer - Named Pipe]
+        WD[ChildAgentWatchdog]
+        BOSS --> IPC
+        BOSS --> WD
+    end
+    
+    subgraph Session 1+ - User Desktop  
+        CHILD[ChildAgent.py]
+        UI[UIOverlay - WPF]
+        CHILD --> UI
+    end
+    
+    IPC <-->|Named Pipe| CHILD
+    WD -->|Monitors/Restarts| CHILD
+```
+
+---
+
+## New Files Created
+
+| File | Purpose |
+|------|---------|
+| [ipc_common.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/ipc_common.py) | Message protocol, commands, helper functions |
+| [ipc_server.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/ipc_server.py) | Named Pipe server for service |
+| [ipc_client.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/ipc_client.py) | Named Pipe client for ChildAgent |
+| [ui_overlay.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/ui_overlay.py) | WPF lock screens, toasts, popups |
+| [child_agent.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/child_agent.py) | Main ChildAgent executable |
+| [test_ipc.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/dev/test_ipc.py) | IPC test script |
+
+---
+
+## Modified Files
+
+### [notifications.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/notifications.py)
+
+```diff:notifications.py
+"""Notification system for user alerts.
+
+
+- PowerShell execution logic
+- Centralized vector icon paths as class constants
+- Unified WPF popup generation with template builder
+"""
+import ctypes
+import datetime
+import subprocess
+import threading
+import time
+from typing import Optional
+from .logger import get_logger
+
+
+# =============================================================================
+# Vector Icon Paths (Material Design style)
+# =============================================================================
+ICON_LOCK = "M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 1,1 14,15A2,2 0 0,1 12,17M15,8H9V6A3,3 0 0,1 15,6V8Z"
+ICON_ALERT = "M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"
+ICON_EYE = "M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+
+
+def _run_powershell(script: str, timeout: Optional[int] = None) -> bool:
+    """Execute PowerShell script with common configuration. Returns True on success."""
+    try:
+        kwargs = {
+            "capture_output": True,
+            "creationflags": subprocess.CREATE_NO_WINDOW
+        }
+        if timeout:
+            kwargs["timeout"] = timeout
+        subprocess.run(["powershell", "-Command", script], **kwargs)
+        return True
+    except Exception:
+        return False
+
+
+def _escape_xaml_text(text: str) -> str:
+    """Escape special characters for XAML text content."""
+    return text.replace(chr(10), '&#x0a;').replace('"', '&quot;')
+
+
+class NotificationManager:
+    """Manage user notifications and alerts."""
+    
+    # Windows constants for MessageBox
+    MB_OK = 0x00000000
+    MB_ICONWARNING = 0x00000030
+    MB_ICONERROR = 0x00000010
+    MB_ICONINFORMATION = 0x00000040
+    MB_SYSTEMMODAL = 0x00001000
+    MB_SETFOREGROUND = 0x00010000
+    
+    # Notification limits per category
+    _NOTIFICATION_LIMITS = {
+        'limit_exceeded': 2,
+        'limit_warning': 2,
+        'daily_limit_warning': 3,
+        'schedule_warning': 2,
+        'default': 3
+    }
+    
+    def __init__(self):
+        self.logger = get_logger('NOTIFY')
+        self._notification_count = {}
+        self._last_reset_date = None
+        
+    def _can_show_notification(self, notification_id: str, category: str = 'default') -> bool:
+        """Check if notification can be shown (count-based daily limit)."""
+        today = datetime.date.today()
+        if self._last_reset_date != today:
+            self._notification_count.clear()
+            self._last_reset_date = today
+            self.logger.info("Daily notification counts reset")
+        
+        current = self._notification_count.get(notification_id, 0)
+        limit = self._NOTIFICATION_LIMITS.get(category, self._NOTIFICATION_LIMITS['default'])
+        
+        if current < limit:
+            self._notification_count[notification_id] = current + 1
+            self.logger.debug(f"Notification {notification_id}: {current + 1}/{limit}")
+            return True
+        return False
+    
+    # =========================================================================
+    # Low-level notification methods
+    # =========================================================================
+    
+    def _show_toast_notification(self, title: str, message: str):
+        """Show native Windows Toast notification."""
+        ps_script = f'''
+$ErrorActionPreference = 'Stop'
+$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$textNodes = $template.GetElementsByTagName("text")
+$textNodes.Item(0).InnerText = "{title}"
+$textNodes.Item(1).InnerText = "{message}"
+$notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("FamilyEye.Agent")
+$notifier.Show([Windows.UI.Notifications.ToastNotification]::new($template))
+'''
+        if not _run_powershell(ps_script, timeout=5):
+            self.logger.error("Failed to show toast, using fallback")
+            self._show_popup_async(title, message, self.MB_ICONINFORMATION)
+
+    def _show_modern_popup(self, title: str, message: str, is_error: bool = False):
+        """Show modern WPF dialog with vector icon."""
+        color = "#e74c3c" if is_error else "#f1c40f"
+        icon_path = ICON_LOCK if is_error else ICON_ALERT
+        escaped_msg = _escape_xaml_text(message)
+        
+        ps_script = f'''
+Add-Type -AssemblyName PresentationFramework
+[xml]$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{title}" Height="260" Width="480" WindowStyle="None" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Transparent" Topmost="True" WindowStartupLocation="CenterScreen">
+    <Border CornerRadius="12" Background="#1e1e1e" BorderBrush="{color}" BorderThickness="2">
+        <Border.Effect><DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.5" Color="Black"/></Border.Effect>
+        <Grid Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Viewbox Width="32" Height="32" Margin="0,0,15,0">
+                    <Path Data="{icon_path}" Fill="{color}" Stretch="Uniform"/>
+                </Viewbox>
+                <TextBlock Text="{title}" Foreground="White" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" FontFamily="Segoe UI"/>
+            </StackPanel>
+            <TextBlock Grid.Row="1" Text="{escaped_msg}" Foreground="#cccccc" FontSize="15" TextWrapping="Wrap" LineHeight="22"
+                     HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,15,0,25"/>
+            <Button Grid.Row="2" Content="Rozumím" Width="140" Height="40" Background="{color}" Foreground="White"
+                    FontSize="15" FontWeight="Bold" Cursor="Hand" IsDefault="True" IsCancel="True" HorizontalAlignment="Right">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{{TemplateBinding Background}}" CornerRadius="6" x:Name="border">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
+    </Border>
+</Window>
+"@
+$reader = (New-Object System.Xml.XmlNodeReader $xaml)
+[Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+'''
+        if not _run_powershell(ps_script):
+            self.logger.error("Failed to show modern popup, using fallback")
+            icon = self.MB_ICONERROR if is_error else self.MB_ICONWARNING
+            self._show_popup_sync(title, message, icon)
+
+    def _show_branded_popup(self, title: str, subtitle: str):
+        """Show branded FamilyEye startup popup."""
+        bg = "#151b2b"
+        accent = "#6366f1"
+        
+        ps_script = f'''
+Add-Type -AssemblyName PresentationFramework
+[xml]$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FamilyEye" Height="180" Width="400" WindowStyle="None" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Transparent" Topmost="True" WindowStartupLocation="CenterScreen">
+    <Border CornerRadius="16" Background="{bg}" BorderBrush="#334155" BorderThickness="1">
+        <Border.Effect><DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.6" Color="Black"/></Border.Effect>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,15">
+                <Viewbox Width="28" Height="28" Margin="0,0,10,0">
+                    <Path Data="{ICON_EYE}" Fill="{accent}" Stretch="Uniform">
+                        <Path.Effect><DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.5" Color="{accent}"/></Path.Effect>
+                    </Path>
+                </Viewbox>
+                <TextBlock Text="FamilyEye" Foreground="{accent}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" FontFamily="Segoe UI">
+                    <TextBlock.Effect><DropShadowEffect BlurRadius="15" ShadowDepth="0" Opacity="0.3" Color="{accent}"/></TextBlock.Effect>
+                </TextBlock>
+            </StackPanel>
+            <TextBlock Grid.Row="1" Text="{title}" Foreground="#94a3b8" FontSize="14" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,15"/>
+            <Button Grid.Row="2" Content="Rozumím" Width="100" Height="32" Background="{accent}" Foreground="White"
+                    FontSize="13" FontWeight="SemiBold" Cursor="Hand" IsDefault="True" IsCancel="True" HorizontalAlignment="Center">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{{TemplateBinding Background}}" CornerRadius="16" x:Name="border">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
+    </Border>
+</Window>
+"@
+$reader = (New-Object System.Xml.XmlNodeReader $xaml)
+[Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+'''
+        if not _run_powershell(ps_script):
+            self.logger.error("Failed to show branded popup, using toast fallback")
+            self._show_toast_notification(f"ℹ️ {title}", subtitle)
+
+    def _show_messagebox_fallback(self, title: str, message: str, icon: int, async_mode: bool):
+        """Show Windows.Forms MessageBox (sync or async)."""
+        def _show():
+            ps_script = f'''
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.MessageBox]::Show(
+    "{message.replace('"', '`"').replace(chr(10), '`n')}",
+    "{title.replace('"', '`"')}",
+    [System.Windows.Forms.MessageBoxButtons]::OK,
+    [System.Windows.Forms.MessageBoxIcon]::{'Warning' if icon == self.MB_ICONWARNING else 'Error'}
+)
+'''
+            if not _run_powershell(ps_script, timeout=30):
+                try:
+                    ctypes.windll.user32.MessageBoxW(
+                        0, message, title,
+                        icon | self.MB_SYSTEMMODAL | self.MB_SETFOREGROUND
+                    )
+                except:
+                    pass
+        
+        if async_mode:
+            threading.Thread(target=_show, daemon=True).start()
+        else:
+            _show()
+    
+    def _show_popup_async(self, title: str, message: str, icon: int):
+        """Show popup in separate thread (non-blocking)."""
+        self._show_messagebox_fallback(title, message, icon, async_mode=True)
+    
+    def _show_popup_sync(self, title: str, message: str, icon: int):
+        """Show popup synchronously (blocking)."""
+        self._show_messagebox_fallback(title, message, icon, async_mode=False)
+
+    # =========================================================================
+    # Public notification methods
+    # =========================================================================
+
+    def show_warning(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show warning toast notification."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.info(f"Showing warning: {title}")
+        self._show_toast_notification(f"⚠️ {title}", message)
+    
+    def show_error(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show error blocking dialog."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.warning(f"Showing error: {title}")
+        self._show_modern_popup(f"🚫 {title}", message, is_error=True)
+    
+    def show_info(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show info toast notification."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.info(f"Showing info: {title}")
+        self._show_toast_notification(f"ℹ️ {title}", message)
+    
+    def show_limit_warning(self, app_name: str, remaining_minutes: int):
+        """Show warning about approaching app time limit."""
+        nid = f"limit_warning_{app_name}"
+        if not self._can_show_notification(nid, 'limit_warning'):
+            return
+        self._show_toast_notification(
+            "⚠️ Blíží se limit aplikace",
+            f"V aplikaci '{app_name}' zbývá už jen {remaining_minutes} minut."
+        )
+    
+    def show_limit_exceeded(self, app_name: str):
+        """Show notification that app time limit was exceeded."""
+        nid = f"limit_exceeded_{app_name}"
+        if not self._can_show_notification(nid, 'limit_exceeded'):
+            return
+        self._show_modern_popup(
+            "🚫 Limit vyčerpán",
+            f"Čas pro aplikaci '{app_name}' vypršel. Aplikace byla ukončena.",
+            is_error=True
+        )
+    
+    def show_daily_limit_warning(self, remaining_minutes: int):
+        """Show warning about approaching daily device limit."""
+        if not self._can_show_notification("daily_limit_warning", 'daily_limit_warning'):
+            return
+        self._show_toast_notification(
+            "⚠️ Blíží se denní limit",
+            f"Zbývá ti {remaining_minutes} minut času na počítači."
+        )
+    
+    def show_daily_limit_exceeded(self, countdown_seconds: int = 60):
+        """Show notification that daily limit was exceeded."""
+        self._show_modern_popup(
+            "🚫 Denní limit vyčerpán",
+            f"Tvůj čas na počítači pro dnešek vypršel.\n\nSystém se vypne za {countdown_seconds} sekund.",
+            is_error=True
+        )
+    
+    def show_schedule_warning(self, minutes_until_end: int):
+        """Show warning that allowed time is ending."""
+        if not self._can_show_notification("schedule_warning", 'schedule_warning'):
+            return
+        self._show_toast_notification(
+            "⚠️ Blíží se večerka",
+            f"Za {minutes_until_end} minut začíná noční klid."
+        )
+    
+    def show_schedule_ended(self, countdown_seconds: int = 60):
+        """Show notification that schedule time ended."""
+        self._show_modern_popup(
+            "🌙 Noční klid",
+            f"Je čas jít spát. Počítač se vypne za {countdown_seconds} sekund.",
+            is_error=True
+        )
+    
+    def show_outside_schedule(self):
+        """Show notification that current time is outside allowed schedule."""
+        if not self._can_show_notification("outside_schedule"):
+            return
+        self._show_modern_popup(
+            "🌙 Mimo povolený čas",
+            "V tuto dobu není povoleno používat počítač.",
+            is_error=True
+        )
+
+    def show_startup_transparent_notification(self):
+        """Show branded startup notification (transparency message)."""
+        self.logger.info("Showing startup transparency notification")
+        self._show_branded_popup("Monitorování aktivní", "Tento počítač je monitorován systémem FamilyEye.")
+
+
+class ShutdownManager:
+    """Manage system shutdown and lock operations."""
+    
+    def __init__(self):
+        self.logger = get_logger('SHUTDOWN')
+        self._shutdown_scheduled = False
+        self._shutdown_thread = None
+    
+    def lock_workstation(self) -> bool:
+        """Lock the Windows workstation."""
+        try:
+            ctypes.windll.user32.LockWorkStation()
+            self.logger.info("Workstation locked")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to lock workstation: {e}")
+            return False
+    
+    def shutdown_computer(self, delay_seconds: int = 0, force: bool = True) -> bool:
+        """Schedule computer shutdown."""
+        try:
+            cmd = ["shutdown", "/s", "/t", str(delay_seconds)]
+            if force:
+                cmd.append("/f")
+            subprocess.run(cmd, capture_output=True)
+            self.logger.warning(f"Shutdown scheduled in {delay_seconds} seconds")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to schedule shutdown: {e}")
+            return False
+    
+    def cancel_shutdown(self) -> bool:
+        """Cancel scheduled shutdown."""
+        try:
+            subprocess.run(["shutdown", "/a"], capture_output=True)
+            self.logger.info("Shutdown cancelled")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to cancel shutdown: {e}")
+            return False
+    
+    def lock_and_shutdown(self, countdown_seconds: int = 60):
+        """Lock workstation and schedule shutdown after countdown."""
+        if self._shutdown_scheduled:
+            self.logger.info("Shutdown already scheduled, skipping")
+            return
+        
+        self._shutdown_scheduled = True
+        
+        def _execute():
+            self.lock_workstation()
+            time.sleep(2)
+            self.shutdown_computer(delay_seconds=countdown_seconds - 2, force=True)
+            self.logger.warning(f"System will shutdown in {countdown_seconds} seconds")
+        
+        self._shutdown_thread = threading.Thread(target=_execute, daemon=True)
+        self._shutdown_thread.start()
+    
+    def reset_shutdown_flag(self):
+        """Reset the shutdown flag (for when rules change)."""
+        self._shutdown_scheduled = False
+===
+"""Notification system for user alerts.
+
+Refactored for Session 0 service architecture:
+- Uses IPC (Named Pipes) to send notifications to ChildAgent
+- ChildAgent runs in user session and displays actual UI
+- Fallback to console logging if IPC not available
+
+Original PowerShell WPF code kept as fallback for standalone testing.
+"""
+import ctypes
+import datetime
+import subprocess
+import threading
+import time
+from typing import Optional
+from .logger import get_logger
+
+
+# =============================================================================
+# Vector Icon Paths (Material Design style) - kept for reference
+# =============================================================================
+ICON_LOCK = "M18,8H17V6A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 1,1 14,15A2,2 0 0,1 12,17M15,8H9V6A3,3 0 0,1 15,6V8Z"
+ICON_ALERT = "M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"
+ICON_EYE = "M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"
+
+
+# Try to import IPC components
+try:
+    from .ipc_server import get_ipc_server, IPCServer
+    from .ipc_common import (
+        msg_show_warning, msg_show_error, msg_show_info,
+        msg_show_limit_warning, msg_show_limit_exceeded,
+        msg_show_daily_limit_warning, msg_show_daily_limit_exceeded,
+        msg_show_schedule_warning, msg_show_schedule_ended,
+        msg_show_outside_schedule, msg_show_startup_notification,
+        msg_show_lock_screen, msg_hide_lock_screen, msg_show_countdown
+    )
+    _ipc_available = True
+except ImportError:
+    _ipc_available = False
+
+
+def _run_powershell(script: str, timeout: Optional[int] = None) -> bool:
+    """Execute PowerShell script with common configuration. Returns True on success."""
+    try:
+        kwargs = {
+            "capture_output": True,
+            "creationflags": subprocess.CREATE_NO_WINDOW
+        }
+        if timeout:
+            kwargs["timeout"] = timeout
+        subprocess.run(["powershell", "-Command", script], **kwargs)
+        return True
+    except Exception:
+        return False
+
+
+def _escape_xaml_text(text: str) -> str:
+    """Escape special characters for XAML text content."""
+    return text.replace(chr(10), '&#x0a;').replace('"', '&quot;')
+
+
+class NotificationManager:
+    """Manage user notifications and alerts.
+    
+    In Session 0 (service mode), notifications are sent via IPC to ChildAgent.
+    ChildAgent runs in user session and displays actual UI elements.
+    """
+    
+    # Windows constants for MessageBox (fallback only)
+    MB_OK = 0x00000000
+    MB_ICONWARNING = 0x00000030
+    MB_ICONERROR = 0x00000010
+    MB_ICONINFORMATION = 0x00000040
+    MB_SYSTEMMODAL = 0x00001000
+    MB_SETFOREGROUND = 0x00010000
+    
+    # Notification limits per category
+    _NOTIFICATION_LIMITS = {
+        'limit_exceeded': 2,
+        'limit_warning': 2,
+        'daily_limit_warning': 3,
+        'schedule_warning': 2,
+        'default': 3
+    }
+    
+    def __init__(self, ipc_server: Optional['IPCServer'] = None):
+        """Initialize NotificationManager.
+        
+        Args:
+            ipc_server: Optional IPC server instance. If not provided,
+                       will try to get global instance or fall back to direct UI.
+        """
+        self.logger = get_logger('NOTIFY')
+        self._notification_count = {}
+        self._last_reset_date = None
+        
+        # IPC mode - send notifications to ChildAgent
+        self._ipc_server = ipc_server
+        self._use_ipc = _ipc_available
+        
+        if self._use_ipc and not self._ipc_server:
+            try:
+                self._ipc_server = get_ipc_server()
+            except Exception as e:
+                self.logger.warning(f"Failed to get IPC server: {e}")
+                self._use_ipc = False
+    
+    def set_ipc_server(self, ipc_server: 'IPCServer'):
+        """Set or update the IPC server reference."""
+        self._ipc_server = ipc_server
+        self._use_ipc = True
+        self.logger.debug("IPC server set for notifications")
+    
+    def _can_show_notification(self, notification_id: str, category: str = 'default') -> bool:
+        """Check if notification can be shown (count-based daily limit)."""
+        today = datetime.date.today()
+        if self._last_reset_date != today:
+            self._notification_count.clear()
+            self._last_reset_date = today
+            self.logger.info("Daily notification counts reset")
+        
+        current = self._notification_count.get(notification_id, 0)
+        limit = self._NOTIFICATION_LIMITS.get(category, self._NOTIFICATION_LIMITS['default'])
+        
+        if current < limit:
+            self._notification_count[notification_id] = current + 1
+            self.logger.debug(f"Notification {notification_id}: {current + 1}/{limit}")
+            return True
+        return False
+    
+    def _send_via_ipc(self, message) -> bool:
+        """Send notification via IPC to ChildAgent."""
+        if not self._use_ipc or not self._ipc_server:
+            return False
+        
+        try:
+            self._ipc_server.broadcast(message)
+            self.logger.debug(f"Sent IPC notification: {message.command}")
+            return True
+        except Exception as e:
+            self.logger.warning(f"IPC send failed: {e}")
+            return False
+    
+    # =========================================================================
+    # Public notification methods - use IPC if available
+    # =========================================================================
+
+    def show_warning(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show warning toast notification."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.info(f"Showing warning: {title}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_warning(f"⚠️ {title}", message))
+        else:
+            self._fallback_toast(f"⚠️ {title}", message)
+    
+    def show_error(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show error blocking dialog."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.warning(f"Showing error: {title}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_error(f"🚫 {title}", message))
+        else:
+            self._fallback_popup(f"🚫 {title}", message, is_error=True)
+    
+    def show_info(self, title: str, message: str, notification_id: Optional[str] = None):
+        """Show info toast notification."""
+        if notification_id and not self._can_show_notification(notification_id):
+            return
+        self.logger.info(f"Showing info: {title}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_info(f"ℹ️ {title}", message))
+        else:
+            self._fallback_toast(f"ℹ️ {title}", message)
+    
+    def show_limit_warning(self, app_name: str, remaining_minutes: int):
+        """Show warning about approaching app time limit."""
+        nid = f"limit_warning_{app_name}"
+        if not self._can_show_notification(nid, 'limit_warning'):
+            return
+        
+        self.logger.info(f"Limit warning: {app_name} - {remaining_minutes}m remaining")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_limit_warning(app_name, remaining_minutes))
+        else:
+            self._fallback_toast(
+                "⚠️ Blíží se limit aplikace",
+                f"V aplikaci '{app_name}' zbývá už jen {remaining_minutes} minut."
+            )
+    
+    def show_limit_exceeded(self, app_name: str):
+        """Show notification that app time limit was exceeded."""
+        nid = f"limit_exceeded_{app_name}"
+        if not self._can_show_notification(nid, 'limit_exceeded'):
+            return
+        
+        self.logger.warning(f"Limit exceeded: {app_name}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_limit_exceeded(app_name))
+        else:
+            self._fallback_popup(
+                "🚫 Limit vyčerpán",
+                f"Čas pro aplikaci '{app_name}' vypršel. Aplikace byla ukončena.",
+                is_error=True
+            )
+    
+    def show_daily_limit_warning(self, remaining_minutes: int):
+        """Show warning about approaching daily device limit."""
+        if not self._can_show_notification("daily_limit_warning", 'daily_limit_warning'):
+            return
+        
+        self.logger.info(f"Daily limit warning: {remaining_minutes}m remaining")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_daily_limit_warning(remaining_minutes))
+        else:
+            self._fallback_toast(
+                "⚠️ Blíží se denní limit",
+                f"Zbývá ti {remaining_minutes} minut času na počítači."
+            )
+    
+    def show_daily_limit_exceeded(self, countdown_seconds: int = 60):
+        """Show notification that daily limit was exceeded."""
+        self.logger.warning(f"Daily limit exceeded, countdown: {countdown_seconds}s")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_daily_limit_exceeded(countdown_seconds))
+        else:
+            self._fallback_popup(
+                "🚫 Denní limit vyčerpán",
+                f"Tvůj čas na počítači pro dnešek vypršel.\n\nSystém se vypne za {countdown_seconds} sekund.",
+                is_error=True
+            )
+    
+    def show_schedule_warning(self, minutes_until_end: int):
+        """Show warning that allowed time is ending."""
+        if not self._can_show_notification("schedule_warning", 'schedule_warning'):
+            return
+        
+        self.logger.info(f"Schedule warning: {minutes_until_end}m until end")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_schedule_warning(minutes_until_end))
+        else:
+            self._fallback_toast(
+                "⚠️ Blíží se večerka",
+                f"Za {minutes_until_end} minut začíná noční klid."
+            )
+    
+    def show_schedule_ended(self, countdown_seconds: int = 60):
+        """Show notification that schedule time ended."""
+        self.logger.warning(f"Schedule ended, countdown: {countdown_seconds}s")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_schedule_ended(countdown_seconds))
+        else:
+            self._fallback_popup(
+                "🌙 Noční klid",
+                f"Je čas jít spát. Počítač se vypne za {countdown_seconds} sekund.",
+                is_error=True
+            )
+    
+    def show_outside_schedule(self):
+        """Show notification that current time is outside allowed schedule."""
+        if not self._can_show_notification("outside_schedule"):
+            return
+        
+        self.logger.warning("Outside schedule notification")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_outside_schedule())
+        else:
+            self._fallback_popup(
+                "🌙 Mimo povolený čas",
+                "V tuto dobu není povoleno používat počítač.",
+                is_error=True
+            )
+
+    def show_startup_transparent_notification(self):
+        """Show branded startup notification (transparency message)."""
+        self.logger.info("Showing startup transparency notification")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_startup_notification())
+        else:
+            self._fallback_branded_popup("Monitorování aktivní")
+    
+    # =========================================================================
+    # Lock screen methods (IPC only - requires ChildAgent)
+    # =========================================================================
+    
+    def show_lock_screen(self, message: str = "Zařízení bylo zamčeno rodičem."):
+        """Show full-screen lock overlay via ChildAgent."""
+        self.logger.warning(f"Lock screen requested: {message}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_lock_screen(message))
+        else:
+            self.logger.warning("Lock screen requires ChildAgent - falling back to workstation lock")
+            try:
+                ctypes.windll.user32.LockWorkStation()
+            except:
+                pass
+    
+    def hide_lock_screen(self):
+        """Hide the lock screen overlay."""
+        self.logger.info("Hide lock screen requested")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_hide_lock_screen())
+    
+    def show_countdown(self, seconds: int, reason: str):
+        """Show countdown overlay before shutdown."""
+        self.logger.warning(f"Countdown: {seconds}s - {reason}")
+        
+        if self._use_ipc:
+            self._send_via_ipc(msg_show_countdown(seconds, reason))
+        else:
+            # Fallback - just show popup
+            self._fallback_popup(reason, f"Systém se vypne za {seconds} sekund.", is_error=True)
+    
+    # =========================================================================
+    # Fallback methods (when IPC not available - for testing/development)
+    # =========================================================================
+    
+    def _fallback_toast(self, title: str, message: str):
+        """Fallback toast notification using PowerShell."""
+        ps_script = f'''
+$ErrorActionPreference = 'SilentlyContinue'
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$textNodes = $template.GetElementsByTagName("text")
+$textNodes.Item(0).InnerText = "{title}"
+$textNodes.Item(1).InnerText = "{message}"
+$notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("FamilyEye.Agent")
+$notifier.Show([Windows.UI.Notifications.ToastNotification]::new($template))
+'''
+        threading.Thread(target=lambda: _run_powershell(ps_script, timeout=5), daemon=True).start()
+    
+    def _fallback_popup(self, title: str, message: str, is_error: bool = False):
+        """Fallback popup using Windows Forms MessageBox."""
+        def _show():
+            ps_script = f'''
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.MessageBox]::Show(
+    "{message.replace('"', '`"').replace(chr(10), '`n')}",
+    "{title.replace('"', '`"')}",
+    [System.Windows.Forms.MessageBoxButtons]::OK,
+    [System.Windows.Forms.MessageBoxIcon]::{'Error' if is_error else 'Warning'}
+)
+'''
+            _run_powershell(ps_script, timeout=30)
+        threading.Thread(target=_show, daemon=True).start()
+    
+    def _fallback_branded_popup(self, message: str):
+        """Fallback branded popup - just log for now."""
+        self.logger.info(f"Branded notification (fallback): {message}")
+
+
+class ShutdownManager:
+    """Manage system shutdown and lock operations."""
+    
+    def __init__(self):
+        self.logger = get_logger('SHUTDOWN')
+        self._shutdown_scheduled = False
+        self._shutdown_thread = None
+    
+    def lock_workstation(self) -> bool:
+        """Lock the Windows workstation."""
+        try:
+            ctypes.windll.user32.LockWorkStation()
+            self.logger.info("Workstation locked")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to lock workstation: {e}")
+            return False
+    
+    def shutdown_computer(self, delay_seconds: int = 0, force: bool = True) -> bool:
+        """Schedule computer shutdown."""
+        try:
+            cmd = ["shutdown", "/s", "/t", str(delay_seconds)]
+            if force:
+                cmd.append("/f")
+            subprocess.run(cmd, capture_output=True)
+            self.logger.warning(f"Shutdown scheduled in {delay_seconds} seconds")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to schedule shutdown: {e}")
+            return False
+    
+    def cancel_shutdown(self) -> bool:
+        """Cancel scheduled shutdown."""
+        try:
+            subprocess.run(["shutdown", "/a"], capture_output=True)
+            self.logger.info("Shutdown cancelled")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to cancel shutdown: {e}")
+            return False
+    
+    def lock_and_shutdown(self, countdown_seconds: int = 60):
+        """Lock workstation and schedule shutdown after countdown."""
+        if self._shutdown_scheduled:
+            self.logger.info("Shutdown already scheduled, skipping")
+            return
+        
+        self._shutdown_scheduled = True
+        
+        def _execute():
+            self.lock_workstation()
+            time.sleep(2)
+            self.shutdown_computer(delay_seconds=countdown_seconds - 2, force=True)
+            self.logger.warning(f"System will shutdown in {countdown_seconds} seconds")
+        
+        self._shutdown_thread = threading.Thread(target=_execute, daemon=True)
+        self._shutdown_thread.start()
+    
+    def reset_shutdown_flag(self):
+        """Reset the shutdown flag (for when rules change)."""
+        self._shutdown_scheduled = False
+
+```
+
+Key changes:
+- Added IPC imports and fallback handling
+- All notification methods now send via IPC first
+- Added [show_lock_screen()](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/ui_overlay.py#176-254), [hide_lock_screen()](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/notifications.py#313-319), [show_countdown()](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/notifications.py#320-329) methods
+- Fallback to PowerShell WPF for testing/development
+
+---
+
+### [main.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/main.py)
+
+```diff:main.py
+"""Main agent module."""
+import time
+import threading
+import requests
+from .config import config
+from .monitor import AppMonitor
+from .enforcer import RuleEnforcer
+from .reporter import UsageReporter
+from .logger import get_logger
+import urllib3
+
+# Suppress SSL warnings for self-signed certs
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Import boot protection
+try:
+    from .boot_protection import BootProtection
+    _boot_protection_available = True
+except ImportError:
+    _boot_protection_available = False
+    BootProtection = None
+
+
+class ParentalControlAgent:
+    """Main agent class."""
+    
+    def __init__(self):
+        self.running = False
+        self.logger = get_logger('MAIN')
+        self.monitor = AppMonitor()
+        self.enforcer = RuleEnforcer()
+        self.reporter = UsageReporter(self.monitor)
+        
+        # Set monitor in enforcer
+        self.enforcer.set_monitor(self.monitor)
+        
+        # Set agent reference in monitor and reporter for stopping on 401
+        self.monitor.agent = self
+        self.reporter.monitor = self.monitor  # Already set, but ensure it has agent reference
+        
+        self.monitor_thread = None
+        self.enforcer_thread = None
+        self.reporter_thread = None
+        self.boot_protection = None
+    
+    def start(self):
+        """Start agent."""
+        self.logger.section("Parental Control Agent - Starting")
+        
+        if not config.is_configured():
+            self.logger.error("Agent not configured")
+            self.logger.info("Configuration check", 
+                           backend_url=config.get('backend_url'),
+                           device_id=config.get('device_id'),
+                           api_key_set=bool(config.get('api_key')))
+            return False
+        
+        # Validate credentials with backend before starting
+        if not self._validate_credentials():
+            self.logger.critical("Credentials validation failed - agent will not start")
+            self.logger.error("Possible causes:")
+            self.logger.error("  1. device_id or api_key are incorrect")
+            self.logger.error("  2. Device was deleted from backend")
+            self.logger.error("  3. Backend is not available")
+            self.logger.error("  4. device_id in config.json does not match database")
+            self.logger.info("Solution: Re-pair device using: python windows_agent/pair_device.py")
+            return False
+        
+        self.running = True
+        
+        # Perform initial monitor update to populate data immediately
+        # This prevents the first report from sending empty/partial process list
+        self.logger.info("Performing initial system scan...")
+        try:
+            self.monitor.update()
+        except Exception as e:
+            self.logger.warning(f"Initial scan failed: {e}")
+
+        # Start threads
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.enforcer_thread = threading.Thread(target=self._enforcer_loop, daemon=True)
+        self.reporter_thread = threading.Thread(target=self._reporter_loop, daemon=True)
+        
+        self.monitor_thread.start()
+        self.enforcer_thread.start()
+        self.reporter_thread.start()
+        
+        # Start boot protection monitor
+        if _boot_protection_available and BootProtection:
+            try:
+                self.boot_protection = BootProtection(
+                    backend_url=config.get("backend_url"),
+                    device_id=config.get("device_id"),
+                    api_key=config.get("api_key")
+                )
+                self.boot_protection.start()
+                self.logger.info("Boot Protection Monitor started")
+            except Exception as e:
+                self.logger.warning(f"Failed to start Boot Protection: {e}")
+        
+        self.logger.success("Agent started successfully",
+                          backend=config.get('backend_url'),
+                          device_id=config.get('device_id')[:20] + "...",
+                          polling_interval=config.get("polling_interval", 5),
+                          reporting_interval=config.get("reporting_interval", 60))
+        
+        # ETHICAL TRANSPARENCY: Notify user that monitoring is active
+        # This prevents misuse as spyware and ensures the user is aware.
+        try:
+            # Wait a few seconds for desktop to be ready if we just booted
+            threading.Timer(5.0, lambda: self.enforcer.notification_manager.show_startup_transparent_notification()).start()
+        except Exception as e:
+            self.logger.warning(f"Failed to queue startup notification: {e}")
+
+        return True
+    
+    def _validate_credentials(self) -> bool:
+        """Validate device_id and api_key with backend."""
+        validate_logger = get_logger('VALIDATE')
+        try:
+            backend_url = config.get("backend_url")
+            device_id = config.get("device_id")
+            api_key = config.get("api_key")
+            
+            if not backend_url or not device_id or not api_key:
+                validate_logger.error("Missing credentials in configuration")
+                return False
+            
+            validate_logger.info("Validating credentials with backend", backend=backend_url)
+            
+            # Try to fetch rules - this will validate credentials
+            start_time = time.time()
+            response = requests.post(
+                f"{backend_url}/api/rules/agent/fetch",
+                json={"device_id": device_id, "api_key": api_key},
+                timeout=10
+            )
+            response_time = (time.time() - start_time) * 1000  # ms
+            
+            if response.status_code == 200:
+                validate_logger.success("Credentials validated successfully",
+                                      device_id=device_id[:20] + "...",
+                                      response_time_ms=f"{response_time:.0f}ms")
+                return True
+            elif response.status_code == 401:
+                validate_logger.critical("Invalid credentials - authentication failed",
+                                       device_id=device_id[:20] + "...",
+                                       status_code=401)
+                return False
+            else:
+                validate_logger.warning("Backend returned unexpected status",
+                                      status_code=response.status_code,
+                                      response_preview=response.text[:100])
+                # Don't fail on other errors - might be temporary network issue
+                return True
+                
+        except requests.exceptions.ConnectionError:
+            validate_logger.warning("Cannot connect to backend - will start anyway",
+                                  backend=backend_url,
+                                  note="May be temporary network issue")
+            # Allow start even if backend is unreachable (might be temporary)
+            return True
+        except Exception as e:
+            validate_logger.warning("Error validating credentials - will start anyway",
+                                  error_type=type(e).__name__,
+                                  error_message=str(e)[:50],
+                                  note="May be temporary issue")
+            # Allow start even if validation fails (might be temporary)
+            return True
+    
+    def stop(self):
+        """Stop agent."""
+        self.logger.info("Stopping agent...")
+        self.running = False
+        
+        # Stop boot protection
+        if self.boot_protection:
+            try:
+                self.boot_protection.stop()
+            except:
+                pass
+            self.boot_protection = None
+        
+        self.reporter.stop()
+        self.logger.success("Agent stopped")
+    
+    def run(self):
+        """Run agent (blocking)."""
+        if not self.start():
+            return
+        
+        try:
+            self.logger.info("Agent running - Press Ctrl+C to stop")
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.logger.warning("Interrupted by user")
+            self.stop()
+    
+    def _monitor_loop(self):
+        """Monitor loop."""
+        monitor_logger = get_logger('MONITOR')
+        monitor_logger.info("Monitor loop started")
+        while self.running:
+            try:
+                self.monitor.update()
+                interval = config.get("polling_interval", 5)
+                time.sleep(interval)
+            except Exception as e:
+                monitor_logger.error("Monitor error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(5)
+    
+    def _enforcer_loop(self):
+        """Enforcer loop."""
+        enforcer_logger = get_logger('ENFORCER')
+        enforcer_logger.info("Enforcer loop started")
+        while self.running:
+            try:
+                self.enforcer.update()
+                time.sleep(2)  # Check every 2 seconds for faster response
+            except Exception as e:
+                enforcer_logger.error("Enforcer error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(5)
+    
+    def _reporter_loop(self):
+        """Reporter loop."""
+        reporter_logger = get_logger('REPORTER')
+        reporter_logger.info("Reporter loop started")
+        while self.running:
+            try:
+                self.reporter.send_reports()
+                interval = config.get("reporting_interval", 60)
+                reporter_logger.debug("Next report scheduled", interval_seconds=interval)
+                time.sleep(interval)
+            except Exception as e:
+                reporter_logger.error("Reporter error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(60)
+
+===
+"""Main agent module.
+
+Session 0 Service Architecture:
+- This agent runs as Windows Service in Session 0
+- All UI notifications are sent via IPC to ChildAgent
+- ChildAgent runs in user session and displays actual UI
+- Watchdog monitors and restarts ChildAgent if needed
+"""
+import os
+import sys
+import time
+import threading
+import subprocess
+import requests
+from .config import config
+from .monitor import AppMonitor
+from .enforcer import RuleEnforcer
+from .reporter import UsageReporter
+from .logger import get_logger
+import urllib3
+
+# Suppress SSL warnings for self-signed certs
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Import boot protection
+try:
+    from .boot_protection import BootProtection
+    _boot_protection_available = True
+except ImportError:
+    _boot_protection_available = False
+    BootProtection = None
+
+# Import IPC server
+try:
+    from .ipc_server import IPCServer, get_ipc_server
+    _ipc_available = True
+except ImportError:
+    _ipc_available = False
+    IPCServer = None
+
+# Windows API for spawning in user session
+try:
+    import ctypes
+    import win32ts
+    import win32process
+    import win32security
+    import win32con
+    import win32api
+    _win32_available = True
+except ImportError:
+    _win32_available = False
+
+
+class ChildAgentWatchdog:
+    """Watchdog that monitors and restarts ChildAgent in user session.
+    
+    The ChildAgent must run in the user's session (Session 1+) to display UI.
+    This watchdog runs in the service (Session 0) and ensures ChildAgent stays alive.
+    """
+    
+    CHILD_AGENT_EXE = "ChildAgent.exe"
+    CHILD_AGENT_SCRIPT = "child_agent.py"
+    CHECK_INTERVAL = 4  # seconds
+    
+    def __init__(self):
+        self.logger = get_logger('WATCHDOG')
+        self.running = False
+        self._thread = None
+        self._script_dir = self._get_script_dir()
+    
+    def _get_script_dir(self):
+        """Get directory containing agent files."""
+        if getattr(sys, 'frozen', False):
+            return os.path.dirname(sys.executable)
+        else:
+            # Go up from agent/ to clients/windows/
+            return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    def _is_child_agent_running(self) -> bool:
+        """Check if ChildAgent is running in any user session."""
+        try:
+            import psutil
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    name = proc.info['name'].lower()
+                    cmdline = proc.info.get('cmdline') or []
+                    cmdline_str = ' '.join(cmdline).lower()
+                    
+                    # Check for compiled exe
+                    if self.CHILD_AGENT_EXE.lower() in name:
+                        return True
+                    
+                    # Check for Python script
+                    if 'python' in name and 'child_agent' in cmdline_str:
+                        return True
+                        
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except Exception as e:
+            self.logger.error(f"Error checking ChildAgent: {e}")
+        return False
+    
+    def _get_active_console_session(self) -> int:
+        """Get the session ID of the active console user."""
+        try:
+            return ctypes.windll.kernel32.WTSGetActiveConsoleSessionId()
+        except Exception:
+            return 0xFFFFFFFF  # No session
+    
+    def _spawn_child_agent(self):
+        """Spawn ChildAgent in the active user session.
+        
+        This is the tricky part - spawning a process in user's session from Session 0.
+        Uses CreateProcessAsUser with the user's token.
+        """
+        session_id = self._get_active_console_session()
+        if session_id == 0xFFFFFFFF:
+            self.logger.debug("No active console session - skipping ChildAgent spawn")
+            return False
+        
+        self.logger.info(f"Spawning ChildAgent in session {session_id}")
+        
+        # Method 1: Try using WTSQueryUserToken + CreateProcessAsUser (requires SYSTEM)
+        if _win32_available:
+            try:
+                # Get user token for the session
+                user_token = win32ts.WTSQueryUserToken(session_id)
+                
+                # Duplicate token with all access
+                duplicate_token = win32security.DuplicateTokenEx(
+                    user_token,
+                    win32security.SecurityImpersonation,
+                    win32con.MAXIMUM_ALLOWED,
+                    win32security.TokenPrimary
+                )
+                
+                # Create startup info
+                startup_info = win32process.STARTUPINFO()
+                startup_info.lpDesktop = "WinSta0\\Default"
+                
+                # Determine command to run
+                exe_path = os.path.join(self._script_dir, self.CHILD_AGENT_EXE)
+                if os.path.exists(exe_path):
+                    cmd = f'"{exe_path}"'
+                else:
+                    script_path = os.path.join(self._script_dir, self.CHILD_AGENT_SCRIPT)
+                    cmd = f'"{sys.executable}" "{script_path}"'
+                
+                # Create process in user's session
+                process_info = win32process.CreateProcessAsUser(
+                    duplicate_token,
+                    None,  # Application name
+                    cmd,   # Command line
+                    None,  # Process security
+                    None,  # Thread security
+                    False, # Inherit handles
+                    win32con.CREATE_NEW_CONSOLE | win32con.CREATE_UNICODE_ENVIRONMENT,
+                    None,  # Environment
+                    self._script_dir,  # Current directory
+                    startup_info
+                )
+                
+                self.logger.info(f"ChildAgent spawned successfully, PID: {process_info[2]}")
+                return True
+                
+            except Exception as e:
+                self.logger.warning(f"CreateProcessAsUser failed: {e}")
+        
+        # Method 2: Fallback - use schtasks to run as logged-in user
+        try:
+            script_path = os.path.join(self._script_dir, self.CHILD_AGENT_SCRIPT)
+            
+            # Check for exe first
+            exe_path = os.path.join(self._script_dir, self.CHILD_AGENT_EXE)
+            if os.path.exists(exe_path):
+                program = exe_path
+                args = ""
+            else:
+                program = sys.executable
+                args = f'"{script_path}"'
+            
+            # Create a one-time scheduled task that runs immediately as INTERACTIVE user
+            task_name = "FamilyEyeChildAgentTemp"
+            
+            # Delete old task if exists
+            subprocess.run(
+                ["schtasks", "/Delete", "/TN", task_name, "/F"],
+                capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # Create and run task
+            subprocess.run([
+                "schtasks", "/Create", 
+                "/TN", task_name,
+                "/TR", f'"{program}" {args}' if args else f'"{program}"',
+                "/SC", "ONCE",
+                "/ST", "00:00",
+                "/IT",  # Interactive token (runs as logged-in user)
+                "/F"
+            ], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            
+            subprocess.run(
+                ["schtasks", "/Run", "/TN", task_name],
+                capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # Clean up task
+            time.sleep(2)
+            subprocess.run(
+                ["schtasks", "/Delete", "/TN", task_name, "/F"],
+                capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            self.logger.info("ChildAgent spawned via scheduled task")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to spawn ChildAgent: {e}")
+            return False
+    
+    def _watchdog_loop(self):
+        """Main watchdog loop."""
+        self.logger.info("Watchdog started")
+        
+        # Initial delay to let system settle
+        time.sleep(10)
+        
+        while self.running:
+            try:
+                if not self._is_child_agent_running():
+                    self.logger.warning("ChildAgent not running - attempting restart")
+                    self._spawn_child_agent()
+                else:
+                    self.logger.debug("ChildAgent is running")
+            except Exception as e:
+                self.logger.error(f"Watchdog error: {e}")
+            
+            time.sleep(self.CHECK_INTERVAL)
+        
+        self.logger.info("Watchdog stopped")
+    
+    def start(self):
+        """Start the watchdog."""
+        if self.running:
+            return
+        
+        self.running = True
+        self._thread = threading.Thread(target=self._watchdog_loop, daemon=True)
+        self._thread.start()
+        self.logger.info("ChildAgent Watchdog started")
+    
+    def stop(self):
+        """Stop the watchdog."""
+        self.running = False
+        if self._thread:
+            self._thread.join(timeout=5)
+        self.logger.info("ChildAgent Watchdog stopped")
+
+
+class ParentalControlAgent:
+    """Main agent class.
+    
+    Runs in Session 0 as Windows Service. Handles:
+    - Process monitoring
+    - Rule enforcement  
+    - Usage reporting
+    - IPC server for ChildAgent communication
+    - Watchdog for ChildAgent process
+    """
+    
+    def __init__(self):
+        self.running = False
+        self.logger = get_logger('MAIN')
+        self.monitor = AppMonitor()
+        self.enforcer = RuleEnforcer()
+        self.reporter = UsageReporter(self.monitor)
+        
+        # Set monitor in enforcer
+        self.enforcer.set_monitor(self.monitor)
+        
+        # Set agent reference in monitor and reporter for stopping on 401
+        self.monitor.agent = self
+        self.reporter.monitor = self.monitor
+        
+        self.monitor_thread = None
+        self.enforcer_thread = None
+        self.reporter_thread = None
+        self.boot_protection = None
+        
+        # IPC server for Session 0 -> User Session communication
+        self.ipc_server = None
+        
+        # Watchdog for ChildAgent
+        self.watchdog = None
+    
+    def start(self):
+        """Start agent."""
+        self.logger.section("Parental Control Agent - Starting")
+        
+        if not config.is_configured():
+            self.logger.error("Agent not configured")
+            self.logger.info("Configuration check", 
+                           backend_url=config.get('backend_url'),
+                           device_id=config.get('device_id'),
+                           api_key_set=bool(config.get('api_key')))
+            return False
+        
+        # Validate credentials with backend before starting
+        if not self._validate_credentials():
+            self.logger.critical("Credentials validation failed - agent will not start")
+            self.logger.error("Possible causes:")
+            self.logger.error("  1. device_id or api_key are incorrect")
+            self.logger.error("  2. Device was deleted from backend")
+            self.logger.error("  3. Backend is not available")
+            self.logger.error("  4. device_id in config.json does not match database")
+            self.logger.info("Solution: Re-pair device using: python windows_agent/pair_device.py")
+            return False
+        
+        self.running = True
+        
+        # Start IPC server for communication with ChildAgent
+        if _ipc_available:
+            try:
+                self.ipc_server = get_ipc_server()
+                self.ipc_server.start()
+                self.logger.info("IPC Server started for ChildAgent communication")
+                
+                # Update notification manager with IPC server
+                self.enforcer.notification_manager.set_ipc_server(self.ipc_server)
+            except Exception as e:
+                self.logger.warning(f"Failed to start IPC server: {e}")
+        else:
+            self.logger.warning("IPC not available - notifications will use fallback")
+        
+        # Perform initial monitor update to populate data immediately
+        self.logger.info("Performing initial system scan...")
+        try:
+            self.monitor.update()
+        except Exception as e:
+            self.logger.warning(f"Initial scan failed: {e}")
+
+        # Start threads
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.enforcer_thread = threading.Thread(target=self._enforcer_loop, daemon=True)
+        self.reporter_thread = threading.Thread(target=self._reporter_loop, daemon=True)
+        
+        self.monitor_thread.start()
+        self.enforcer_thread.start()
+        self.reporter_thread.start()
+        
+        # Start boot protection monitor
+        if _boot_protection_available and BootProtection:
+            try:
+                self.boot_protection = BootProtection(
+                    backend_url=config.get("backend_url"),
+                    device_id=config.get("device_id"),
+                    api_key=config.get("api_key")
+                )
+                self.boot_protection.start()
+                self.logger.info("Boot Protection Monitor started")
+            except Exception as e:
+                self.logger.warning(f"Failed to start Boot Protection: {e}")
+        
+        # Start ChildAgent Watchdog
+        try:
+            self.watchdog = ChildAgentWatchdog()
+            self.watchdog.start()
+            self.logger.info("ChildAgent Watchdog started")
+        except Exception as e:
+            self.logger.warning(f"Failed to start Watchdog: {e}")
+        
+        self.logger.success("Agent started successfully",
+                          backend=config.get('backend_url'),
+                          device_id=config.get('device_id')[:20] + "...",
+                          polling_interval=config.get("polling_interval", 5),
+                          reporting_interval=config.get("reporting_interval", 60),
+                          ipc_enabled=_ipc_available)
+        
+        # ETHICAL TRANSPARENCY: Notify user that monitoring is active
+        # This message goes via IPC to ChildAgent in user session
+        try:
+            threading.Timer(8.0, lambda: self.enforcer.notification_manager.show_startup_transparent_notification()).start()
+        except Exception as e:
+            self.logger.warning(f"Failed to queue startup notification: {e}")
+
+        return True
+    
+    def _validate_credentials(self) -> bool:
+        """Validate device_id and api_key with backend."""
+        validate_logger = get_logger('VALIDATE')
+        try:
+            backend_url = config.get("backend_url")
+            device_id = config.get("device_id")
+            api_key = config.get("api_key")
+            
+            if not backend_url or not device_id or not api_key:
+                validate_logger.error("Missing credentials in configuration")
+                return False
+            
+            validate_logger.info("Validating credentials with backend", backend=backend_url)
+            
+            # Try to fetch rules - this will validate credentials
+            start_time = time.time()
+            response = requests.post(
+                f"{backend_url}/api/rules/agent/fetch",
+                json={"device_id": device_id, "api_key": api_key},
+                timeout=10
+            )
+            response_time = (time.time() - start_time) * 1000  # ms
+            
+            if response.status_code == 200:
+                validate_logger.success("Credentials validated successfully",
+                                      device_id=device_id[:20] + "...",
+                                      response_time_ms=f"{response_time:.0f}ms")
+                return True
+            elif response.status_code == 401:
+                validate_logger.critical("Invalid credentials - authentication failed",
+                                       device_id=device_id[:20] + "...",
+                                       status_code=401)
+                return False
+            else:
+                validate_logger.warning("Backend returned unexpected status",
+                                      status_code=response.status_code,
+                                      response_preview=response.text[:100])
+                # Don't fail on other errors - might be temporary network issue
+                return True
+                
+        except requests.exceptions.ConnectionError:
+            validate_logger.warning("Cannot connect to backend - will start anyway",
+                                  backend=backend_url,
+                                  note="May be temporary network issue")
+            return True
+        except Exception as e:
+            validate_logger.warning("Error validating credentials - will start anyway",
+                                  error_type=type(e).__name__,
+                                  error_message=str(e)[:50],
+                                  note="May be temporary issue")
+            return True
+    
+    def stop(self):
+        """Stop agent."""
+        self.logger.info("Stopping agent...")
+        self.running = False
+        
+        # Stop watchdog
+        if self.watchdog:
+            try:
+                self.watchdog.stop()
+            except:
+                pass
+            self.watchdog = None
+        
+        # Stop IPC server
+        if self.ipc_server:
+            try:
+                self.ipc_server.stop()
+            except:
+                pass
+            self.ipc_server = None
+        
+        # Stop boot protection
+        if self.boot_protection:
+            try:
+                self.boot_protection.stop()
+            except:
+                pass
+            self.boot_protection = None
+        
+        self.reporter.stop()
+        self.logger.success("Agent stopped")
+    
+    def run(self):
+        """Run agent (blocking)."""
+        if not self.start():
+            return
+        
+        try:
+            self.logger.info("Agent running - Press Ctrl+C to stop")
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.logger.warning("Interrupted by user")
+            self.stop()
+    
+    def _monitor_loop(self):
+        """Monitor loop."""
+        monitor_logger = get_logger('MONITOR')
+        monitor_logger.info("Monitor loop started")
+        while self.running:
+            try:
+                self.monitor.update()
+                interval = config.get("polling_interval", 5)
+                time.sleep(interval)
+            except Exception as e:
+                monitor_logger.error("Monitor error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(5)
+    
+    def _enforcer_loop(self):
+        """Enforcer loop."""
+        enforcer_logger = get_logger('ENFORCER')
+        enforcer_logger.info("Enforcer loop started")
+        while self.running:
+            try:
+                self.enforcer.update()
+                time.sleep(2)  # Check every 2 seconds for faster response
+            except Exception as e:
+                enforcer_logger.error("Enforcer error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(5)
+    
+    def _reporter_loop(self):
+        """Reporter loop."""
+        reporter_logger = get_logger('REPORTER')
+        reporter_logger.info("Reporter loop started")
+        while self.running:
+            try:
+                self.reporter.send_reports()
+                interval = config.get("reporting_interval", 60)
+                reporter_logger.debug("Next report scheduled", interval_seconds=interval)
+                time.sleep(interval)
+            except Exception as e:
+                reporter_logger.error("Reporter error", error_type=type(e).__name__, error_message=str(e)[:50])
+                import traceback
+                traceback.print_exc()
+                time.sleep(60)
+
+```
+
+Key changes:
+- Added [ChildAgentWatchdog](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/agent/main.py#54-258) class (monitors every 4 seconds)
+- Added IPC server initialization
+- Spawn logic uses `CreateProcessAsUser` with `schtasks` fallback
+- IPC server passed to NotificationManager
+
+---
+
+## Usage
+
+### Enable Auto-Start for ChildAgent
+
+```powershell
+# On child's computer, as child user:
+python child_agent.py --install
+```
+
+### Run ChildAgent Manually (Debug)
+
+```powershell
+python child_agent.py --debug
+```
+
+### Test IPC Communication
+
+```powershell
+# Terminal 1 - Run server
+python dev/test_ipc.py server
+
+# Terminal 2 - Run client
+python dev/test_ipc.py client
+
+# Or automated test:
+python dev/test_ipc.py test
+```
+
+---
+
+## Verification Results
+
+| Test | Status |
+|------|--------|
+| IPC module imports | ✅ Pass |
+| Main agent import | ✅ Pass |
+| Child agent --help | ✅ Pass |
+| Named Pipe creation | ✅ Pass |
+| Client connects to server | ✅ Pass |
+| Message delivery (PING/PONG) | ✅ Pass |
+| End-to-end notification | ⬜ Pending (requires service) |
+
+---
+
+## Next Steps
+
+1. **Build ChildAgent.exe**: Package [child_agent.py](file:///c:/Users/Administrator/Documents/Cursor/Parential-Control_Enterprise/clients/windows/child_agent.py) as standalone executable
+2. **Installer update**: Add ChildAgent to installer, enable auto-start
+3. **Test in production**: Run service + ChildAgent on test device

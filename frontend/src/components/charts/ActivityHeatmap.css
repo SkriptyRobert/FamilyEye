@@ -1,0 +1,279 @@
+/* ============================================
+   ACTIVITY HEATMAP - Elasticsearch/Kibana Style
+   ============================================ */
+
+/* CSS Variables for heatmap colors */
+:root {
+    --heatmap-empty: rgba(100, 100, 100, 0.1);
+    --heatmap-low: #10b981;
+    --heatmap-medium: #fbbf24;
+    --heatmap-high: #f97316;
+    --heatmap-max: #ef4444;
+}
+
+.heatmap-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.heatmap-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.heatmap-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heatmap-controls .period-select,
+.heatmap-period {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.heatmap-wrapper {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+/* Hour labels row */
+.heatmap-hours-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.heatmap-hour-label {
+    width: 20px;
+    min-width: 20px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Grid rows */
+.heatmap-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.heatmap-date-label {
+    width: 60px;
+    min-width: 60px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-align: right;
+    padding-right: 8px;
+}
+
+/* Individual cell */
+.heatmap-cell {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 3px;
+    margin: 1px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.3);
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Larger dots variant */
+.heatmap-container.larger-dots .heatmap-cell {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 4px;
+    margin: 2px;
+}
+
+.heatmap-container.larger-dots .heatmap-hour-label {
+    width: 24px;
+    min-width: 24px;
+}
+
+/* Tooltip */
+.heatmap-tooltip {
+    /* position, top/left handled inline by JS */
+    background-color: #0f172a;
+    /* Explicit dark background */
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-width: 140px;
+    z-index: 9999;
+    /* Ensure on top */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.heatmap-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: #0f172a;
+    /* Match background */
+}
+
+.tooltip-time {
+    font-size: 11px;
+    color: #94a3b8;
+    /* Light gray */
+    margin-bottom: 4px;
+}
+
+.tooltip-duration {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f8fafc;
+    /* White */
+    margin-bottom: 6px;
+}
+
+.tooltip-detail {
+    font-size: 11px;
+    color: #cbd5e1;
+    /* Lighter gray */
+    line-height: 1.4;
+}
+
+/* Legend */
+.heatmap-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.legend-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.legend-scale {
+    display: flex;
+    gap: 3px;
+}
+
+.legend-cell {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+/* Loading state */
+.heatmap-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.heatmap-loading .loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Error state */
+.heatmap-error {
+    text-align: center;
+    padding: 40px;
+    color: #ef4444;
+}
+
+/* Empty state */
+.heatmap-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-secondary);
+    gap: 8px;
+}
+
+.empty-icon {
+    font-size: 32px;
+    opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .heatmap-cell {
+        width: 14px;
+        height: 14px;
+        min-width: 14px;
+    }
+
+    .heatmap-hour-label {
+        width: 14px;
+        min-width: 14px;
+        font-size: 8px;
+    }
+
+    .heatmap-date-label {
+        width: 50px;
+        min-width: 50px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .heatmap-cell {
+        width: 10px;
+        height: 10px;
+        min-width: 10px;
+    }
+
+    .heatmap-hour-label {
+        width: 10px;
+        min-width: 10px;
+    }
+
+    .heatmap-date-label {
+        width: 40px;
+        min-width: 40px;
+    }
+}

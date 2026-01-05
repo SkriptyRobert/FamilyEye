@@ -1,0 +1,192 @@
+"""Rules management endpoints."""
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+from ..database import get_db
+from ..models import Rule, Device, User
+from ..schemas import RuleCreate, RuleResponse, AgentRulesRequest, AgentRulesResponse
+from ..api.auth import get_current_parent
+from ..api.devices import verify_device_api_key
+
+router = APIRouter()
+
+
+@router.post("/", response_model=RuleResponse, status_code=status.HTTP_201_CREATED)
+async def create_rule(
+    rule_data: RuleCreate,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Create a new rule."""
+    # Verify device belongs to parent
+    device = db.query(Device).filter(
+        Device.id == rule_data.device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    new_rule = Rule(**rule_data.dict())
+    db.add(new_rule)
+    db.commit()
+    db.refresh(new_rule)
+    
+    return new_rule
+
+
+@router.get("/device/{device_id}", response_model=List[RuleResponse])
+async def get_device_rules(
+    device_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Get all rules for a device."""
+    # Verify device belongs to parent
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    rules = db.query(Rule).filter(
+        Rule.device_id == device_id,
+        Rule.enabled == True
+    ).all()
+    
+    return rules
+
+
+@router.get("/{rule_id}", response_model=RuleResponse)
+async def get_rule(
+    rule_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Get rule by ID."""
+    rule = db.query(Rule).join(Device).filter(
+        Rule.id == rule_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rule not found"
+        )
+    
+    return rule
+
+
+@router.put("/{rule_id}", response_model=RuleResponse)
+async def update_rule(
+    rule_id: int,
+    rule_data: RuleCreate,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Update a rule."""
+    rule = db.query(Rule).join(Device).filter(
+        Rule.id == rule_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rule not found"
+        )
+    
+    for key, value in rule_data.dict().items():
+        setattr(rule, key, value)
+    
+    db.commit()
+    db.refresh(rule)
+    
+    return rule
+
+
+@router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_rule(
+    rule_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Delete a rule."""
+    rule = db.query(Rule).join(Device).filter(
+        Rule.id == rule_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not rule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rule not found"
+        )
+    
+    db.delete(rule)
+    db.commit()
+    
+    return None
+
+
+# Agent endpoint for fetching rules
+@router.post("/agent/fetch", response_model=AgentRulesResponse)
+async def agent_fetch_rules(
+    request: AgentRulesRequest,
+    db: Session = Depends(get_db)
+):
+    """Agent endpoint to fetch rules for device."""
+    device = verify_device_api_key(request.device_id, request.api_key, db)
+    db.commit()  # Persist last_seen update from verify_device_api_key
+    
+    rules = db.query(Rule).filter(
+        Rule.device_id == device.id,
+        Rule.enabled == True
+    ).all()
+    
+    # Calculate daily usage as COUNT of unique MINUTES (truncated to minute level)
+    # This ensures all apps logged in same minute count as 1 minute, not N
+    from datetime import datetime, timezone
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_str = today_start.strftime('%Y-%m-%d')
+    
+    from ..models import UsageLog
+    from sqlalchemy import func
+    
+    # Count unique report minutes - truncate timestamp to minute level
+    unique_minutes = db.query(
+        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+    ).filter(
+        UsageLog.device_id == device.id,
+        UsageLog.timestamp.like(f'{today_str}%')
+    ).scalar() or 0
+    
+    reporting_interval = 60  # seconds
+    total_usage = unique_minutes * reporting_interval
+    
+    # Usage by app (sum of durations for each app)
+    usage_by_app_rows = db.query(
+        UsageLog.app_name,
+        func.sum(UsageLog.duration)
+    ).filter(
+        UsageLog.device_id == device.id,
+        UsageLog.timestamp.like(f'{today_str}%')
+    ).group_by(UsageLog.app_name).all()
+    
+    usage_by_app = {row[0]: row[1] for row in usage_by_app_rows}
+    
+    return {
+        "rules": rules,
+        "daily_usage": int(total_usage),
+        "usage_by_app": usage_by_app
+    }
+

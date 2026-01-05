@@ -1,0 +1,246 @@
+/* ============================================
+   APP DETAILS MODAL
+   ============================================ */
+
+.app-details-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.app-details-modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-icon {
+    font-size: 24px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.modal-close:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* Summary stats */
+.modal-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-stat {
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--bg-primary);
+    border-radius: 10px;
+}
+
+.summary-stat.highlight {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+}
+
+.summary-stat .stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.summary-stat.highlight .stat-value {
+    color: #6366f1;
+}
+
+.summary-stat .stat-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Tabs */
+.modal-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+/* Chart area */
+.modal-chart {
+    padding: 20px 24px;
+}
+
+.modal-chart h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* Footer */
+.modal-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+/* Loading state */
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.modal-loading .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Error state */
+.modal-error {
+    text-align: center;
+    padding: 60px;
+    color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .modal-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .summary-stat .stat-value {
+        font-size: 16px;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-details-modal {
+        max-height: 95vh;
+    }
+
+    .modal-header {
+        padding: 16px 20px;
+    }
+
+    .modal-summary {
+        padding: 16px 20px;
+    }
+
+    .modal-tabs {
+        padding: 12px 20px;
+    }
+
+    .modal-chart {
+        padding: 16px 20px;
+    }
+}

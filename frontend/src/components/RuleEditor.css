@@ -1,0 +1,290 @@
+.rule-editor {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+}
+
+.rule-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.rule-editor-header h2 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.device-select {
+  padding: 10px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.device-select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.rule-form {
+  margin: 24px 0;
+  padding: 24px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.premium-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary) !important;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input {
+  padding: 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.button {
+  padding: 12px 24px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.button-secondary {
+  background: var(--text-secondary);
+}
+
+.button-success {
+  background: #00c853;
+}
+
+.button-success:hover {
+  box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+}
+
+.tag-button {
+  padding: 6px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--accent-color);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-button:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.rule-card {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.rule-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+}
+
+.rule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.rule-card-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.status-badge {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.status-badge.active {
+  background: rgba(0, 200, 83, 0.1);
+  color: #00c853;
+}
+
+.status-badge.inactive {
+  background: rgba(255, 82, 82, 0.1);
+  color: #ff5252;
+}
+
+.rule-card-body {
+  flex: 1;
+}
+
+.rule-card-body p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.network-blocked {
+  color: #ff5252 !important;
+  font-weight: bold;
+  font-size: 0.8rem !important;
+}
+
+.delete-button {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.delete-button:hover {
+  background: var(--error-color);
+  color: white;
+}
+
+.loading-small {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Hidden Apps Section */
+.hidden-apps-section {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 2px dashed var(--border-color);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.hidden-apps-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hidden-app-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-primary);
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.hidden-app-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.restore-button {
+  background: transparent;
+  border: 1px solid var(--accent-color);
+  color: var(--accent-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.restore-button:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+.empty-small {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
