@@ -333,8 +333,8 @@ class ParentalControlAgent:
         # IPC server for Session 0 -> User Session communication
         self.ipc_server = None
         
-        # Heartbeat monitor for ChildAgent (replaces old watchdog)
-        self.heartbeat_monitor = None
+        # Process monitor for ChildAgent (replaces old watchdog)
+        self.process_monitor = None
     
     def start(self):
         """Start agent."""
@@ -406,11 +406,11 @@ class ParentalControlAgent:
         
         # Start ProcessMonitor for ChildAgent (active recovery)
         try:
-            self.heartbeat_monitor = ProcessMonitor()
-            self.heartbeat_monitor.start()
+            self.process_monitor = ProcessMonitor()
+            self.process_monitor.start()
             
             # Connect components
-            # self.ipc_server.set_heartbeat_callback(self.heartbeat_monitor.receive_heartbeat) # ProcessMonitor uses psutil, not heartbeats
+            # self.ipc_server.set_heartbeat_callback(self.process_monitor.receive_heartbeat) # ProcessMonitor uses psutil, not heartbeats
             self.ipc_server.set_screenshot_callback(self.reporter.upload_screenshot_from_file)  # Legacy
             self.ipc_server.set_screenshot_ready_callback(self.reporter.handle_screenshot_ready)  # File-based
             self.reporter.set_ipc_server(self.ipc_server)
@@ -418,7 +418,7 @@ class ParentalControlAgent:
             # Start loops
             self.logger.info("ProcessMonitor started (Active Recovery enabled)")
         except Exception as e:
-            self.logger.warning(f"Failed to start HeartbeatMonitor: {e}")
+            self.logger.warning(f"Failed to start ProcessMonitor: {e}")
         
         self.logger.success("Agent started successfully",
                           backend=config.get('backend_url'),
@@ -493,13 +493,13 @@ class ParentalControlAgent:
         self.logger.info("Stopping agent...")
         self.running = False
         
-        # Stop watchdog
-        if self.watchdog:
+        # Stop process monitor
+        if self.process_monitor:
             try:
-                self.watchdog.stop()
+                self.process_monitor.stop()
             except:
                 pass
-            self.watchdog = None
+            self.process_monitor = None
         
         # Stop IPC server
         if self.ipc_server:

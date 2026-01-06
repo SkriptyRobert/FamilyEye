@@ -67,13 +67,14 @@ class EnterpriseLogger:
                     # Running as compiled exe
                     # Use ProgramData for logging to avoid permission issues
                     program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
-                    log_dir = os.path.join(program_data, 'FamilyEye', 'Agent')
+                    log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
                 else:
                     # Dev mode
                     log_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 
                 os.makedirs(log_dir, exist_ok=True)
-                log_path = os.path.join(log_dir, 'agent.log')
+                os.makedirs(log_dir, exist_ok=True)
+                log_path = os.path.join(log_dir, 'service_core.log')
                 file_handler = logging.FileHandler(log_path, encoding='utf-8')
                 file_handler.setLevel(level)
                 file_formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s')

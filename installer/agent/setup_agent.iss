@@ -36,6 +36,16 @@ VersionInfoVersion=2.0.0
 
 CreateUninstallRegKey=yes
 Uninstallable=yes
+[Dirs]
+; Create ProgramData data directories with specific permissions
+; 1. Agent root: Configs and Caches. 
+;    SECURITY: Users have Read & Execute only. Admins/System have Full.
+;    Prevents child from modifying config.json or rules_cache.json
+Name: "{commonappdata}\FamilyEye\Agent"; Permissions: users-readexec admins-full system-full
+
+; 2. Logs directory: ChildAgent needs to write here.
+;    SECURITY: Users have Modify permissions.
+Name: "{commonappdata}\FamilyEye\Agent\Logs"; Permissions: users-modify admins-full system-full
 
 [Languages]
 Name: "czech"; MessagesFile: "compiler:Languages\Czech.isl"
@@ -69,22 +79,33 @@ czech.BlockControlPanel=Omezit přístup k Ovládacím panelům
 czech.BlockRegistry=Zakázat přístup k registrům
 
 [Files]
-; PyInstaller-built standalone executables
+; Main Executable (Service)
 Source: "dist\agent_service.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; UI Agent (Child)
 Source: "dist\FamilyEyeAgent.exe"; DestDir: "{app}"; Flags: ignoreversion
 
-; Assets
-Source: "assets\setup_icon.ico"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; Icon
 Source: "..\..\clients\windows\agent\familyeye_icon.png"; DestDir: "{app}\agent"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Generated config file from pairing step
-Source: "{tmp}\config.json"; DestDir: "{app}"; Flags: external ignoreversion skipifsourcedoesntexist
+Source: "{tmp}\config.json"; DestDir: "{commonappdata}\FamilyEye\Agent"; Flags: external ignoreversion skipifsourcedoesntexist
 
 [UninstallDelete]
+; Clean up ProgramData files and folders
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\service_core.log"
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\ui_agent.log"
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\service_wrapper.log"
+Type: dirifempty; Name: "{commonappdata}\FamilyEye\Agent\Logs"
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\config.json"
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\rules_cache.json"
+Type: files; Name: "{commonappdata}\FamilyEye\Agent\usage_cache.json"
+Type: dirifempty; Name: "{commonappdata}\FamilyEye\Agent"
+Type: dirifempty; Name: "{commonappdata}\FamilyEye"
+
+; Use {app} just for cleaning remaining bin folder binaries if any
 Type: filesandordirs; Name: "{app}\logs"
 Type: files; Name: "{app}\config.json"
-Type: files; Name: "{app}\debug_config.txt"
-Type: filesandordirs; Name: "{app}\agent"
 Type: files; Name: "{app}\rules_cache.json"
 Type: files; Name: "{app}\child_agent.log"
 Type: dirifempty; Name: "{app}"

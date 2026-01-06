@@ -69,34 +69,31 @@ class ChildAgent:
         self.running = False
         self.ipc_client: IPCClient = None
         self.ui_overlay: UIOverlay = None
-        # Log to user-writable directory
-        # Note: When spawned by Watchdog from SYSTEM context, env vars may point to wrong paths
-        # Use %TEMP% as the most reliable writable location across all contexts
+        # Log to ProgramData/FamilyEye/Agent/Logs
+        # This is created by Installer with Users:Modify permissions
         log_dir = None
-        for path in [
-            os.environ.get('TEMP'),
-            os.environ.get('TMP'),
-            os.path.expanduser('~'),
-            os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else None
-        ]:
-            if path:
-                try:
-                    test_dir = os.path.join(path, 'FamilyEye')
-                    os.makedirs(test_dir, exist_ok=True)
-                    # Test write access
-                    test_file = os.path.join(test_dir, '.write_test')
-                    with open(test_file, 'w') as f:
-                        f.write('test')
-                    os.remove(test_file)
-                    log_dir = test_dir
-                    break
-                except (PermissionError, OSError):
-                    continue
+        try:
+            if getattr(sys, 'frozen', False):
+                 program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+                 target_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+                 os.makedirs(target_dir, exist_ok=True)
+                 # Test write
+                 test_file = os.path.join(target_dir, '.write_test')
+                 with open(test_file, 'w') as f: f.write('test')
+                 os.remove(test_file)
+                 log_dir = target_dir
+            else:
+                 # Dev mode - current dir
+                 log_dir = os.path.dirname(os.path.abspath(__file__))
+        except Exception as e:
+            # Fallback to Temp if ProgramData is not writable (should not happen with correct installer)
+            print(f"Log path fallback due to: {e}")
+            log_dir = os.path.join(os.environ.get('TEMP', '.'), 'FamilyEye')
+            os.makedirs(log_dir, exist_ok=True)
         
         if log_dir:
-            self.log_file = os.path.join(log_dir, "child_agent.log")
+            self.log_file = os.path.join(log_dir, "ui_agent.log")
         else:
-            # Absolute fallback - just don't log to file
             self.log_file = None
         
         # Command handlers
@@ -361,10 +358,6 @@ Write-Output 'OK'
         
         self._log("ChildAgent running - waiting for commands...", "INFO")
         
-        # Start heartbeat sender thread
-        heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
-        heartbeat_thread.start()
-        
         try:
             while self.running:
                 time.sleep(1)
@@ -372,21 +365,6 @@ Write-Output 'OK'
             self._log("Interrupted by user", "WARNING")
         finally:
             self.stop()
-    
-    def _heartbeat_loop(self):
-        """Send periodic heartbeat to service."""
-        HEARTBEAT_INTERVAL = 10  # seconds
-        
-        while self.running:
-            try:
-                if self.ipc_client and self.ipc_client.connected:
-                    msg = IPCMessage(IPCCommand.HEARTBEAT, {"timestamp": time.time()})
-                    self.ipc_client.send_message(msg)
-                    self._log("Heartbeat sent", "DEBUG") if self.debug else None
-            except Exception as e:
-                self._log(f"Heartbeat error: {e}", "ERROR")
-            
-            time.sleep(HEARTBEAT_INTERVAL)
 
 
 def setup_autostart():

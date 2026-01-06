@@ -45,8 +45,23 @@ if agent_path not in sys.path:
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
-# Setup logging
-log_file = os.path.join(script_dir, 'agent_service.log')
+# Setup logging to ProgramData
+program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+if not os.path.exists(log_dir):
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except:
+        pass
+        
+log_file = os.path.join(log_dir, 'service_wrapper.log')
+
+# Fallback to local dir if ProgramData fails
+try:
+    with open(log_file, 'a') as f: pass
+except:
+    log_file = os.path.join(script_dir, 'service_wrapper.log')
+
 logging.basicConfig(
     filename=log_file,
     level=logging.INFO,
