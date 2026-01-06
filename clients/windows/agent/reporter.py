@@ -83,33 +83,7 @@ class UsageReporter:
             else:
                  # API Client handled logging
                  pass
-            
-            if response.status_code == 201:
-                response_data = response.json()
-                self.logger.success("Usage report sent successfully", logs_sent=len(usage_logs))
-                # CRITICAL: Clear ONLY the pending delta after success
-                self.monitor.clear_pending_usage()
-                
-                # Check for commands in response
-                if response_data and "commands" in response_data:
-                    self._handle_backend_commands(response_data["commands"])
-            elif response.status_code == 401:
-                # Device was deleted or credentials are invalid
-                self.logger.critical("Authentication failed - device deleted or invalid credentials",
-                                   device_id=device_id[:20] + "...",
-                                   status_code=401)
-                self.logger.error("Agent will stop - device must be re-paired")
-                # Signal to main agent to stop via monitor reference
-                if self.monitor and hasattr(self.monitor, 'agent'):
-                    if hasattr(self.monitor.agent, 'running'):
-                        self.monitor.agent.running = False
-                        self.logger.warning("Agent stopped due to invalid credentials")
-                else:
-                    self.logger.error("Cannot stop agent - monitor.agent reference not set")
-            else:
-                self.logger.error("Failed to send usage report",
-                               status_code=response.status_code,
-                               response_preview=response.text[:100])
+
         
         except Exception as e:
             self.logger.error("Unexpected error during reporting", error=str(e)[:100])
@@ -213,13 +187,6 @@ class UsageReporter:
             file_size = os.path.getsize(file_path)
             self.logger.info(f"Uploading screenshot to backend ({file_size} bytes)")
             
-            # Read file and encode to base64
-            with open(file_path, "rb") as f:
-                image_data = base64.b64encode(f.read()).decode("utf-8")
-            
-            file_size = os.path.getsize(file_path)
-            self.logger.info(f"Uploading screenshot to backend ({file_size} bytes)")
-            
             from .api_client import api_client
             success = api_client.upload_screenshot_base64(image_data)
             
@@ -227,11 +194,7 @@ class UsageReporter:
                 self.logger.success("Screenshot uploaded successfully")
             else:
                 self.logger.error("Failed to upload screenshot (see network logs)")
-            
-            if response.status_code in [200, 201]:
-                self.logger.success("Screenshot uploaded successfully")
-            else:
-                self.logger.error(f"Failed to upload screenshot: {response.status_code}")
+
         except Exception as e:
             self.logger.error(f"Upload screenshot error: {e}")
 

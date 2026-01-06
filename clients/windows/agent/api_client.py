@@ -112,10 +112,11 @@ class BackendAPIClient:
             return {}
             
         try:
-            url = f"{self._get_base_url()}/api/activity/log/batch"
+            url = f"{self._get_base_url()}/api/reports/agent/report"
             payload = {
                 "device_id": config.get("device_id"),
-                "logs": usage_logs
+                "api_key": config.get("api_key"),
+                "usage_logs": usage_logs
             }
             
             response = self.session.post(url, json=payload, timeout=10)
