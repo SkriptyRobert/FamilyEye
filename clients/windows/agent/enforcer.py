@@ -84,7 +84,7 @@ class RuleEnforcer:
         try:
             import json
             cache_data = {
-                "timestamp": time.time(),
+                "timestamp": self.get_trusted_utc_datetime().timestamp(),
                 "rules": self.rules,
                 "usage_by_app": self.usage_by_app,
                 "daily_usage": self.device_today_usage
@@ -188,16 +188,35 @@ class RuleEnforcer:
     
     def get_trusted_datetime(self) -> datetime:
         """Get trusted local datetime distinct from system clock if possible."""
+        # Validate sync age
+        SYNC_MAX_AGE = 3600  # 1 hour
+        if self.is_time_synced and (time.monotonic() - self.ref_monotonic > SYNC_MAX_AGE):
+            self.logger.warning("Time sync expired (older than 1h), reverting to system time")
+            self.is_time_synced = False
+
         if self.is_time_synced:
             # Calculate elapsed since sync
             elapsed = time.monotonic() - self.ref_monotonic
             current_server_ts = self.ref_server_ts + elapsed
             
             # Convert to local time (Server UTC TS -> Local DT)
-            # We assume system timezone setting is correct (hard to fake timezone vs time)
             return datetime.fromtimestamp(current_server_ts)
         else:
             return datetime.now()
+
+    def get_trusted_utc_datetime(self) -> datetime:
+        """Get trusted UTC datetime."""
+        # Re-check sync age (or rely on method above if called sequentially, but safer to check)
+        SYNC_MAX_AGE = 3600
+        if self.is_time_synced and (time.monotonic() - self.ref_monotonic > SYNC_MAX_AGE):
+             self.is_time_synced = False
+             
+        if self.is_time_synced:
+            elapsed = time.monotonic() - self.ref_monotonic
+            current_server_ts = self.ref_server_ts + elapsed
+            return datetime.utcfromtimestamp(current_server_ts)
+        else:
+            return datetime.utcnow()
             
     def _update_blocked_apps(self):
         """Update blocked apps list from rules and sync network blocking."""
@@ -472,8 +491,7 @@ class RuleEnforcer:
             return
         
         # Reset notification tracking daily
-        from datetime import date
-        today = date.today()
+        today = self.get_trusted_datetime().date()
         if self._last_limit_reset_date != today:
             self._apps_limit_exceeded_notified.clear()
             self._apps_limit_warning_notified.clear()
@@ -540,7 +558,7 @@ class RuleEnforcer:
     
     def _enforce_vpn_detection(self):
         """Detect and handle VPN/proxy usage."""
-        current_time = time.time()
+        current_time = time.monotonic()
         if current_time - self.last_vpn_check < self.vpn_check_interval:
             return
         
@@ -711,7 +729,7 @@ class RuleEnforcer:
     def update(self):
         """Update enforcement."""
         # Fetch rules periodically (every 30 seconds)
-        current_time = time.time()
+        current_time = time.monotonic()
         from .config import config
         polling_interval = config.get("polling_interval", 10)
             

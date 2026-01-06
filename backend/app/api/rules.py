@@ -180,9 +180,22 @@ async def agent_fetch_rules(
     
     # Calculate daily usage as COUNT of unique MINUTES (truncated to minute level)
     # This ensures all apps logged in same minute count as 1 minute, not N
-    from datetime import datetime, timezone
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    today_str = today_start.strftime('%Y-%m-%d')
+    from datetime import datetime, timezone, timedelta
+    
+    # Calculate "Today" based on DEVICE'S local time
+    # This aligns backend limits with agent's local daily reset
+    now_utc = datetime.now(timezone.utc)
+    offset_seconds = device.timezone_offset or 0
+    now_device = now_utc + timedelta(seconds=offset_seconds)
+    
+    # Device's start of day (Local)
+    device_today_start_local = now_device.replace(hour=0, minute=0, second=0, microsecond=0)
+    # Convert back to UTC for database query
+    query_start_utc = device_today_start_local - timedelta(seconds=offset_seconds)
+    # Ensure it's unaware or aware matching DB (SQLite is usually naive string, but usually we store naive UTC)
+    # If DB stores naive UTC, we need naive query_start_utc.
+    # reporter.py sends datetime.utcnow(), so it's naive UTC.
+    query_start_utc = query_start_utc.replace(tzinfo=None)
     
     from ..models import UsageLog
     from sqlalchemy import func
@@ -192,7 +205,7 @@ async def agent_fetch_rules(
         func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device.id,
-        UsageLog.timestamp.like(f'{today_str}%')
+        UsageLog.timestamp >= query_start_utc
     ).scalar() or 0
     
     reporting_interval = 60  # seconds
@@ -204,7 +217,7 @@ async def agent_fetch_rules(
         func.sum(UsageLog.duration)
     ).filter(
         UsageLog.device_id == device.id,
-        UsageLog.timestamp.like(f'{today_str}%')
+        UsageLog.timestamp >= query_start_utc
     ).group_by(UsageLog.app_name).all()
     
     usage_by_app = {row[0]: row[1] for row in usage_by_app_rows}

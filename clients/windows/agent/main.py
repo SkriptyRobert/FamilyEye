@@ -66,9 +66,19 @@ class ParentalControlAgent:
         # Set monitor in enforcer
         self.enforcer.set_monitor(self.monitor)
         
-        # Set agent reference in monitor and reporter for stopping on 401
+        # Set agent reference in monitor and reporter
         self.monitor.agent = self
         self.reporter.monitor = self.monitor
+        
+        # Link Trusted Time from Enforcer to Reporter (Anti-Cheat)
+        # Reporter needs UTC for database timestamps
+        self.reporter.set_time_provider(self.enforcer.get_trusted_utc_datetime)
+        
+        # Monitor needs Local for daily reset, UTC for cache
+        self.monitor.set_time_providers(
+            self.enforcer.get_trusted_datetime,
+            self.enforcer.get_trusted_utc_datetime
+        )
         
         self.monitor_thread = None
         self.enforcer_thread = None

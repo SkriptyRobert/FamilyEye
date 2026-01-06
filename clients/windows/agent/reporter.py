@@ -13,9 +13,14 @@ class UsageReporter:
         self.monitor = monitor
         self.last_report = time.time()
         self.logger = get_logger('REPORTER')
+        self.last_report = time.time()
+        self.logger = get_logger('REPORTER')
         self.ipc_server = None
-    
-    def set_ipc_server(self, ipc_server):
+        self.time_provider = None
+        
+    def set_time_provider(self, provider):
+        """Set trusted time provider function."""
+        self.time_provider = provider
         """Set IPC server for sending commands to ChildAgent."""
         self.ipc_server = ipc_server
     
@@ -47,7 +52,12 @@ class UsageReporter:
             
             # Convert to log format
             from datetime import datetime
-            batch_timestamp = datetime.utcnow().isoformat()
+            from datetime import datetime
+            if self.time_provider:
+                # Use trusted time if available (anti-cheat)
+                batch_timestamp = self.time_provider().isoformat()
+            else:
+                batch_timestamp = datetime.utcnow().isoformat()
             
             for app_name, duration in usage_stats.items():
                 duration_seconds = int(round(duration))

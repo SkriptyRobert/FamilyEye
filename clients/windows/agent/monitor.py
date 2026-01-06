@@ -85,6 +85,14 @@ class AppMonitor:
         
         # Load cached usage logs on startup
         self._load_usage_cache()
+        
+        self.local_time_provider = None
+        self.utc_time_provider = None
+
+    def set_time_providers(self, local_provider, utc_provider):
+        """Set trusted time providers (Local for daily reset, UTC for cache)."""
+        self.local_time_provider = local_provider
+        self.utc_time_provider = utc_provider
 
     def _get_cache_path(self):
         """Get path for usage cache file."""
@@ -101,8 +109,14 @@ class AppMonitor:
         """Save current usage stats to local cache."""
         try:
             import json
+            
+            # Use Trusted UTC Timestamp if available
+            ts = time.time()
+            if self.utc_time_provider:
+                ts = self.utc_time_provider().timestamp()
+                
             cache_data = {
-                "timestamp": time.time(),
+                "timestamp": ts,
                 "boot_time": self.boot_time,
                 "usage_today": dict(self.usage_today),
                 "usage_pending": dict(self.usage_pending),
@@ -385,7 +399,12 @@ class AppMonitor:
         self.raw_processes = raw_process_list
         
         # DETECT DATE CHANGE (Daily Reset)
-        current_date = time.strftime('%Y-%m-%d')
+        # Use Trusted Local Time for correct "Midnight" detection
+        if self.local_time_provider:
+            current_date = self.local_time_provider().strftime('%Y-%m-%d')
+        else:
+            current_date = time.strftime('%Y-%m-%d')
+            
         if current_date != self.last_date:
             self.logger.info(f"New day detected ({current_date}), resetting daily stats.")
             self.usage_today.clear()
