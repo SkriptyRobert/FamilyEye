@@ -67,17 +67,22 @@ class UsageReporter:
             # Send to backend
             # ... (heartbeat logic or prep info) ...
             
-            response = requests.post(
-                f"{backend_url}/api/reports/agent/report",
-                json={
-                    "device_id": device_id,
-                    "api_key": api_key,
-                    "usage_logs": usage_logs,
-                    "running_processes": self.monitor.get_running_processes() if hasattr(self.monitor, 'get_running_processes') else []
-                },
-                timeout=30,
-                verify=config.get_ssl_verify()
-            )
+            # Send to backend using centralized client
+            from .api_client import api_client
+            
+            response_data = api_client.send_reports(usage_logs)
+            
+            if response_data is not None:
+                self.logger.success("Usage report sent successfully", logs_sent=len(usage_logs))
+                # CRITICAL: Clear ONLY the pending delta after success
+                self.monitor.clear_pending_usage()
+                
+                # Check for commands in response
+                if "commands" in response_data:
+                    self._handle_backend_commands(response_data["commands"])
+            else:
+                 # API Client handled logging
+                 pass
             
             if response.status_code == 201:
                 response_data = response.json()
@@ -106,10 +111,6 @@ class UsageReporter:
                                status_code=response.status_code,
                                response_preview=response.text[:100])
         
-        except requests.exceptions.Timeout:
-            self.logger.error("Request timeout - backend not responding", timeout_seconds=30)
-        except requests.exceptions.ConnectionError as e:
-            self.logger.error("Connection error - cannot reach backend", error=str(e)[:50])
         except Exception as e:
             self.logger.error("Unexpected error during reporting", error=str(e)[:100])
 
@@ -212,16 +213,20 @@ class UsageReporter:
             file_size = os.path.getsize(file_path)
             self.logger.info(f"Uploading screenshot to backend ({file_size} bytes)")
             
-            response = requests.post(
-                f"{backend_url}/api/reports/agent/screenshot",
-                json={
-                    "device_id": device_id,
-                    "api_key": api_key,
-                    "image": image_data
-                },
-                timeout=60,
-                verify=config.get_ssl_verify()
-            )
+            # Read file and encode to base64
+            with open(file_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
+            
+            file_size = os.path.getsize(file_path)
+            self.logger.info(f"Uploading screenshot to backend ({file_size} bytes)")
+            
+            from .api_client import api_client
+            success = api_client.upload_screenshot_base64(image_data)
+            
+            if success:
+                self.logger.success("Screenshot uploaded successfully")
+            else:
+                self.logger.error("Failed to upload screenshot (see network logs)")
             
             if response.status_code in [200, 201]:
                 self.logger.success("Screenshot uploaded successfully")

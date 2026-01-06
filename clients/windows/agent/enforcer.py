@@ -112,80 +112,43 @@ class RuleEnforcer:
             self.logger.warning(f"Failed to load cached rules: {e}")
 
     def _fetch_rules(self):
-        """Fetch rules from backend."""
+        """Fetch rules from backend using API Client."""
         try:
-            import requests
-            backend_url = config.get("backend_url")
-            device_id = config.get("device_id")
-            api_key = config.get("api_key")
+            from .api_client import api_client
             
-            if not device_id or not api_key:
-                self.logger.warning("Missing device_id or api_key, skipping rules fetch")
+            # Skip if we don't have basic config (api_client handles details, but good to check)
+            if not config.is_configured():
                 return
+
+            rules_data = api_client.fetch_rules()
             
-            # self.logger.info(f"Fetching rules from {backend_url}/api/rules/agent/fetch")
-            try:
-                response = requests.post(
-                    f"{backend_url}/api/rules/agent/fetch",
-                    json={"device_id": device_id, "api_key": api_key},
-                    timeout=30,  # Increased timeout for rules fetch
-                    verify=config.get_ssl_verify()  # Accept self-signed certificates
-                )
-                
-                if response.status_code == 200:
-                    rules_data = response.json()
-                    # Handle both direct list and wrapped response
-                    if isinstance(rules_data, list):
-                        self.rules = rules_data
-                    elif isinstance(rules_data, dict) and "rules" in rules_data:
-                        self.rules = rules_data["rules"]
-                        # Store backend-reported usage
-                        self.usage_by_app = rules_data.get("usage_by_app", {})
-                        # Store device daily usage for daily limit enforcement
-                        self.device_today_usage = rules_data.get("daily_usage", 0)
-                        self.logger.debug(f"Received usage stats: {len(self.usage_by_app)} apps, {self.device_today_usage}s total today")
-                    else:
-                        self.rules = []
-                    
-                    self._update_blocked_apps()
-                    self._save_rules_cache()  # Cache successful rules
-                    self.logger.info(f"Successfully fetched {len(self.rules)} rules")
-                    
-                elif response.status_code == 401:
-                    # Device was deleted or credentials are invalid
-                    self.logger.critical("Authentication failed - device deleted or invalid credentials",
-                                       device_id=device_id[:20] + "...",
-                                       status_code=401)
-                    # Do not load cache here - credentials are demonstrably wrong
-                    
-                    self.logger.error("Agent will stop - device must be re-paired")
-                    # Signal to main agent to stop via monitor reference
-                    if self.monitor and hasattr(self.monitor, 'agent'):
-                        if hasattr(self.monitor.agent, 'running'):
-                            self.monitor.agent.running = False
-                            self.logger.warning("Agent stopped due to invalid credentials")
-                    else:
-                        self.logger.error("Cannot stop agent - monitor.agent reference not set")
+            if rules_data:
+                # Handle both direct list and wrapped response
+                if isinstance(rules_data, list):
+                    self.rules = rules_data
+                elif isinstance(rules_data, dict) and "rules" in rules_data:
+                    self.rules = rules_data["rules"]
+                    # Store backend-reported usage
+                    self.usage_by_app = rules_data.get("usage_by_app", {})
+                    # Store device daily usage for daily limit enforcement
+                    self.device_today_usage = rules_data.get("daily_usage", 0)
+                    self.logger.debug(f"Received usage stats: {len(self.usage_by_app)} apps, {self.device_today_usage}s total today")
                 else:
-                    self.logger.error(f"Failed to fetch rules: {response.status_code} - {response.text}")
-                    self.logger.info("Falling back to local cache")
-                    self._load_rules_cache()
-                    
-            except requests.exceptions.Timeout:
-                self.logger.error(f"Timeout fetching rules from {backend_url} (timeout=30s)")
-                self.logger.info("Falling back to local cache (Network Timeout)")
+                    self.rules = []
+                
+                self._update_blocked_apps()
+                self._save_rules_cache()
+                self.logger.debug(f"Rules updated: {len(self.rules)} rules")
+            else:
+                # Fetch failed (network or auth). API Client handles logging.
+                # Fallback to cache for resilience (unless 401, which kills agent anyway)
+                self.logger.info("Falling back to local cache")
                 self._load_rules_cache()
-                
-            except requests.exceptions.ConnectionError as e:
-                self.logger.error(f"Connection error fetching rules: {e}")
-                self.logger.info("Falling back to local cache (No Connection)")
-                self._load_rules_cache()
-                
-            except Exception as e:
-                self.logger.error(f"Error fetching rules: {type(e).__name__}: {e}")
-                
+
         except Exception as e:
-            self.logger.error(f"Error in _fetch_rules: {type(e).__name__}: {e}")
+            self.logger.error(f"Error in rule fetch cycle: {e}")
+            self._load_rules_cache()
+
     
     def _update_blocked_apps(self):
         """Update blocked apps list from rules and sync network blocking."""

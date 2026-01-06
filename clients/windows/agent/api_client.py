@@ -1,0 +1,204 @@
+"""Centralized API Client for FamilyEye Agent.
+
+Handles all HTTP communication with the backend, including:
+- Connection pooling (Session)
+- Authentication headers
+- SSL verification
+- Error handling
+- Retry logic with exponential backoff
+"""
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+import json
+import time
+from typing import Optional, Any, Dict, List
+from .config import config
+from .logger import get_logger
+
+# Suppress insecure request warnings if SSL verify is False
+import urllib3
+if not config.get_ssl_verify():
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+class BackendAPIClient:
+    """Thread-safe API client for backend communication."""
+    
+    def __init__(self):
+        self.logger = get_logger('NETWORK')
+        self.session = self._create_session()
+        self._update_headers()
+        self._auth_failure_callback = None
+        
+    def set_auth_failure_callback(self, callback):
+        """Set callback to be called on 401 Unauthorized (Critical)."""
+        self._auth_failure_callback = callback
+
+    def _handle_401(self):
+        """Handle 401 Unauthorized response."""
+        self.logger.error("Unauthorized: Invalid credentials or device deleted")
+        if self._auth_failure_callback:
+            try:
+                self._auth_failure_callback()
+            except Exception as e:
+                self.logger.error(f"Error in auth failure callback: {e}")
+
+        """Create a session with retry logic and connection pooling."""
+        session = requests.Session()
+        
+        # Retry strategy: 3 retries, backoff factor 1 (1s, 2s, 4s...)
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        
+        # Global SSL setting
+        session.verify = config.get_ssl_verify()
+        return session
+        
+    def _update_headers(self):
+        """Update session headers with current credentials."""
+        device_id = config.get("device_id")
+        api_key = config.get("api_key")
+        
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "User-Agent": "FamilyEye-Agent/2.0.1",
+            "X-Device-ID": device_id if device_id else "",
+            "X-API-Key": api_key if api_key else ""
+        })
+
+    def _get_base_url(self) -> str:
+        """Get current backend URL from config."""
+        url = config.get("backend_url", "https://localhost:8000")
+        return url.rstrip('/')
+
+    def fetch_rules(self) -> Optional[Dict]:
+        """Fetch latest rules from backend."""
+        try:
+            url = f"{self._get_base_url()}/api/rules/agent/fetch"
+            # Payload is redundant if headers are used, but keeping for compatibility
+            payload = {
+                "device_id": config.get("device_id"),
+                "api_key": config.get("api_key")
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                self.logger.debug("Rules fetched successfully")
+                return response.json()
+            elif response.status_code == 401:
+                self._handle_401()
+                return None
+            else:
+                self.logger.warning(f"Failed to fetch rules: HTTP {response.status_code}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            self.logger.warning(f"Connection error fetching rules: {e}")
+            return None
+            
+    def send_reports(self, usage_logs: List[Dict]) -> Optional[Dict]:
+        """Send usage logs to backend. Returns response JSON on success."""
+        if not usage_logs:
+            return {}
+            
+        try:
+            url = f"{self._get_base_url()}/api/activity/log/batch"
+            payload = {
+                "device_id": config.get("device_id"),
+                "logs": usage_logs
+            }
+            
+            response = self.session.post(url, json=payload, timeout=10)
+            
+            if response.status_code in [200, 201]:
+                self.logger.info(f"Sent {len(usage_logs)} activity logs")
+                return response.json()
+            elif response.status_code == 401:
+                self._handle_401()
+                return None
+            else:
+                self.logger.warning(f"Failed to send reports: HTTP {response.status_code} - {response.text}")
+                return None
+                
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Network error sending reports: {e}")
+            return None
+                
+
+
+    def upload_screenshot_multipart(self, image_data: bytes, filename: str = "screenshot.jpg") -> bool:
+        """Upload screenshot using multipart/form-data (Optimized)."""
+        try:
+            url = f"{self._get_base_url()}/api/screenshots/upload"
+            
+            # For multipart, we don't set Content-Type header (requests does it with boundary)
+            # We must temporarily remove it or create a new request without the global session header?
+            # Requests handles this automatically if 'files' is provided.
+            
+            # We need to send auth in body or headers? 
+            # Current backend likely expects headers or form fields. 
+            # Assuming headers are OK (X-Device-ID).
+            
+            files = {
+                'file': (filename, image_data, 'image/jpeg')
+            }
+            data = {
+                'device_id': config.get("device_id"),
+                'timestamp': str(time.time())
+            }
+            
+            response = self.session.post(url, files=files, data=data, timeout=30)
+            
+            if response.status_code == 200:
+                self.logger.info("Screenshot uploaded successfully")
+                return True
+            else:
+                self.logger.warning(f"Screenshot upload failed: {response.status_code} - {response.text}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error uploading screenshot: {e}")
+            return False
+
+    def upload_screenshot_base64(self, base64_image: str) -> bool:
+        """Upload screenshot using base64 (Legacy/Current Backend)."""
+        try:
+            url = f"{self._get_base_url()}/api/reports/agent/screenshot"
+            
+            payload = {
+                "device_id": config.get("device_id"),
+                "api_key": config.get("api_key"),
+                "image": base64_image
+            }
+            
+            # Use a longer timeout for large payloads
+            response = self.session.post(url, json=payload, timeout=60)
+            
+            if response.status_code in [200, 201]:
+                self.logger.info("Screenshot uploaded successfully (Base64)")
+                return True
+            else:
+                self.logger.warning(f"Screenshot upload failed: {response.status_code} - {response.text[:100]}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error uploading screenshot (Base64): {e}")
+            return False
+
+    def check_credentials(self) -> bool:
+        """Validate credentials by performing a lightweight fetch."""
+        # Using fetch_rules as a probe
+        result = self.fetch_rules()
+        return result is not None
+
+# Global instance
+api_client = BackendAPIClient()

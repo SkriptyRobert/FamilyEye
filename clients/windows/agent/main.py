@@ -348,6 +348,17 @@ class ParentalControlAgent:
                            api_key_set=bool(config.get('api_key')))
             return False
         
+        # Initialize API Client and register auth failure callback
+        from .api_client import api_client
+        
+        self.auth_failed = False
+        def on_auth_fail():
+            self.auth_failed = True
+            self.logger.critical("Auth failure detected - stopping agent")
+            self.stop()
+            
+        api_client.set_auth_failure_callback(on_auth_fail)
+
         # Validate credentials with backend before starting
         if not self._validate_credentials():
             self.logger.critical("Credentials validation failed - agent will not start")
@@ -450,37 +461,20 @@ class ParentalControlAgent:
             
             validate_logger.info("Validating credentials with backend", backend=backend_url)
             
-            # Try to fetch rules - this will validate credentials
-            start_time = time.time()
-            response = requests.post(
-                f"{backend_url}/api/rules/agent/fetch",
-                json={"device_id": device_id, "api_key": api_key},
-                timeout=10
-            )
-            response_time = (time.time() - start_time) * 1000  # ms
+            # Use API Client to validate
+            from .api_client import api_client
             
-            if response.status_code == 200:
-                validate_logger.success("Credentials validated successfully",
-                                      device_id=device_id[:20] + "...",
-                                      response_time_ms=f"{response_time:.0f}ms")
-                return True
-            elif response.status_code == 401:
-                validate_logger.critical("Invalid credentials - authentication failed",
-                                       device_id=device_id[:20] + "...",
-                                       status_code=401)
+            # Check if we triggered 401 during the fetch
+            # Note: The callback registered in start() sets self.auth_failed = True
+            api_client.fetch_rules()
+            
+            if hasattr(self, 'auth_failed') and self.auth_failed:
+                validate_logger.critical("Invalid credentials - authentication failed")
                 return False
-            else:
-                validate_logger.warning("Backend returned unexpected status",
-                                      status_code=response.status_code,
-                                      response_preview=response.text[:100])
-                # Don't fail on other errors - might be temporary network issue
-                return True
                 
-        except requests.exceptions.ConnectionError:
-            validate_logger.warning("Cannot connect to backend - will start anyway",
-                                  backend=backend_url,
-                                  note="May be temporary network issue")
+            validate_logger.success("Credentials check complete (or offline mode)")
             return True
+
         except Exception as e:
             validate_logger.warning("Error validating credentials - will start anyway",
                                   error_type=type(e).__name__,
