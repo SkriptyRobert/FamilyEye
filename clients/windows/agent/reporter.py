@@ -21,6 +21,8 @@ class UsageReporter:
     def set_time_provider(self, provider):
         """Set trusted time provider function."""
         self.time_provider = provider
+
+    def set_ipc_server(self, ipc_server):
         """Set IPC server for sending commands to ChildAgent."""
         self.ipc_server = ipc_server
     
