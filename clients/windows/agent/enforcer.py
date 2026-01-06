@@ -455,7 +455,10 @@ class RuleEnforcer:
                 # Use Trusted Time
                 now = self.get_trusted_datetime()
                 current_time_str = now.strftime("%H:%M")
-                current_day = now.strftime("%a").lower()[:3]
+                
+                # Robust Day Check (Locate-independent)
+                days_map = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+                current_day = days_map[now.weekday()]
                 
                 is_allowed_now = False
                 for sch in app_schedules:
@@ -469,7 +472,14 @@ class RuleEnforcer:
                         is_allowed_now = True
                         break
                 
+                        break
+                    else:
+                        # Log why it failed (debug)
+                        # self.logger.debug(f"Schedule mismatch: {current_time_str} not in {sch.get('start_time')}-{sch.get('end_time')}")
+                        pass
+                
                 if not is_allowed_now:
+                    self.logger.info(f"Checking schedule failure: {app_name}. Day:{current_day}, Time:{current_time_str}. Rules: {app_schedules}")
                     self.logger.warning(f"APP OUTSIDE SCHEDULE: {app_name} (Killing)")
                     self._kill_app(app_name)
                     # Optional: Notification for app schedule?
