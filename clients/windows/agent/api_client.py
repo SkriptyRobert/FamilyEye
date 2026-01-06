@@ -43,6 +43,7 @@ class BackendAPIClient:
             except Exception as e:
                 self.logger.error(f"Error in auth failure callback: {e}")
 
+    def _create_session(self):
         """Create a session with retry logic and connection pooling."""
         session = requests.Session()
         
