@@ -59,12 +59,13 @@ class NetworkController:
                 with open(hosts_path, 'a', encoding='utf-8') as f:
                     f.write(block_entry)
                 self.blocked_websites.add(domain_clean)
-                print(f"[NETWORK] Blocked website: {domain_clean}")
+                self.logger.info(f"Blocked website: {domain_clean}")
                 return True
             except PermissionError:
                 return False
         except Exception as e:
             print(f"[NETWORK] Error blocking website {domain}: {e}")
+            self.logger.error(f"Error blocking website {domain}: {e}")
             return False
     
     def unblock_website(self, domain: str) -> bool:
@@ -89,12 +90,12 @@ class NetworkController:
                 with open(hosts_path, 'w', encoding='utf-8') as f:
                     f.writelines(filtered_lines)
                 self.blocked_websites.discard(domain_clean)
-                print(f"[NETWORK] Unblocked website: {domain_clean}")
+                self.logger.info(f"Unblocked website: {domain_clean}")
                 return True
             except PermissionError:
                 return False
         except Exception as e:
-            print(f"[NETWORK] Error unblocking website {domain}: {e}")
+            self.logger.error(f"Error unblocking website {domain}: {e}")
             return False
 
     def clear_all_blocked_websites(self) -> bool:
@@ -114,7 +115,7 @@ class NetworkController:
                 f.writelines(filtered_lines)
             return True
         except Exception as e:
-            print(f"[NETWORK] Error during full website cleanup: {e}")
+            self.logger.error(f"Error during full website cleanup: {e}")
             return False
     
     def set_dns_servers(self, dns_servers: List[str]) -> bool:
@@ -126,7 +127,7 @@ class NetworkController:
             # Get active network adapter
             adapter_name = self._get_active_adapter()
             if not adapter_name:
-                print("[NETWORK] Could not find active network adapter")
+                self.logger.warning("Could not find active network adapter")
                 return False
             
             # Set DNS using netsh
@@ -137,7 +138,7 @@ class NetworkController:
             
             if result.returncode == 0:
                 self.allowed_dns_servers = dns_servers
-                print(f"[NETWORK] Set DNS servers: {dns_servers}")
+                self.logger.info(f"Set DNS servers: {dns_servers}")
                 
                 # Set secondary DNS if provided
                 if len(dns_servers) > 1:
@@ -147,10 +148,10 @@ class NetworkController:
                 
                 return True
             else:
-                print(f"[NETWORK] Failed to set DNS: {result.stderr}")
+                self.logger.error(f"Failed to set DNS: {result.stderr}")
                 return False
         except Exception as e:
-            print(f"[NETWORK] Error setting DNS servers: {e}")
+            self.logger.error(f"Error setting DNS servers: {e}")
             return False
     
     def _get_active_adapter(self) -> Optional[str]:
@@ -198,7 +199,7 @@ class NetworkController:
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
         except Exception as e:
-            print(f"[NETWORK] Error detecting VPN: {e}")
+            self.logger.error(f"Error detecting VPN: {e}")
         
         return False
     
@@ -212,12 +213,12 @@ class NetworkController:
                     # Check for proxy processes
                     for proxy_name in self.proxy_processes:
                         if proxy_name in proc_name:
-                            print(f"[NETWORK] Proxy detected: {proc_name}")
+                            self.logger.warning(f"Proxy detected: {proc_name}")
                             return True
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
         except Exception as e:
-            print(f"[NETWORK] Error detecting proxy: {e}")
+            self.logger.error(f"Error detecting proxy: {e}")
         
         return False
     
@@ -242,7 +243,7 @@ class NetworkController:
             # Create new rule
             app_path = self._find_app_path(app_name)
             if not app_path:
-                print(f"[NETWORK] Could not find path for {app_name}")
+                self.logger.warning(f"Could not find path for {app_name}")
                 return False
             
             cmd = [
@@ -257,13 +258,13 @@ class NetworkController:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
             
             if result.returncode == 0:
-                print(f"[NETWORK] Blocked network access for {app_name}")
+                self.logger.info(f"Blocked network access for {app_name}")
                 return True
             else:
-                print(f"[NETWORK] Failed to block network for {app_name}: {result.stderr}")
+                self.logger.error(f"Failed to block network for {app_name}: {result.stderr}")
                 return False
         except Exception as e:
-            print(f"[NETWORK] Error blocking network for {app_name}: {e}")
+            self.logger.error(f"Error blocking network for {app_name}: {e}")
             return False
     
     def _resolve_domain(self, url_or_domain: str) -> Optional[str]:
@@ -482,7 +483,7 @@ class NetworkController:
                             dns_servers.append(ip_match.group())
                 return dns_servers
         except Exception as e:
-            print(f"[NETWORK] Error getting DNS: {e}")
+            self.logger.error(f"Error getting DNS: {e}")
         
         return []
 

@@ -196,6 +196,63 @@ class BackendAPIClient:
             self.logger.error(f"Error uploading screenshot (Base64): {e}")
             return False
 
+    def report_critical_event(self, event_data: Dict) -> bool:
+        """Report critical event (e.g., limit exceeded) to backend. 
+        
+        Using this method ensures centralizedauth handling and retries.
+        """
+        try:
+            url = f"{self._get_base_url()}/api/reports/agent/critical-event"
+            # Ensure auth data is present if caller didn't supply it
+            if "device_id" not in event_data:
+                event_data["device_id"] = config.get("device_id")
+            if "api_key" not in event_data:
+                event_data["api_key"] = config.get("api_key")
+                
+            response = self.session.post(url, json=event_data, timeout=5)
+            
+            if response.status_code in [200, 201]:
+                self.logger.info(f"Critical event reported: {event_data.get('event_type')}")
+                return True
+            elif response.status_code == 401:
+                self._handle_401()
+                return False
+            else:
+                self.logger.warning(f"Failed to report critical event: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error reporting critical event: {e}")
+            return False
+
+    def report_security_event(self, event_data: Dict) -> bool:
+        """Report security event (e.g., boot detection) to backend.
+        
+        This replaces the custom retry logic in boot_protection.py with
+        standardized client retry mechanisms.
+        """
+        try:
+            url = f"{self._get_base_url()}/api/security/events"
+            # Ensure auth data
+            if "device_id" not in event_data:
+                event_data["device_id"] = config.get("device_id")
+            
+            response = self.session.post(url, json=event_data, timeout=5)
+            
+            if response.status_code in [200, 201]:
+                self.logger.info(f"Security event reported: {event_data.get('event_type')}")
+                return True
+            elif response.status_code == 401:
+                self._handle_401()
+                return False
+            else:
+                self.logger.warning(f"Failed to report security event: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error reporting security event: {e}")
+            return False
+
     def check_credentials(self) -> bool:
         """Validate credentials by performing a lightweight fetch."""
         # Using fetch_rules as a probe

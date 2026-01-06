@@ -291,23 +291,13 @@ class RuleEnforcer:
                                 used_seconds: int = None, limit_seconds: int = None,
                                 message: str = None):
         """
-        Report critical event to backend immediately.
-        This allows dashboard to update in real-time when limits are exceeded.
+        Report critical event to backend immediately using centralized API client.
         """
         try:
-            import requests
+            from .api_client import api_client
             from datetime import datetime, timezone
             
-            backend_url = config.get("backend_url")
-            device_id = config.get("device_id")
-            api_key = config.get("api_key")
-            
-            if not backend_url or not device_id or not api_key:
-                return
-            
             payload = {
-                "device_id": device_id,
-                "api_key": api_key,
                 "event_type": event_type,
                 "app_name": app_name,
                 "used_seconds": used_seconds,
@@ -316,20 +306,8 @@ class RuleEnforcer:
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
-            # Use short timeout - this is best-effort, don't block enforcement
-            response = requests.post(
-                f"{backend_url}/api/reports/agent/critical-event",
-                json=payload,
-                timeout=3,
-                verify=config.get_ssl_verify()
-            )
-            
-            if response.status_code == 201:
-                self.logger.info(f"Critical event reported: {event_type} for {app_name}")
-            else:
-                self.logger.warning(f"Critical event report failed: {response.status_code} - {response.text}")
-                if response.status_code == 422:
-                    self.logger.debug(f"Failed payload: {payload}")
+            # Use centralized client handles retry and error logging
+            api_client.report_critical_event(payload)
                 
         except Exception as e:
             # Don't let reporting failures affect enforcement

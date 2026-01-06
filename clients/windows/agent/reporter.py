@@ -1,6 +1,5 @@
 """Usage reporting (batch)."""
 import time
-import requests
 from typing import List, Dict
 from .config import config
 from .monitor import AppMonitor

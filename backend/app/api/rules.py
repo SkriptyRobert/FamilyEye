@@ -30,6 +30,31 @@ async def create_rule(
             detail="Device not found"
         )
     
+    # Check for existing rule of the same type for this app/website
+    existing_rule_query = db.query(Rule).filter(
+        Rule.device_id == rule_data.device_id,
+        Rule.rule_type == rule_data.rule_type
+    )
+    
+    if rule_data.app_name:
+        existing_rule_query = existing_rule_query.filter(Rule.app_name == rule_data.app_name)
+    elif rule_data.website_url:
+        existing_rule_query = existing_rule_query.filter(Rule.website_url == rule_data.website_url)
+    elif rule_data.rule_type in ["daily_limit", "lock_device"]:
+        # Singleton rules per device
+        pass
+        
+    existing_rule = existing_rule_query.first()
+    
+    if existing_rule:
+        # Update existing rule
+        for key, value in rule_data.dict().items():
+            setattr(existing_rule, key, value)
+        
+        db.commit()
+        db.refresh(existing_rule)
+        return existing_rule
+
     new_rule = Rule(**rule_data.dict())
     db.add(new_rule)
     db.commit()

@@ -11,17 +11,12 @@ import sys
 import time
 import threading
 import subprocess
-import requests
 import psutil
 from .config import config
 from .monitor import AppMonitor
 from .enforcer import RuleEnforcer
 from .reporter import UsageReporter
 from .logger import get_logger
-import urllib3
-
-# Suppress SSL warnings for self-signed certs
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Import boot protection
 try:

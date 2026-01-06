@@ -110,61 +110,27 @@ class BootProtection:
     
     def _report_boot_event(self, event_type):
         """Nahlásit boot event na backend."""
-        if not self.backend_url or not self.device_id or not self.api_key:
-            self.log(f"Boot event detekován, ale backend není nakonfigurován: {event_type}", "WARNING")
-            return
+        if not self.backend_url:
+            # Try to get from config context if possible, or fallback
+            from .config import config
+            if config.is_configured():
+                self.backend_url = config.get("backend_url")
         
         try:
-            import requests
-            # Zkusit různé možné endpointy
-            endpoints = [
-                f"{self.backend_url}/api/devices/boot-event",
-                f"{self.backend_url}/api/devices/security-event",
-                f"{self.backend_url}/api/reports/security"
-            ]
+            from .api_client import api_client
             
             event_data = {
-                "device_id": self.device_id,
-                "api_key": self.api_key,
                 "event_type": event_type,
                 "timestamp": time.time(),
                 "message": f"Boot event detected: {event_type}"
             }
             
-            reported = False
-            for endpoint in endpoints:
-                try:
-                    response = requests.post(
-                        endpoint,
-                        json=event_data,
-                        timeout=5
-                    )
-                    if response.status_code in [200, 201]:
-                        self.log(f"Boot event nahlášen na {endpoint}: {event_type}", "INFO")
-                        reported = True
-                        break
-                except:
-                    continue
-            
-            if not reported:
-                # Pokud žádný endpoint nefunguje, zkusit použít standardní reporting endpoint
-                try:
-                    requests.post(
-                        f"{self.backend_url}/api/reports/agent/report",
-                        json={
-                            "device_id": self.device_id,
-                            "api_key": self.api_key,
-                            "usage_logs": [],
-                            "security_events": [{
-                                "type": event_type,
-                                "timestamp": time.time()
-                            }]
-                        },
-                        timeout=5
-                    )
-                    self.log(f"Boot event nahlášen přes reporting endpoint: {event_type}", "INFO")
-                except Exception as e:
-                    self.log(f"Chyba při nahlášení boot eventu: {e}", "ERROR")
+            # Use centralized client
+            if api_client.report_security_event(event_data):
+                self.log(f"Boot event nahlášen: {event_type}", "INFO")
+            else:
+                self.log(f"Nepodařilo se nahlásit boot event: {event_type}", "WARNING")
+                
         except Exception as e:
             self.log(f"Chyba při nahlášení boot eventu: {e}", "ERROR")
     

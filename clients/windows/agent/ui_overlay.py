@@ -165,8 +165,9 @@ $notifier.Show([Windows.UI.Notifications.ToastNotification]::new($template))
         escaped_msg = _escape_xaml(message)
         
         ps_script = f'''
-Add-Type -AssemblyName PresentationFramework
-[xml]$xaml = @"
+try {{
+    Add-Type -AssemblyName PresentationFramework
+    [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{_escape_xaml(title)}" Height="280" Width="480" WindowStyle="None" ResizeMode="NoResize"
@@ -214,8 +215,13 @@ Add-Type -AssemblyName PresentationFramework
     </Border>
 </Window>
 "@
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
-[Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+    $reader = (New-Object System.Xml.XmlNodeReader $xaml)
+    [Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+    exit 0
+}} catch {{
+    Write-Error $_
+    exit 1
+}}
 '''
         _run_powershell_async(ps_script, self._log, fallback_title=title, fallback_message=message, fallback_is_error=is_error)
         self._log(f"Popup: {title}")
@@ -226,8 +232,9 @@ $reader = (New-Object System.Xml.XmlNodeReader $xaml)
         accent = "#6366f1"
         
         ps_script = f'''
-Add-Type -AssemblyName PresentationFramework
-[xml]$xaml = @"
+try {{
+    Add-Type -AssemblyName PresentationFramework
+    [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="FamilyEye" Height="180" Width="400" WindowStyle="None" ResizeMode="NoResize"
@@ -268,8 +275,13 @@ Add-Type -AssemblyName PresentationFramework
     </Border>
 </Window>
 "@
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
-[Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+    $reader = (New-Object System.Xml.XmlNodeReader $xaml)
+    [Windows.Markup.XamlReader]::Load($reader).ShowDialog() | Out-Null
+    exit 0
+}} catch {{
+    Write-Error $_
+    exit 1
+}}
 '''
         _run_powershell_async(ps_script, self._log, fallback_title="FamilyEye", fallback_message=message, fallback_is_error=False)
         self._log(f"Branded notification: {message}")
@@ -361,12 +373,13 @@ $window.ShowDialog() | Out-Null
         escaped_reason = _escape_xaml(reason)
         
         ps_script = f'''
-Add-Type -AssemblyName PresentationFramework
-Add-Type -AssemblyName System.Windows.Forms
+try {{
+    Add-Type -AssemblyName PresentationFramework
+    Add-Type -AssemblyName System.Windows.Forms
 
-$countdownSeconds = {seconds}
+    $countdownSeconds = {seconds}
 
-[xml]$xaml = @"
+    [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         Title="FamilyEye" Height="300" Width="500" WindowStyle="None" ResizeMode="NoResize"
         AllowsTransparency="True" Background="Transparent" Topmost="True" WindowStartupLocation="CenterScreen">
@@ -396,26 +409,31 @@ $countdownSeconds = {seconds}
 </Window>
 "@
 
-$reader = (New-Object System.Xml.XmlNodeReader $xaml)
-$window = [Windows.Markup.XamlReader]::Load($reader)
-$countdownText = $window.FindName("CountdownText")
+    $reader = (New-Object System.Xml.XmlNodeReader $xaml)
+    $window = [Windows.Markup.XamlReader]::Load($reader)
+    $countdownText = $window.FindName("CountdownText")
 
-# Create timer for countdown
-$timer = New-Object System.Windows.Threading.DispatcherTimer
-$timer.Interval = [TimeSpan]::FromSeconds(1)
-$script:remaining = $countdownSeconds
+    # Create timer for countdown
+    $timer = New-Object System.Windows.Threading.DispatcherTimer
+    $timer.Interval = [TimeSpan]::FromSeconds(1)
+    $script:remaining = $countdownSeconds
 
-$timer.Add_Tick({{
-    $script:remaining--
-    $countdownText.Text = $script:remaining.ToString()
-    if ($script:remaining -le 0) {{
-        $timer.Stop()
-        $window.Close()
-    }}
-}})
+    $timer.Add_Tick({{
+        $script:remaining--
+        $countdownText.Text = $script:remaining.ToString()
+        if ($script:remaining -le 0) {{
+            $timer.Stop()
+            $window.Close()
+        }}
+    }})
 
-$timer.Start()
-$window.ShowDialog() | Out-Null
+    $timer.Start()
+    $window.ShowDialog() | Out-Null
+    exit 0
+}} catch {{
+    Write-Error $_
+    exit 1
+}}
 '''
         _run_powershell_async(ps_script, self._log)
         self._log(f"Countdown shown: {seconds}s - {reason}")
