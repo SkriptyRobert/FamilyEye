@@ -113,10 +113,12 @@ class BackendAPIClient:
             
         try:
             url = f"{self._get_base_url()}/api/reports/agent/report"
+            from datetime import datetime
             payload = {
                 "device_id": config.get("device_id"),
                 "api_key": config.get("api_key"),
-                "usage_logs": usage_logs
+                "usage_logs": usage_logs,
+                "client_timestamp": datetime.now().isoformat()
             }
             
             response = self.session.post(url, json=payload, timeout=10)

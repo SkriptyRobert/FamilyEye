@@ -37,11 +37,18 @@ class RuleEnforcer:
         self.current_pid = os.getpid()
         self._last_fetch_rules_time = 0
         
-        # Daily device limit tracking
         self.device_daily_limit: Optional[int] = None  # seconds
         self.device_today_usage: int = 0  # seconds from backend
         self._daily_limit_warning_shown = False
         self._daily_limit_shutdown_initiated = False
+        
+        # Time Synchronization (Monotonic)
+        self.clock_offset: float = 0.0
+        self.ref_monotonic: float = 0.0
+        self.ref_server_ts: float = 0.0
+        self.is_time_synced: bool = False
+        self.last_time_sync: float = 0
+
         
         # Track apps that already exceeded limit (to avoid repeated notifications)
         self._apps_limit_exceeded_notified: Set[str] = set()
@@ -132,6 +139,34 @@ class RuleEnforcer:
                     self.usage_by_app = rules_data.get("usage_by_app", {})
                     # Store device daily usage for daily limit enforcement
                     self.device_today_usage = rules_data.get("daily_usage", 0)
+                    
+                    # SERVER TIME SYNC
+                    server_time_str = rules_data.get("server_time")
+                    if server_time_str:
+                        try:
+                            # Parse server time (UTC)
+                            from datetime import datetime
+                            # Handle ISO format with potential Z
+                            if server_time_str.endswith('Z'):
+                                server_time_str = server_time_str[:-1] + '+00:00'
+                            
+                            server_dt = datetime.fromisoformat(server_time_str)
+                            server_ts = server_dt.timestamp()
+                            local_ts = time.time()
+                            
+                            # Calculate offset: Offset = Server - Local
+                            # True Time = Local + Offset
+                            new_offset = server_ts - local_ts
+                            
+                            # Monotonic Sync (Primary Source of Truth)
+                            self.ref_server_ts = server_ts
+                            self.ref_monotonic = time.monotonic()
+                            self.is_time_synced = True
+                            
+                            self.logger.info(f"Time synced. Server: {server_dt}, Monotonic Ref: {self.ref_monotonic}")
+                        except Exception as e:
+                            self.logger.warning(f"Failed to sync time from rules: {e}")
+
                     self.logger.debug(f"Received usage stats: {len(self.usage_by_app)} apps, {self.device_today_usage}s total today")
                 else:
                     self.rules = []
@@ -150,6 +185,20 @@ class RuleEnforcer:
             self._load_rules_cache()
 
     
+    
+    def get_trusted_datetime(self) -> datetime:
+        """Get trusted local datetime distinct from system clock if possible."""
+        if self.is_time_synced:
+            # Calculate elapsed since sync
+            elapsed = time.monotonic() - self.ref_monotonic
+            current_server_ts = self.ref_server_ts + elapsed
+            
+            # Convert to local time (Server UTC TS -> Local DT)
+            # We assume system timezone setting is correct (hard to fake timezone vs time)
+            return datetime.fromtimestamp(current_server_ts)
+        else:
+            return datetime.now()
+            
     def _update_blocked_apps(self):
         """Update blocked apps list from rules and sync network blocking."""
         self.blocked_apps.clear()
@@ -162,6 +211,10 @@ class RuleEnforcer:
         self.is_locked = False
         self.is_network_blocked = False
         self.device_daily_limit = None
+        
+        # Use Trusted Time for Rule Evaluation
+        now = self.get_trusted_datetime()
+        now_str = now.strftime("%H:%M")
         
         for rule in self.rules:
             if not rule.get("enabled", True):
@@ -208,9 +261,8 @@ class RuleEnforcer:
                 start = rule.get("schedule_start_time")
                 end = rule.get("schedule_end_time")
                 if start and end:
-                    now_str = datetime.now().strftime("%H:%M")
                     # Log schedule for debugging
-                    self.logger.info(f"Checking Network Block: {start} <= {now_str} <= {end}")
+                    # self.logger.info(f"Checking Network Block: {start} <= {now_str} <= {end}")
                     if start <= now_str <= end:
                         self.is_network_blocked = True
                 else:
@@ -381,7 +433,8 @@ class RuleEnforcer:
                 target_key = clean_name if clean_name in self.app_schedules else orig_name
                 app_schedules = self.app_schedules[target_key]
                 
-                now = datetime.now()
+                # Use Trusted Time
+                now = self.get_trusted_datetime()
                 current_time_str = now.strftime("%H:%M")
                 current_day = now.strftime("%a").lower()[:3]
                 
@@ -590,7 +643,8 @@ class RuleEnforcer:
             self.shutdown_manager.reset_shutdown_flag()
             return
         
-        now = datetime.now()
+        # Use Trusted Time
+        now = self.get_trusted_datetime()
         current_time_str = now.strftime("%H:%M")
         current_day = now.strftime("%a").lower()[:3]
         

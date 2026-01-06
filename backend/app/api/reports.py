@@ -31,9 +31,28 @@ async def agent_report_usage(
     device = verify_device_api_key(request.device_id, request.api_key, db)
     
     # Update last_seen timestamp
+    # Update last_seen timestamp
     from datetime import timezone
-    device.last_seen = datetime.now(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
+    device.last_seen = now_utc
     
+    # Calculate timezone offset
+    if request.client_timestamp:
+        # Client sends naive local time. We compare to naive UTC.
+        client_ts = request.client_timestamp
+        server_naive = now_utc.replace(tzinfo=None)
+        if client_ts.tzinfo is not None:
+             # If client sent aware time (unlikely with datetime.now().isoformat()), convert to naive
+             client_ts = client_ts.replace(tzinfo=None)
+             
+        diff = client_ts - server_naive
+        offset_seconds = int(diff.total_seconds())
+        
+        # Only update if changed significantly (> 1 minute to avoid drift noise)
+        if abs(device.timezone_offset - offset_seconds) > 60:
+            device.timezone_offset = offset_seconds
+            logger.debug(f"Updated timezone offset for device {device.id}: {offset_seconds}s")
+
     # Log incoming report
     logger.info(f"Received usage report from device {device.id} ({device.name}): {len(request.usage_logs)} logs")
     

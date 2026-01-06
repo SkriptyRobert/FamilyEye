@@ -325,13 +325,28 @@ async def pause_internet(
     from datetime import datetime, timedelta
     
     # Use local time for schedule so it matches the device's clock and UI expectation
-    now = datetime.now()
+    # We calculate Device Local Time = Server UTC + Offset
+    from datetime import timezone
+    now_utc = datetime.now(timezone.utc)
+    
+    # Client offset is calculated as (Client - ServerUTC) in seconds
+    offset_seconds = device.timezone_offset or 0
+    
+    # Shift UTC time to match Client's Wall Clock
+    # Note: The resulting datetime effectively represents "Client Time" but might keep UTC tzinfo
+    # We only care about the string "HH:MM" output matching the client's clock
+    device_now = now_utc + timedelta(seconds=offset_seconds)
+    
+    # Handle overlap across midnight (not strictly handled by HH:MM, but good enough for now)
+    # If Internet Pause crosses midnight, the simple HH:MM check in Agent might fail if Start > End
+    # But usually immediate pause is Start=Now.
+    
     block_rule = Rule(
         device_id=device.id,
         rule_type="network_block",
         enabled=True,
-        schedule_start_time=now.strftime("%H:%M"),
-        schedule_end_time=(now + timedelta(minutes=duration_minutes)).strftime("%H:%M")
+        schedule_start_time=device_now.strftime("%H:%M"),
+        schedule_end_time=(device_now + timedelta(minutes=duration_minutes)).strftime("%H:%M")
     )
     db.add(block_rule)
     db.commit()

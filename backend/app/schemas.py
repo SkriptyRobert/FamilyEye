@@ -157,6 +157,7 @@ class AgentRulesResponse(BaseModel):
     rules: List[RuleResponse]
     daily_usage: int  # Total seconds used today
     usage_by_app: Dict[str, int] = {}  # App name -> duration seconds
+    server_time: Optional[datetime] = None  # Server UTC time
 
 
 class AgentUsageLogCreate(BaseModel):

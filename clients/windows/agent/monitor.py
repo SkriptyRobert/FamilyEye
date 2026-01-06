@@ -67,9 +67,9 @@ class AppMonitor:
         self.device_usage_pending = 0.0
         
         self.app_metadata: Dict[str, Dict] = {} # app_name -> {exe, title, is_focused}
-        self.last_update = time.time()
+        self.last_update = time.monotonic()
         self.boot_time = psutil.boot_time() # Detect reboots
-        self.last_cache_save = time.time()
+        self.last_cache_save = time.monotonic()
         self.debug_counter = 0
         self.current_detections = {}
         self.focused_app = None
@@ -281,8 +281,9 @@ class AppMonitor:
             return None
     def update(self):
         """Update monitoring data - Smart Detection Strategy."""
-        current_time = time.time()
+        current_time = time.monotonic()
         elapsed = current_time - self.last_update
+        self.last_update = current_time
         if elapsed <= 0: elapsed = 0.1
         
         # 1. Identify which PID is in the Foreground (Focus) for Smart Insights Tagging
@@ -424,7 +425,7 @@ class AppMonitor:
             self.logger.debug(f"SmartMonitor: Tracking {len(running_user_apps)} active apps. "
                             f"Focused: {self.focused_app}, Top: {tracked_apps}")
         
-        self.last_update = current_time
+
     
     def get_usage_stats(self) -> Dict[str, float]:
         """Return cumulative stats for today (used for local enforcement)."""

@@ -212,6 +212,7 @@ async def agent_fetch_rules(
     return {
         "rules": rules,
         "daily_usage": int(total_usage),
-        "usage_by_app": usage_by_app
+        "usage_by_app": usage_by_app,
+        "server_time": datetime.now(timezone.utc)
     }
 
