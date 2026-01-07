@@ -200,16 +200,20 @@ async def agent_fetch_rules(
     from ..models import UsageLog
     from sqlalchemy import func
     
-    # Count unique report minutes - truncate timestamp to minute level
-    unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
-    ).filter(
+    # Calculate daily usage as ELAPSED time since first activity today
+    # This aligns with user expectation: "PC is on for X minutes"
+    first_log_ts = db.query(func.min(UsageLog.timestamp)).filter(
         UsageLog.device_id == device.id,
         UsageLog.timestamp >= query_start_utc
-    ).scalar() or 0
+    ).scalar()
     
-    reporting_interval = 60  # seconds
-    total_usage = unique_minutes * reporting_interval
+    if first_log_ts:
+        # Calculate elapsed seconds from first log until now (UTC)
+        # Use naive utcnow() to match naive database timestamps
+        elapsed_delta = datetime.utcnow() - first_log_ts
+        total_usage = max(0, int(elapsed_delta.total_seconds()))
+    else:
+        total_usage = 0
     
     # Usage by app (sum of durations for each app)
     usage_by_app_rows = db.query(
