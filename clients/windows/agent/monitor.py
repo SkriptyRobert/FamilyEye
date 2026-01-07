@@ -50,7 +50,8 @@ class AppMonitor:
         'shellexperiencehost', 'searchhost', 'startmenuexperiencehost', 'userinit',
         'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
         'sihost', 'searchindexer', 'conhost', 'dllhost', 'explorer', 'net', 'net1',
-        'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd'
+        'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd', 'runtime', 'runtimebroker',
+        'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray'
     }
     
     # Windows that should be ignored even if they have visible windows

@@ -22,6 +22,8 @@ class UsageReporter:
         
         # Report Queue for offline persistence
         self.report_queue: List[Dict] = []
+        import threading
+        self._queue_lock = threading.Lock()
         self._load_queue_cache()
         
         # Register for reconnection events
@@ -49,6 +51,10 @@ class UsageReporter:
         """Send usage reports to backend (batch with queue)."""
         if not self.monitor:
             return
+        
+        # Prevent concurrent access to queue
+        if not self._queue_lock.acquire(blocking=False):
+            return  # Another send is in progress
             
         try:
             # 1. SNAP current usage from monitor into a new report hunk
@@ -130,6 +136,9 @@ class UsageReporter:
 
         except Exception as e:
             self.logger.error(f"Unexpected error in reporting flow: {e}")
+        finally:
+            self._queue_lock.release()
+
 
     def _get_queue_path(self):
         import sys
