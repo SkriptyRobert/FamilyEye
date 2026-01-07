@@ -49,9 +49,9 @@ class AppMonitor:
         'svchost', 'fontdrvhost', 'winlogon', 'spoolsv', 'dwm', 'ctfmon', 'taskhostw',
         'shellexperiencehost', 'searchhost', 'startmenuexperiencehost', 'userinit',
         'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
-        'sihost', 'searchindexer', 'conhost', 'dllhost', 'explorer', 'net', 'net1',
         'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd', 'runtime', 'runtimebroker',
-        'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray'
+        'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray',
+        'phoneexperiencehost', 'searchapp', 'widgets', 'audiodg', 'spoolsv'
     }
     
     # Windows that should be ignored even if they have visible windows
@@ -399,6 +399,13 @@ class AppMonitor:
                         }
 
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+                except KeyError as e:
+                    # Specific catch for dictionary errors (like IGNORED_WINDOWS)
+                    # Just skip this process and continue
+                    continue
+                except Exception as e:
+                    self.logger.debug(f"Skipping process {proc.pid}: {e}")
                     continue
         except Exception as e:
             self.logger.error(f"Error in monitor update loop: {e}")
