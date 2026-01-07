@@ -191,6 +191,12 @@ class RuleEnforcer:
                         except Exception as e:
                             self.logger.warning(f"Failed to sync time from rules: {e}")
 
+                    # SERVER DAY ID - for cross-midnight tracking
+                    server_day_id = rules_data.get("server_day_id")
+                    if server_day_id and hasattr(self, 'reporter') and self.reporter:
+                        self.reporter.current_day_id = server_day_id
+                        self.logger.debug(f"Day ID synced: {server_day_id}")
+
                     self.logger.debug(f"Received usage stats: {len(self.usage_by_app)} apps, {self.device_today_usage}s total today")
                 else:
                     self.rules = []

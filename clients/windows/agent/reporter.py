@@ -20,6 +20,9 @@ class UsageReporter:
         self.cumulative_offline = 0  # Total offline seconds today
         self._needs_immediate_sync = False  # Flag to trigger immediate retry after reconnect
         
+        # Day ID from backend for proper cross-midnight tracking
+        self.current_day_id: str = None  # e.g., "2026-01-07"
+        
         # Report Queue for offline persistence
         self.report_queue: List[Dict] = []
         import threading
@@ -79,7 +82,8 @@ class UsageReporter:
                             "exe_path": meta.get("exe", ""),
                             "duration": duration_seconds,
                             "is_focused": meta.get("is_focused", False),
-                            "timestamp": batch_timestamp
+                            "timestamp": batch_timestamp,
+                            "day_id": self.current_day_id or datetime.utcnow().strftime("%Y-%m-%d")
                         })
                 
                 if usage_logs or running_processes:

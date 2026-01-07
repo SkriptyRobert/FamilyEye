@@ -158,6 +158,7 @@ class AgentRulesResponse(BaseModel):
     daily_usage: int  # Total seconds used today
     usage_by_app: Dict[str, int] = {}  # App name -> duration seconds
     server_time: Optional[datetime] = None  # Server UTC time
+    server_day_id: Optional[str] = None  # Device's local day for cross-midnight sync, e.g. "2026-01-07"
 
 
 class AgentUsageLogCreate(BaseModel):
