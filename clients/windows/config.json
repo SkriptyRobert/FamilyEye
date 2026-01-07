@@ -5,5 +5,9 @@
   "polling_interval": 30,
   "reporting_interval": 60,
   "cache_duration": 300,
-  "ssl_verify": false
+  "ssl_verify": false,
+  "sync_max_age_seconds": 3600,
+  "max_queue_size": 50,
+  "window_enum_cache_ms": 200,
+  "shutdown_warning_countdown": 60
 }

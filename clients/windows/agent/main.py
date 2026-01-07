@@ -70,6 +70,9 @@ class ParentalControlAgent:
         self.monitor.agent = self
         self.reporter.monitor = self.monitor
         
+        # Link Reporter to Enforcer for Sync-on-Fetch
+        self.enforcer.set_reporter(self.reporter)
+        
         # Link Trusted Time from Enforcer to Reporter (Anti-Cheat)
         # Reporter needs UTC for database timestamps
         self.reporter.set_time_provider(self.enforcer.get_trusted_utc_datetime)
@@ -298,7 +301,8 @@ class ParentalControlAgent:
         while self.running:
             try:
                 self.monitor.update()
-                interval = config.get("polling_interval", 5)
+                # Use faster Monitor Interval for responsive tracking
+                interval = config.get("monitor_interval", 5)
                 time.sleep(interval)
             except Exception as e:
                 monitor_logger.error("Monitor error", error_type=type(e).__name__, error_message=str(e)[:50])
@@ -313,7 +317,8 @@ class ParentalControlAgent:
         while self.running:
             try:
                 self.enforcer.update()
-                time.sleep(2)  # Check every 2 seconds for faster response
+                # Run enforcer at same cadence (or slightly faster) to catch limits
+                time.sleep(2) 
             except Exception as e:
                 enforcer_logger.error("Enforcer error", error_type=type(e).__name__, error_message=str(e)[:50])
                 import traceback

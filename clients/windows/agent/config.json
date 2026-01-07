@@ -1,0 +1,7 @@
+{
+  "backend_url": "https://192.168.0.145:8000",
+  "device_id": "windows-ROBERT-PC-670c35ad",
+  "api_key": "357bc536-cd5c-48ea-b673-bba5ca2b6212",
+  "polling_interval": 30,
+  "reporting_interval": 60
+}

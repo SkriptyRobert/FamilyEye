@@ -327,30 +327,54 @@ async def get_device_summary(
     yesterday_start_utc = today_start_utc - timedelta(days=1)
     yesterday_end_utc = today_start_utc
     
-    # Count unique report minutes - truncate timestamp to minute level before counting
-    # This ensures multiple apps logged in same minute count as 1 minute, not N
-    unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
-    ).filter(
+    # --- PRECISE USAGE CALCULATION (Interval Merging) ---
+    # Fetch all logs for today to calculate precise screen time (Wall Clock)
+    # This avoids "7 minutes usage in 6 minutes time" paradox caused by minute-bucketing
+    
+    daily_logs = db.query(UsageLog.app_name, UsageLog.timestamp, UsageLog.duration).filter(
         UsageLog.device_id == device_id,
         UsageLog.timestamp >= today_start_utc,
         UsageLog.timestamp < today_end_utc
-    ).scalar() or 0
+    ).all()
     
-    # Each unique minute = 60 seconds of device activity
-    reporting_interval = 60  # seconds
-    today_usage = unique_minutes * reporting_interval
+    # Algorithm: Merge overlapping intervals from ALL apps to find "Time Machine Was Used"
+    from dateutil import parser
+    all_segments = []
     
-    logger.info(f"Device {device_id} today usage: {unique_minutes} unique minutes = {today_usage}s ({today_usage//60}min)")
+    for log in daily_logs:
+        # DB returns datetime object or string depending on driver
+        ts_obj = log.timestamp if hasattr(log.timestamp, 'timestamp') else parser.parse(log.timestamp)
+        start_ts = ts_obj.timestamp()
+        duration = log.duration
+        if duration > 0:
+            all_segments.append((start_ts, start_ts + duration))
+            
+    # Merge intervals
+    total_seconds = 0.0
+    if all_segments:
+        all_segments.sort(key=lambda x: x[0])
+        merged = []
+        if all_segments:
+            curr_start, curr_end = all_segments[0]
+            for next_start, next_end in all_segments[1:]:
+                if next_start < curr_end: # Overlap
+                    curr_end = max(curr_end, next_end)
+                else:
+                    merged.append((curr_start, curr_end))
+                    curr_start, curr_end = next_start, next_end
+            merged.append((curr_start, curr_end))
+        
+        total_seconds = sum(end - start for start, end in merged)
     
-    # Total apps used today
-    apps_today = db.query(func.count(func.distinct(UsageLog.app_name))).filter(
-        UsageLog.device_id == device_id,
-        UsageLog.timestamp >= today_start_utc,
-        UsageLog.timestamp < today_end_utc
-    ).scalar() or 0
+    today_usage = int(total_seconds)
     
-    # Most used apps today
+    logger.info(f"Device {device_id} precise usage: {today_usage}s")
+    
+    # Total apps used today (from the fetched list to save query)
+    apps_today = len(set(log.app_name for log in daily_logs))
+    
+    # Most used apps today - Aggregate from fetched logs (Python side) or Query
+    # Query is cleaner for aggregation/ordering
     top_apps_query = db.query(
         UsageLog.app_name,
         func.sum(UsageLog.duration).label('total_duration')
@@ -383,17 +407,22 @@ async def get_device_summary(
         Rule.enabled == True
     ).count()
     
-    # Calculate total usage time (all time, not just today)
-    total_usage = db.query(func.sum(UsageLog.duration)).filter(
+    # Calculate total usage time (all time) - Keep simplistic sum or cache? 
+    # For now, simplistic sum is okay for all-time
+    total_usage_all = db.query(func.sum(UsageLog.duration)).filter(
         UsageLog.device_id == device_id
     ).scalar() or 0
+    # Note: total_usage variable was shadowed, renamed to total_usage_all
     
     # Get last usage timestamp
     last_usage = db.query(func.max(UsageLog.timestamp)).filter(
         UsageLog.device_id == device_id
     ).scalar()
     
-    # Yesterday's usage - COUNT of unique MINUTES (truncated to minute level)
+    # Yesterday's usage - Use Minute Buckets (Legacy) for speed on historical data?
+    # Or fetch logs? Yesterday logs might be many. Keep Minute Buckets for Yesterday/Week for performance.
+    # Count unique report minutes - truncate timestamp to minute level before counting
+    reporting_interval = 60
     unique_minutes_yesterday = db.query(
         func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
     ).filter(
@@ -433,7 +462,6 @@ async def get_device_summary(
     apps_with_limits = []
     for rule in time_limit_rules:
         app_name = rule.app_name
-        # Get today's usage for this app
         # Get today's usage for this app - improved matching (case-insensitive, handles .exe)
         app_usage_today = db.query(func.sum(UsageLog.duration)).filter(
             UsageLog.device_id == device_id,
@@ -600,15 +628,21 @@ async def get_device_summary(
                     is_night_owl = True
                     break
 
-                day_start_utc_h = today_start_utc - timedelta(days=i)
+            # Calculate Average Start Hour (Past 7 days)
+            for k in range(1, 8):
+                day_start_utc_h = today_start_utc - timedelta(days=k)
                 day_end_utc_h = day_start_utc_h + timedelta(days=1)
                 first_d = db.query(func.min(UsageLog.timestamp)).filter(
                     UsageLog.device_id == device_id, 
                     UsageLog.timestamp >= day_start_utc_h,
                     UsageLog.timestamp < day_end_utc_h
                 ).scalar()
+                
                 if first_d:
                     first_d_dt = parser.parse(first_d) if isinstance(first_d, str) else first_d
+                    # Adjust to device local time roughly for hour extraction (approximation)
+                    # Ideally we use timezone_offset but for simple check this might suffice
+                    # or better: just rely on the hour if we trust the offset logic elsewhere
                     starts.append(first_d_dt.hour + first_d_dt.minute/60)
             
             if starts:
@@ -620,8 +654,8 @@ async def get_device_summary(
         apps_today_set = set(app[0].lower() for app in logs_today)
         apps_last_week = db.query(func.distinct(UsageLog.app_name)).filter(
             UsageLog.device_id == device_id,
-            UsageLog.timestamp >= today_start - timedelta(days=7),
-            UsageLog.timestamp < today_start
+            UsageLog.timestamp >= today_start_utc - timedelta(days=7),
+            UsageLog.timestamp < today_start_utc
         ).all()
         apps_last_week_set = set(app[0].lower() for app in apps_last_week)
         new_apps = list(apps_today_set - apps_last_week_set)
@@ -694,8 +728,8 @@ async def get_device_summary(
         "today_usage_hours": round(today_usage / 3600, 2),
         "yesterday_usage_seconds": yesterday_usage,
         "week_avg_seconds": week_avg,
-        "total_usage_seconds": total_usage,
-        "total_usage_hours": round(total_usage / 3600, 2),
+        "total_usage_seconds": total_usage_all,
+        "total_usage_hours": round(total_usage_all / 3600, 2),
         "apps_used_today": apps_today,
         "apps_used_today": apps_today,
         "top_apps": [{

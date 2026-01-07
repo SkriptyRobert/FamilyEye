@@ -50,6 +50,12 @@ def get_default_config():
         "reporting_interval": int(os.getenv("AGENT_REPORTING_INTERVAL", "300")),
         "cache_duration": int(os.getenv("AGENT_CACHE_DURATION", "300")),
         "ssl_verify": os.getenv("AGENT_SSL_VERIFY", "false").lower() == "true",  # False for self-signed certs
+        
+        "sync_max_age_seconds": int(os.getenv("AGENT_SYNC_MAX_AGE", "3600")),
+        "max_queue_size": int(os.getenv("AGENT_MAX_QUEUE_SIZE", "500")),
+        "window_enum_cache_ms": int(os.getenv("AGENT_WINDOW_CACHE_MS", "500")),
+        "shutdown_warning_countdown": int(os.getenv("AGENT_SHUTDOWN_WARNING", "60")),
+        "monitor_interval": int(os.getenv("AGENT_MONITOR_INTERVAL", "5")), # Fast loop for usage counting
     }
 
 DEFAULT_CONFIG = get_default_config()
