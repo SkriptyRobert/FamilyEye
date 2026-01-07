@@ -3,7 +3,7 @@ import os
 import sys
 import psutil
 import time
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, List
 from collections import defaultdict
 from .logger import get_logger
 
@@ -51,7 +51,8 @@ class AppMonitor:
         'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
         'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd', 'runtime', 'runtimebroker',
         'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray',
-        'phoneexperiencehost', 'searchapp', 'widgets', 'audiodg', 'spoolsv'
+        'phoneexperiencehost', 'searchapp', 'widgets', 'audiodg', 'spoolsv',
+        'dllhost', 'conhost', 'sihost', 'dashost' 
     }
     
     # Windows that should be ignored even if they have visible windows
@@ -91,6 +92,14 @@ class AppMonitor:
         self.metadata_cache: Dict[str, str] = {} # path -> original_filename
         self.pid_titles: Dict[int, str] = {}     # pid -> window_title
         
+        # NEW: Enhanced tracking for better parental control
+        # Track process start times (when app was first detected today)
+        self.process_start_times: Dict[str, float] = {}  # app_name -> timestamp
+        # Track process kill history (for enforcer logging)
+        self.kill_history: List[Dict] = []  # [{app_name, reason, timestamp, used_seconds, limit_seconds}]
+        # Track how long each app has been continuously running
+        self.app_session_start: Dict[str, float] = {}  # app_name -> session start monotonic
+        
         # Load cached usage logs on startup
         self._load_usage_cache()
         
@@ -114,18 +123,19 @@ class AppMonitor:
             return os.path.join(os.path.dirname(__file__), 'usage_cache.json')
         
     def _save_usage_cache(self):
-        """Save current usage stats to local cache."""
+        """Save current usage stats to local cache using Monotonic Time."""
         try:
             import json
             
-            # Use Trusted UTC Timestamp if available
-            ts = time.time()
-            if self.utc_time_provider:
-                ts = self.utc_time_provider().timestamp()
-                
+            # Use Monotonic Timestamp for internal validity check
+            # We still store wall-clock 'timestamp' for debugging/human readability
+            ts = time.time() 
+            mono_ts = time.monotonic()
+            
             cache_data = {
-                "timestamp": ts,
-                "boot_time": self.boot_time,
+                "timestamp": ts,               # Wall clock (debug only)
+                "monotonic_timestamp": mono_ts,# Trusted internal clock
+                "boot_time": self.boot_time,   # Reboot detection ID
                 "usage_today": dict(self.usage_today),
                 "usage_pending": dict(self.usage_pending),
                 "device_usage_today": self.device_usage_today,
@@ -133,12 +143,11 @@ class AppMonitor:
             }
             with open(self._get_cache_path(), 'w') as f:
                 json.dump(cache_data, f)
-            # self.logger.debug("Usage stats cached locally")
         except Exception as e:
             self.logger.error(f"Failed to cache usage stats: {e}")
             
     def _load_usage_cache(self):
-        """Load usage stats from local cache."""
+        """Load usage stats from local cache with Strict Monotonic Validation."""
         try:
             import json
             cache_path = self._get_cache_path()
@@ -148,19 +157,31 @@ class AppMonitor:
             with open(cache_path, 'r') as f:
                 cache_data = json.load(f)
                 
-            # CACHE AGING & REBOOT DETECTION
-            cache_ts = cache_data.get("timestamp", 0)
+            # CACHE VALIDATION (Strict Mode)
             cache_boot = cache_data.get("boot_time", 0)
-            now = time.time()
+            cache_mono = cache_data.get("monotonic_timestamp", 0)
             
-            # 1. Discard if older than 1 hour (User's request to kill "time travel" bugs)
-            if now - cache_ts > 3600:
-                self.logger.info("Cache aged out (>1h), starting fresh.")
+            current_boot = psutil.boot_time() # Fresh boot time
+            current_mono = time.monotonic()
+            
+            # 1. REBOOT CHECK (Critical)
+            # Boot time is fixed per session. If it differs (>5s for float drift), it's a new session.
+            if abs(cache_boot - current_boot) > 5:
+                self.logger.info(f"System reboot detected (Boot delta: {abs(cache_boot - current_boot):.1f}s). Starting fresh.")
                 return
 
-            # 2. Discard if system rebooted since cache (reality check)
-            if abs(cache_boot - self.boot_time) > 5: # 5s tolerance
-                self.logger.info("System reboot detected, discarding old cache.")
+            # 2. MONOTONIC AGE CHECK (Prevent huge gaps/sleep issues)
+            # If cache is older than 1 hour in MONOTONIC time, discard it.
+            # This handles hibernation correctly: Monotonic usually pauses or ticks.
+            # If it pauses, age is low -> OK. If it ticks -> age is high -> Discard.
+            age = current_mono - cache_mono
+            if age > 3600:
+                self.logger.info(f"Cache expired (Age: {age:.0f}s > 3600s). Starting fresh.")
+                return
+            
+            # 3. FUTURE CHECK (Sanity)
+            if age < -10: # Allow small skew
+                self.logger.warning(f"Cache from future detected ({age:.0f}s). Discarding.")
                 return
             
             # Load today's cumulative stats
@@ -170,24 +191,33 @@ class AppMonitor:
             
             self.device_usage_today = cache_data.get("device_usage_today", 0.0)
                 
-            # Load pending stats (delta that failed to send last time)
+            # Load pending stats
             cached_pending = cache_data.get("usage_pending", {})
             for app, duration in cached_pending.items():
                 self.usage_pending[app] = duration
             
             self.device_usage_pending = cache_data.get("device_usage_pending", 0.0)
                 
-            self.logger.info(f"Loaded usage stats (Today: {len(self.usage_today)} apps, Total Active: {int(self.device_usage_today)}s)")
+            self.logger.info(f"Loaded usage stats (Apps: {len(self.usage_today)}, Active: {int(self.device_usage_today)}s, Cache Age: {int(age)}s)")
         except Exception as e:
             self.logger.warning(f"Failed to load cached usage: {e}")
 
     def _get_pids_with_visible_windows(self) -> Dict[int, str]:
-        """Return a mapping of PIDs to their main window title."""
-        pid_to_title = {}
+        """Return a mapping of PIDs to their main window title. (Cached)"""
         try:
+            from .config import config
+            current_time = time.monotonic()
+            
+            # Check cache (default 500ms)
+            cache_ms = config.get("window_enum_cache_ms", 500)
+            if hasattr(self, '_window_cache_time') and (current_time - self._window_cache_time) * 1000 < cache_ms:
+                return self._window_cache_data
+                
             import win32gui
             import win32process
             import win32con
+
+            pid_to_title = {}
 
             def enum_handler(hwnd, ctx):
                 if win32gui.IsWindowVisible(hwnd):
@@ -202,9 +232,16 @@ class AppMonitor:
                                 pid_to_title[pid] = title
             
             win32gui.EnumWindows(enum_handler, None)
+            
+            # Update cache
+            self._window_cache_time = current_time
+            self._window_cache_data = pid_to_title
+            
+            return pid_to_title
+            
         except Exception as e:
             self.logger.error(f"Error enumerating windows: {e}")
-        return pid_to_title
+            return {}
 
     def _get_original_filename(self, path: str) -> Optional[str]:
         """Read 'OriginalFilename' from PE metadata of an executable."""
@@ -301,6 +338,7 @@ class AppMonitor:
                 return None
         except Exception:
             return None
+
     def update(self):
         """Update monitoring data - Smart Detection Strategy."""
         current_time = time.monotonic()
@@ -437,11 +475,31 @@ class AppMonitor:
             self.device_usage_today += elapsed
             self.device_usage_pending += elapsed
             
-            # Count time for ALL detected user applications (including background ones with windows)
-            # This ensures multitasking is reflected, but filtered system noise (svchost, etc) is NOT.
-            for app_name in running_user_apps:
-                self.usage_today[app_name] += elapsed
-                self.usage_pending[app_name] += elapsed
+            # Count time for ALL detected user applications
+            # DEFENSIVE CHECK: Ensure dictionaries are still defaultdicts
+            if not isinstance(self.usage_today, defaultdict):
+                self.logger.error(f"CORRUPTION DETECTED: usage_today is {type(self.usage_today)}, restoring defaultdict")
+                self.usage_today = defaultdict(float, self.usage_today)
+                
+            if not isinstance(self.usage_pending, defaultdict):
+                self.logger.error(f"CORRUPTION DETECTED: usage_pending is {type(self.usage_pending)}, restoring defaultdict")
+                self.usage_pending = defaultdict(float, self.usage_pending)
+
+            try:
+                for app_name in running_user_apps:
+                    self.usage_today[app_name] += elapsed
+                    self.usage_pending[app_name] += elapsed
+                    # NEW: Track app session for duration reporting
+                    self.track_app_session(app_name)
+            except Exception as e:
+                self.logger.error(f"Critical error in accumulation loop: {e}")
+            
+            # NEW: End sessions for apps that are no longer active
+            previously_active = set(self.app_session_start.keys())
+            for app_name in previously_active:
+                if app_name not in [a.lower() for a in running_user_apps]:
+                    self.end_app_session(app_name)
+                
         elif self.active_apps:
             # If no user apps detected, we don't count time.
             pass
@@ -510,3 +568,107 @@ class AppMonitor:
         """Return list of currently active trackable processes."""
         with self.lock:
             return sorted(list(self.active_apps))
+
+    # ========== NEW: Enhanced Tracking Methods ==========
+    
+    def get_device_uptime(self) -> float:
+        """Return device uptime in seconds since last boot."""
+        return time.time() - self.boot_time
+    
+    def get_device_uptime_formatted(self) -> str:
+        """Return device uptime as human-readable string."""
+        uptime = self.get_device_uptime()
+        hours = int(uptime // 3600)
+        minutes = int((uptime % 3600) // 60)
+        return f"{hours}h {minutes}m"
+    
+    def log_process_kill(self, app_name: str, reason: str, used_seconds: int = 0, limit_seconds: int = 0):
+        """Log when a process is killed with reason and usage details."""
+        from datetime import datetime
+        
+        timestamp = datetime.now().isoformat()
+        kill_entry = {
+            "app_name": app_name,
+            "reason": reason,
+            "timestamp": timestamp,
+            "used_seconds": used_seconds,
+            "limit_seconds": limit_seconds,
+            "device_uptime": self.get_device_uptime_formatted()
+        }
+        
+        with self.lock:
+            self.kill_history.append(kill_entry)
+            # Keep only last 100 entries to prevent memory bloat
+            if len(self.kill_history) > 100:
+                self.kill_history = self.kill_history[-100:]
+        
+        self.logger.info(f"Process killed: {app_name} (reason: {reason}, used: {used_seconds}s/{limit_seconds}s)")
+    
+    def get_kill_history(self) -> List[Dict]:
+        """Return recent kill history for reporting."""
+        with self.lock:
+            return list(self.kill_history)
+    
+    def clear_kill_history(self):
+        """Clear kill history after sending to backend."""
+        with self.lock:
+            self.kill_history.clear()
+    
+    def get_process_session_duration(self, app_name: str) -> float:
+        """Return how long an app has been running in current session (seconds)."""
+        app_lower = app_name.lower()
+        if app_lower in self.app_session_start:
+            return time.monotonic() - self.app_session_start[app_lower]
+        return 0.0
+    
+    def get_enhanced_usage_stats(self) -> Dict:
+        """
+        Return enhanced usage stats for backend reporting.
+        Includes uptime, process details, and session info.
+        """
+        with self.lock:
+            stats = {
+                "device_uptime_seconds": int(self.get_device_uptime()),
+                "device_usage_today_seconds": int(self.device_usage_today),
+                "active_apps_count": len(self.active_apps),
+                "focused_app": self.focused_app,
+                "apps": {}
+            }
+            
+            for app_name, duration in self.usage_today.items():
+                meta = self.app_metadata.get(app_name, {})
+                start_time = self.process_start_times.get(app_name)
+                session_duration = self.get_process_session_duration(app_name)
+                
+                stats["apps"][app_name] = {
+                    "usage_today_seconds": int(duration),
+                    "session_duration_seconds": int(session_duration),
+                    "first_seen_today": start_time,
+                    "is_active": app_name in self.active_apps,
+                    "is_focused": meta.get("is_focused", False),
+                    "exe_path": meta.get("exe", ""),
+                    "window_title": meta.get("title", "")
+                }
+            
+            return stats
+    
+    def track_app_session(self, app_name: str):
+        """Track when an app session starts (for session duration)."""
+        app_lower = app_name.lower()
+        current_mono = time.monotonic()
+        
+        # Record first seen time today
+        if app_lower not in self.process_start_times:
+            from datetime import datetime
+            self.process_start_times[app_lower] = datetime.now().isoformat()
+            self.logger.debug(f"First detection today: {app_name}")
+        
+        # Record session start if not already running
+        if app_lower not in self.app_session_start:
+            self.app_session_start[app_lower] = current_mono
+    
+    def end_app_session(self, app_name: str):
+        """End an app session (app no longer detected)."""
+        app_lower = app_name.lower()
+        if app_lower in self.app_session_start:
+            del self.app_session_start[app_lower]

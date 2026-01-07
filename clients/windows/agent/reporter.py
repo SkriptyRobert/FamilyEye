@@ -83,11 +83,35 @@ class UsageReporter:
                         })
                 
                 if usage_logs or running_processes:
+                    # Enforce Queue Limit
+                    from .config import config
+                    MAX_QUEUE_SIZE = config.get("max_queue_size", 500)
+                    
+                    if len(self.report_queue) >= MAX_QUEUE_SIZE:
+                        # Drop oldest 10% to make space (avoid dropping one by one)
+                        drop_count = max(10, int(MAX_QUEUE_SIZE * 0.1))
+                        del self.report_queue[:drop_count]
+                        self.logger.warning(f"Report queue limit reached ({MAX_QUEUE_SIZE}). Dropped {drop_count} oldest reports.")
+                        
+                    # NEW: Collect enhanced metrics
+                    device_uptime = int(self.monitor.get_device_uptime())
+                    device_usage_today = int(self.monitor.device_usage_today)
+                    kill_history = self.monitor.get_kill_history()
+                    
                     self.report_queue.append({
                         "usage_logs": usage_logs,
                         "running_processes": running_processes,
-                        "timestamp": batch_timestamp
+                        "timestamp": batch_timestamp,
+                        # NEW: Enhanced data for backend
+                        "device_uptime_seconds": device_uptime,
+                        "device_usage_today_seconds": device_usage_today,
+                        "kill_history": kill_history
                     })
+                    
+                    # Clear kill history after including in report
+                    if kill_history:
+                        self.monitor.clear_kill_history()
+                    
                     self._save_queue_cache()
 
             if not self.report_queue:
@@ -110,9 +134,9 @@ class UsageReporter:
                     # SUCCESS - mark for removal
                     sent_indices.append(idx)
                     
-                    # Track reconnection
+                    # Track reconnection using Monotonic Time
                     if self.offline_since:
-                        offline_duration = time.time() - self.offline_since
+                        offline_duration = time.monotonic() - self.offline_since
                         self.cumulative_offline += offline_duration
                         self.logger.info(f"Back online after {offline_duration:.0f}s (cached reports sent)")
                         self.offline_since = None
@@ -123,7 +147,7 @@ class UsageReporter:
                 else:
                     # FAILED - stop processing queue for now
                     if self.offline_since is None:
-                        self.offline_since = time.time()
+                        self.offline_since = time.monotonic()
                         self.logger.warning("Network connection lost - reports queued")
                     break
             

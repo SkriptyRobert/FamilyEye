@@ -71,6 +71,10 @@ class RuleEnforcer:
         self.monitor = monitor
         # Try to load cached rules on startup
         self._load_rules_cache()
+
+    def set_reporter(self, reporter):
+        """Set reporter instance for sync-on-fetch."""
+        self.reporter = reporter
         
     def _get_cache_path(self):
         """Get path for rules cache file."""
@@ -137,6 +141,15 @@ class RuleEnforcer:
             # Skip if we don't have basic config (api_client handles details, but good to check)
             if not config.is_configured():
                 return
+
+            # SYNC-ON-FETCH: Send latest usage data BEFORE asking for rules
+            # This ensures backend has up-to-date counters for daily limits
+            if getattr(self, 'reporter', None):
+                try:
+                    # self.logger.debug("Syncing usage before rule fetch...")
+                    self.reporter.send_reports()
+                except Exception as e:
+                    self.logger.warning(f"Failed to sync usage before fetch: {e}")
 
             rules_data = api_client.fetch_rules()
             
@@ -329,7 +342,7 @@ class RuleEnforcer:
         # 3. Update the state
         self.blocked_websites = new_blocked_websites
     
-    def _kill_app(self, app_name: str):
+    def _kill_app(self, app_name: str, reason: str = "blocked", used_seconds: int = 0, limit_seconds: int = 0):
         """Kill application by name - kills ALL processes matching the name pattern."""
         try:
             import psutil
@@ -351,6 +364,10 @@ class RuleEnforcer:
             
             if killed_count > 0:
                 self.logger.warning(f"Enforced limit: Killed {killed_count} processes for {app_name}")
+                
+                # NEW: Log kill to monitor for backend reporting
+                if self.monitor:
+                    self.monitor.log_process_kill(app_name, reason, used_seconds, limit_seconds)
             else:
                 # Fallback to taskkill if psutil didn't find anything
                 subprocess.run(
@@ -366,6 +383,10 @@ class RuleEnforcer:
                         timeout=5
                     )
                 self.logger.info(f"Enforced block via taskkill: {app_name}")
+                
+                # Still log the kill attempt via taskkill
+                if self.monitor:
+                    self.monitor.log_process_kill(app_name, reason, used_seconds, limit_seconds)
         except Exception as e:
             self.logger.error(f"Error killing {app_name}: {e}")
     
@@ -454,7 +475,7 @@ class RuleEnforcer:
             if is_blocked:
                 self.logger.warning(f"BLOCKED APP DETECTED: {app_name} (Matches rule: {matching_rule})")
                 self.logger.info(f"  Details: OrigName={orig_name}, Title='{title}', PID={pid}")
-                self._kill_app(app_name)
+                self._kill_app(app_name, reason="app_blocked")
                 continue
 
             # NEW: Check app-specific schedules
@@ -487,7 +508,7 @@ class RuleEnforcer:
                 if not is_allowed_now:
                     self.logger.info(f"Checking schedule failure: {app_name}. Day:{current_day}, Time:{current_time_str}. Rules: {app_schedules}")
                     self.logger.warning(f"APP OUTSIDE SCHEDULE: {app_name} (Killing)")
-                    self._kill_app(app_name)
+                    self._kill_app(app_name, reason="outside_app_schedule")
     
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""
@@ -575,7 +596,7 @@ class RuleEnforcer:
                 # Limit exceeded - kill all matched apps
                 self.logger.warning(f"TIME LIMIT EXCEEDED: {rule_name} (Matches: {matched_apps}) used {int(total_seconds/60)}m / {int(limit_seconds/60)}m")
                 for m_app in matched_apps:
-                    self._kill_app(m_app)
+                    self._kill_app(m_app, reason="time_limit_exceeded", used_seconds=int(total_seconds), limit_seconds=int(limit_seconds))
                 
                 if rule_low not in self._apps_limit_exceeded_notified:
                     self.notification_manager.show_limit_exceeded(rule_name)
@@ -671,17 +692,17 @@ class RuleEnforcer:
                 
         elif percentage_used >= 80:
             # Warning threshold (80% used) - show warning every 5 minutes
+            
+            # Reset warning flag if 5 minutes have passed
+            last_shown = getattr(self, '_daily_limit_warning_shown_at', 0)
+            if self._daily_limit_warning_shown and (time.time() - last_shown > 300):
+                self._daily_limit_warning_shown = False
+            
             if not self._daily_limit_warning_shown:
                 self.logger.warning(f"Approaching daily device limit: {remaining_minutes} minutes remaining")
                 self.notification_manager.show_daily_limit_warning(remaining_minutes)
                 self._daily_limit_warning_shown = True
-                
-                # Reset warning flag after 5 minutes to show again
-                def reset_warning():
-                    time.sleep(300)  # 5 minutes
-                    self._daily_limit_warning_shown = False
-                import threading
-                threading.Thread(target=reset_warning, daemon=True).start()
+                self._daily_limit_warning_shown_at = time.time()
     
     def _enforce_schedule(self):
         """Enforce schedule rules - allowed time windows for the WHOLE DEVICE."""
