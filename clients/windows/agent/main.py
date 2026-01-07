@@ -103,7 +103,7 @@ class ParentalControlAgent:
                            api_key_set=bool(config.get('api_key')))
             return False
         
-        # Initialize API Client and register auth failure callback
+        # 1. Initialize API Client and register callbacks
         from .api_client import api_client
         
         self.auth_failed = False
@@ -114,41 +114,42 @@ class ParentalControlAgent:
             
         api_client.set_auth_failure_callback(on_auth_fail)
 
-        # Validate credentials with backend before starting
+        # 2. Validate credentials with backend before starting
         if not self._validate_credentials():
             self.logger.critical("Credentials validation failed - agent will not start")
-            self.logger.error("Possible causes:")
-            self.logger.error("  1. device_id or api_key are incorrect")
-            self.logger.error("  2. Device was deleted from backend")
-            self.logger.error("  3. Backend is not available")
-            self.logger.error("  4. device_id in config.json does not match database")
-            self.logger.info("Solution: Re-pair device using: python windows_agent/pair_device.py")
             return False
         
         self.running = True
         
-        # Start IPC server for communication with ChildAgent
+        # 3. Start IPC server for communication with ChildAgent
         if _ipc_available:
             try:
                 self.ipc_server = get_ipc_server()
                 self.ipc_server.start()
-                self.logger.info("IPC Server started for ChildAgent communication")
-                
-                # Update notification manager with IPC server
+                self.logger.info("IPC Server started")
                 self.enforcer.notification_manager.set_ipc_server(self.ipc_server)
+                self.reporter.set_ipc_server(self.ipc_server)
             except Exception as e:
                 self.logger.warning(f"Failed to start IPC server: {e}")
-        else:
-            self.logger.warning("IPC not available - notifications will use fallback")
         
-        # Perform initial monitor update to populate data immediately
+        # 4. PERFORM INITIAL SYSTEM SCAN (Populates monitor with current apps)
         self.logger.info("Performing initial system scan...")
         try:
+            self.monitor.update()
+            # Wait a moment for accurate data collection (psutil need time for deltas sometimes, but we just need PIDs now)
+            time.sleep(1)
             self.monitor.update()
         except Exception as e:
             self.logger.warning(f"Initial scan failed: {e}")
 
-        # Start threads
+        # 5. INITIAL RULE FETCH (Get current rules and backend usage stats)
+        try:
+            self.logger.info("Fetching initial rules from backend...")
+            self.enforcer._fetch_rules()
+        except Exception as e:
+            self.logger.warning(f"Initial rule fetch failed: {e}")
+
+        # 6. Start background threads
         self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
         self.enforcer_thread = threading.Thread(target=self._enforcer_loop, daemon=True)
         self.reporter_thread = threading.Thread(target=self._reporter_loop, daemon=True)
@@ -156,6 +157,14 @@ class ParentalControlAgent:
         self.monitor_thread.start()
         self.enforcer_thread.start()
         self.reporter_thread.start()
+        
+        # 7. IMMEDIATE INITIAL PUSH (Send scan results and current usage state)
+        try:
+            self.logger.info("Sending initial data report to backend...")
+            # reporter.send_reports() now includes running_processes
+            self.reporter.send_reports()
+        except Exception as e:
+            self.logger.warning(f"Initial push failed: {e}")
         
         # Start boot protection monitor
         if _boot_protection_available and BootProtection:
@@ -318,6 +327,14 @@ class ParentalControlAgent:
         while self.running:
             try:
                 self.reporter.send_reports()
+                
+                # Check if immediate sync is needed (after reconnection)
+                if getattr(self.reporter, '_needs_immediate_sync', False):
+                    self.reporter._needs_immediate_sync = False
+                    reporter_logger.info("Immediate sync triggered - sending again")
+                    time.sleep(1)  # Small delay before retry
+                    continue  # Skip normal interval, send again immediately
+                
                 interval = config.get("reporting_interval", 60)
                 reporter_logger.debug("Next report scheduled", interval_seconds=interval)
                 time.sleep(interval)

@@ -29,10 +29,26 @@ class BackendAPIClient:
         self.session = self._create_session()
         self._update_headers()
         self._auth_failure_callback = None
+        self._on_reconnect_callbacks = []
+        self.is_online = True  # Assume online initially
         
     def set_auth_failure_callback(self, callback):
         """Set callback to be called on 401 Unauthorized (Critical)."""
         self._auth_failure_callback = callback
+
+    def add_on_reconnect_callback(self, callback):
+        """Add a callback to be called when connection is restored."""
+        if callback not in self._on_reconnect_callbacks:
+            self._on_reconnect_callbacks.append(callback)
+
+    def _trigger_reconnect(self):
+        """Trigger all registered reconnection callbacks."""
+        self.logger.info(f"Triggering {len(self._on_reconnect_callbacks)} reconnection callbacks")
+        for callback in self._on_reconnect_callbacks:
+            try:
+                callback()
+            except Exception as e:
+                self.logger.error(f"Error in reconnection callback: {e}")
 
     def _handle_401(self):
         """Handle 401 Unauthorized response."""
@@ -94,21 +110,28 @@ class BackendAPIClient:
             
             if response.status_code == 200:
                 self.logger.debug("Rules fetched successfully")
+                if not self.is_online:
+                    self.logger.info("Connection restored (fetch_rules)")
+                    self.is_online = True
+                    self._trigger_reconnect()
                 return response.json()
             elif response.status_code == 401:
                 self._handle_401()
                 return None
             else:
                 self.logger.warning(f"Failed to fetch rules: HTTP {response.status_code}")
+                # We don't set is_online=False for non-200 if it's not a connection error
                 return None
                 
         except requests.exceptions.RequestException as e:
-            self.logger.warning(f"Connection error fetching rules: {e}")
+            if self.is_online:
+                self.logger.warning(f"Connection error fetching rules: {e}")
+                self.is_online = False
             return None
             
-    def send_reports(self, usage_logs: List[Dict]) -> Optional[Dict]:
+    def send_reports(self, usage_logs: List[Dict], running_processes: List[str] = None) -> Optional[Dict]:
         """Send usage logs to backend. Returns response JSON on success."""
-        if not usage_logs:
+        if not usage_logs and not running_processes:
             return {}
             
         try:
@@ -118,13 +141,18 @@ class BackendAPIClient:
                 "device_id": config.get("device_id"),
                 "api_key": config.get("api_key"),
                 "usage_logs": usage_logs,
-                "client_timestamp": datetime.now().isoformat()
+                "client_timestamp": datetime.now().isoformat(),
+                "running_processes": running_processes
             }
             
             response = self.session.post(url, json=payload, timeout=10)
             
             if response.status_code in [200, 201]:
                 self.logger.info(f"Sent {len(usage_logs)} activity logs")
+                if not self.is_online:
+                    self.logger.info("Connection restored (send_reports)")
+                    self.is_online = True
+                    self._trigger_reconnect()
                 return response.json()
             elif response.status_code == 401:
                 self._handle_401()
@@ -134,7 +162,9 @@ class BackendAPIClient:
                 return None
                 
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"Network error sending reports: {e}")
+            if self.is_online:
+                self.logger.error(f"Network error sending reports: {e}")
+                self.is_online = False
             return None
                 
 

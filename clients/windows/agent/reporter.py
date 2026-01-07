@@ -13,10 +13,20 @@ class UsageReporter:
         self.monitor = monitor
         self.last_report = time.time()
         self.logger = get_logger('REPORTER')
-        self.last_report = time.time()
-        self.logger = get_logger('REPORTER')
         self.ipc_server = None
         self.time_provider = None
+        # Offline tracking
+        self.offline_since = None  # Timestamp when network went down
+        self.cumulative_offline = 0  # Total offline seconds today
+        self._needs_immediate_sync = False  # Flag to trigger immediate retry after reconnect
+        
+        # Report Queue for offline persistence
+        self.report_queue: List[Dict] = []
+        self._load_queue_cache()
+        
+        # Register for reconnection events
+        from .api_client import api_client
+        api_client.add_on_reconnect_callback(self.trigger_immediate_sync)
         
     def set_time_provider(self, provider):
         """Set trusted time provider function."""
@@ -30,74 +40,128 @@ class UsageReporter:
         """Stop reporting."""
         self.send_reports()
     
+    def trigger_immediate_sync(self):
+        """Callback for reconnection - trigger immediate report."""
+        self.logger.info("Reconnection detected - triggering immediate sync")
+        self._needs_immediate_sync = True
+    
     def send_reports(self):
-        """Send usage reports to backend (batch)."""
+        """Send usage reports to backend (batch with queue)."""
         if not self.monitor:
-            self.logger.warning("Monitor not available")
             return
-        
+            
         try:
-            backend_url = config.get("backend_url")
-            device_id = config.get("device_id")
-            api_key = config.get("api_key")
+            # 1. SNAP current usage from monitor into a new report hunk
+            usage_stats = self.monitor.snap_pending_usage()
+            running_processes = self.monitor.get_running_processes()
             
-            if not device_id or not api_key:
-                self.logger.error("Missing configuration", device_id=bool(device_id), api_key=bool(api_key))
-                return
-            
-            self.logger.info("Initiating usage report", backend=backend_url, device_id=device_id[:20] + "...")
-            
-            # Get pending usage (delta since last success)
-            usage_logs = []
-            usage_stats = self.monitor.get_pending_usage()
-            total_apps = len(usage_stats)
-            
-            # Convert to log format
-            from datetime import datetime
-            from datetime import datetime
-            if self.time_provider:
-                # Use trusted time if available (anti-cheat)
-                batch_timestamp = self.time_provider().isoformat()
-            else:
-                batch_timestamp = datetime.utcnow().isoformat()
-            
-            for app_name, duration in usage_stats.items():
-                duration_seconds = int(round(duration))
-                if duration_seconds >= 1:
-                    meta = self.monitor.app_metadata.get(app_name, {})
-                    usage_logs.append({
-                        "app_name": app_name,
-                        "window_title": meta.get("title", ""),
-                        "exe_path": meta.get("exe", ""),
-                        "duration": duration_seconds,
-                        "is_focused": meta.get("is_focused", False),
-                        "device_id": 0,
+            if usage_stats or running_processes:
+                from datetime import datetime
+                if self.time_provider:
+                    batch_timestamp = self.time_provider().isoformat()
+                else:
+                    batch_timestamp = datetime.utcnow().isoformat()
+                
+                usage_logs = []
+                for app_name, duration in usage_stats.items():
+                    duration_seconds = int(round(duration))
+                    if duration_seconds >= 1:
+                        meta = self.monitor.app_metadata.get(app_name, {})
+                        usage_logs.append({
+                            "app_name": app_name,
+                            "window_title": meta.get("title", ""),
+                            "exe_path": meta.get("exe", ""),
+                            "duration": duration_seconds,
+                            "is_focused": meta.get("is_focused", False),
+                            "timestamp": batch_timestamp
+                        })
+                
+                if usage_logs or running_processes:
+                    self.report_queue.append({
+                        "usage_logs": usage_logs,
+                        "running_processes": running_processes,
                         "timestamp": batch_timestamp
                     })
+                    self._save_queue_cache()
+
+            if not self.report_queue:
+                return
+
+            self.logger.info(f"Processing report queue: {len(self.report_queue)} hunks pending")
             
-            # Send to backend
-            # ... (heartbeat logic or prep info) ...
-            
-            # Send to backend using centralized client
+            # 2. TRY TO SEND all hunks in queue
             from .api_client import api_client
             
-            response_data = api_client.send_reports(usage_logs)
-            
-            if response_data is not None:
-                self.logger.success("Usage report sent successfully", logs_sent=len(usage_logs))
-                # CRITICAL: Clear ONLY the pending delta after success
-                self.monitor.clear_pending_usage()
+            # Process queue safely - collect indices of successfully sent hunks
+            sent_indices = []
+            for idx, report_hunk in enumerate(self.report_queue):
+                response_data = api_client.send_reports(
+                    report_hunk["usage_logs"], 
+                    running_processes=report_hunk.get("running_processes")
+                )
                 
-                # Check for commands in response
-                if "commands" in response_data:
-                    self._handle_backend_commands(response_data["commands"])
-            else:
-                 # API Client handled logging
-                 pass
+                if response_data is not None:
+                    # SUCCESS - mark for removal
+                    sent_indices.append(idx)
+                    
+                    # Track reconnection
+                    if self.offline_since:
+                        offline_duration = time.time() - self.offline_since
+                        self.cumulative_offline += offline_duration
+                        self.logger.info(f"Back online after {offline_duration:.0f}s (cached reports sent)")
+                        self.offline_since = None
+                        self._needs_immediate_sync = True
+                    
+                    if "commands" in response_data:
+                        self._handle_backend_commands(response_data["commands"])
+                else:
+                    # FAILED - stop processing queue for now
+                    if self.offline_since is None:
+                        self.offline_since = time.time()
+                        self.logger.warning("Network connection lost - reports queued")
+                    break
+            
+            # Remove sent hunks (in reverse order to preserve indices)
+            for idx in reversed(sent_indices):
+                del self.report_queue[idx]
+            
+            if sent_indices:
+                self._save_queue_cache()
 
-        
         except Exception as e:
-            self.logger.error("Unexpected error during reporting", error=str(e)[:100])
+            self.logger.error(f"Unexpected error in reporting flow: {e}")
+
+    def _get_queue_path(self):
+        import sys
+        import os
+        if getattr(sys, 'frozen', False):
+            program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+            base_dir = os.path.join(program_data, 'FamilyEye', 'Agent')
+            os.makedirs(base_dir, exist_ok=True)
+            return os.path.join(base_dir, 'report_queue.json')
+        else:
+            return os.path.join(os.path.dirname(__file__), 'report_queue.json')
+
+    def _save_queue_cache(self):
+        try:
+            import json
+            with open(self._get_queue_path(), 'w') as f:
+                json.dump(self.report_queue, f)
+        except Exception as e:
+            self.logger.error(f"Failed to save report queue: {e}")
+
+    def _load_queue_cache(self):
+        try:
+            import json
+            import os
+            cache_path = self._get_queue_path()
+            if os.path.exists(cache_path):
+                with open(cache_path, 'r') as f:
+                    self.report_queue = json.load(f)
+                if self.report_queue:
+                    self.logger.info(f"Loaded {len(self.report_queue)} pending reports from cache")
+        except Exception as e:
+            self.logger.error(f"Failed to load report queue: {e}")
 
     def _handle_backend_commands(self, commands: List[Dict]):
         """Handle commands from backend response."""
@@ -171,7 +235,7 @@ class UsageReporter:
             files = glob.glob(os.path.join(cache_dir, "screenshot_*.jpg"))
             files.sort(key=os.path.getmtime, reverse=True)
             
-            # Delete older files beyondmax_files
+            # Delete older files beyond max_files
             for old_file in files[max_files:]:
                 try:
                     os.remove(old_file)
@@ -208,6 +272,3 @@ class UsageReporter:
 
         except Exception as e:
             self.logger.error(f"Upload screenshot error: {e}")
-
-
-

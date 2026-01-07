@@ -49,8 +49,12 @@ class AppMonitor:
         'svchost', 'fontdrvhost', 'winlogon', 'spoolsv', 'dwm', 'ctfmon', 'taskhostw',
         'shellexperiencehost', 'searchhost', 'startmenuexperiencehost', 'userinit',
         'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
-        'sihost', 'searchindexer', 'conhost', 'dllhost', 'explorer'
+        'sihost', 'searchindexer', 'conhost', 'dllhost', 'explorer', 'net', 'net1',
+        'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd'
     }
+    
+    # Windows that should be ignored even if they have visible windows
+    IGNORED_WINDOWS = IGNORED_PROCESSES
     
     
     def __init__(self):
@@ -61,6 +65,9 @@ class AppMonitor:
         # usage_pending: Transient delta to be sent to backend
         self.usage_today: Dict[str, float] = defaultdict(float)
         self.usage_pending: Dict[str, float] = defaultdict(float)
+        
+        import threading
+        self.lock = threading.Lock()
         
         # Absolute wall-clock active time (not sum of apps)
         self.device_usage_today = 0.0
@@ -448,37 +455,50 @@ class AppMonitor:
     
     def get_usage_stats(self) -> Dict[str, float]:
         """Return cumulative stats for today (used for local enforcement)."""
-        return dict(self.usage_today)
+        with self.lock:
+            return dict(self.usage_today)
     
-    def get_pending_usage(self) -> Dict[str, float]:
-        """Return delta since last report (used for backend updates)."""
-        return dict(self.usage_pending)
+    def get_pending_usage(self):
+        """Return a copy of pending usage (not cleared)."""
+        with self.lock:
+            return self.usage_pending.copy()
+            
+    def snap_pending_usage(self):
+        """Return pending usage and clear it (for discrete reporting)."""
+        with self.lock:
+            snap = self.usage_pending.copy()
+            self.usage_pending = {}
+            self.device_usage_pending = 0.0
+            self._save_usage_cache()
+            return snap
+            
+    def clear_pending_usage(self):
+        """Clear pending delta after successful report."""
+        with self.lock:
+            self.usage_pending.clear()
+            self.device_usage_pending = 0.0
+            self._save_usage_cache()
 
     def get_device_usage(self) -> float:
         """Return total wall-clock active time for today."""
         return self.device_usage_today
 
-    def clear_pending_usage(self):
-        """Clear pending delta after successful report."""
-        self.usage_pending.clear()
-        self.device_usage_pending = 0.0
-        self._save_usage_cache() # Persist the fact that we sent it
-
     def reset_daily_stats(self):
         """Full reset (e.g. on manual request or local day change)."""
-        self.usage_today.clear()
-        self.usage_pending.clear()
-        self.device_usage_today = 0.0
-        self.device_usage_pending = 0.0
-        # Also clear cache
-        try:
-            cache_path = self._get_cache_path()
-            if os.path.exists(cache_path):
-                os.remove(cache_path)
-        except Exception:
-            pass
+        with self.lock:
+            self.usage_today.clear()
+            self.usage_pending.clear()
+            self.device_usage_today = 0.0
+            self.device_usage_pending = 0.0
+            # Also clear cache
+            try:
+                cache_path = self._get_cache_path()
+                if os.path.exists(cache_path):
+                    os.remove(cache_path)
+            except Exception:
+                pass
 
-    def get_running_processes(self) -> list:
-        if hasattr(self, 'raw_processes'):
-            return sorted(self.raw_processes)
-        return sorted(list(self.active_apps))
+    def get_running_processes(self):
+        """Return list of currently active trackable processes."""
+        with self.lock:
+            return sorted(list(self.active_apps))

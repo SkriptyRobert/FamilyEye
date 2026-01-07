@@ -47,7 +47,12 @@ class RuleEnforcer:
         self.ref_monotonic: float = 0.0
         self.ref_server_ts: float = 0.0
         self.is_time_synced: bool = False
-        self.last_time_sync: float = 0
+        self.last_time_sync = 0
+        self._needs_immediate_fetch = False
+        
+        # Register for reconnection events
+        from .api_client import api_client
+        api_client.add_on_reconnect_callback(self.trigger_immediate_fetch)
 
         
         # Track apps that already exceeded limit (to avoid repeated notifications)
@@ -107,7 +112,8 @@ class RuleEnforcer:
                 cache_data = json.load(f)
                 
             # Check cache age (optional, maybe warn if too old)
-            cache_age = time.time() - cache_data.get("timestamp", 0)
+            cache_ts = cache_data.get("timestamp", 0)
+            cache_age = time.time() - cache_ts
             
             self.rules = cache_data.get("rules", [])
             self.usage_by_app = cache_data.get("usage_by_app", {})
@@ -117,6 +123,11 @@ class RuleEnforcer:
             self.logger.info(f"Loaded {len(self.rules)} rules from local cache (age: {int(cache_age/60)}m)")
         except Exception as e:
             self.logger.warning(f"Failed to load cached rules: {e}")
+
+    def trigger_immediate_fetch(self):
+        """Callback for reconnection - trigger immediate rule fetch."""
+        self.logger.info("Reconnection detected - triggering immediate rule fetch")
+        self._needs_immediate_fetch = True
 
     def _fetch_rules(self):
         """Fetch rules from backend using API Client."""
@@ -464,25 +475,19 @@ class RuleEnforcer:
                 for sch in app_schedules:
                     # Check day
                     if sch.get("days"):
-                        days_list = [d.strip().lower()[:3] for d in sch.get("days").split(",")]
-                        if current_day not in days_list: continue
+                        days_list = self._parse_schedule_days(sch.get("days"))
+                        if current_day not in days_list:
+                            continue
                     
                     # Check time
                     if sch.get("start_time") <= current_time_str <= sch.get("end_time"):
                         is_allowed_now = True
                         break
                 
-                        break
-                    else:
-                        # Log why it failed (debug)
-                        # self.logger.debug(f"Schedule mismatch: {current_time_str} not in {sch.get('start_time')}-{sch.get('end_time')}")
-                        pass
-                
                 if not is_allowed_now:
                     self.logger.info(f"Checking schedule failure: {app_name}. Day:{current_day}, Time:{current_time_str}. Rules: {app_schedules}")
                     self.logger.warning(f"APP OUTSIDE SCHEDULE: {app_name} (Killing)")
                     self._kill_app(app_name)
-                    # Optional: Notification for app schedule?
     
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""
@@ -494,6 +499,22 @@ class RuleEnforcer:
         # Remove port
         url = url.split(':')[0]
         return url.lower().strip()
+    
+    def _parse_schedule_days(self, days_raw: str) -> list:
+        """Parse schedule days - supports both numeric ('0,1,2') and text ('mon,tue,wed') formats."""
+        days_map = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+        days_list = []
+        for d in days_raw.split(","):
+            d = d.strip()
+            if d.isdigit():
+                # Numeric format: 0=mon, 1=tue, etc.
+                idx = int(d)
+                if 0 <= idx <= 6:
+                    days_list.append(days_map[idx])
+            else:
+                # Text format: 'mon', 'tue', 'monday', etc.
+                days_list.append(d.lower()[:3])
+        return days_list
     
     def _enforce_time_limits(self):
         """Enforce time limits - check total daily usage from backend."""
@@ -687,7 +708,7 @@ class RuleEnforcer:
             
             # Check if today is an allowed day
             if allowed_days:
-                allowed_days_list = [d.strip().lower()[:3] for d in allowed_days.split(",")]
+                allowed_days_list = self._parse_schedule_days(allowed_days)
                 if current_day not in allowed_days_list:
                     continue  # Today is not in the allowed days
             
@@ -743,7 +764,11 @@ class RuleEnforcer:
         from .config import config
         polling_interval = config.get("polling_interval", 10)
             
-        if current_time - self._last_fetch_rules_time >= polling_interval:
+        if current_time - self._last_fetch_rules_time >= polling_interval or self._needs_immediate_fetch:
+            if self._needs_immediate_fetch:
+                self.logger.info("Immediate rule fetch triggered (reconnection)")
+                self._needs_immediate_fetch = False
+                
             self._fetch_rules()
             self._last_fetch_rules_time = current_time
         

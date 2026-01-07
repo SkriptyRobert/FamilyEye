@@ -185,13 +185,19 @@ async def agent_critical_event(
     
     # For limit_exceeded events, update usage log with actual time
     if request.event_type == 'limit_exceeded' and request.app_name and request.used_seconds:
-        today_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        # Calculate device's current day start in UTC
+        offset_seconds = device.timezone_offset or 0
+        now_device = datetime.now(timezone.utc) + timedelta(seconds=offset_seconds)
+        local_midnight = now_device.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_utc = local_midnight - timedelta(seconds=offset_seconds)
+        today_end_utc = today_start_utc + timedelta(days=1)
         
-        # Get current usage for this app today
+        # Get current usage for this app today (within device's local day range)
         current_usage = db.query(func.sum(UsageLog.duration)).filter(
             UsageLog.device_id == device.id,
             func.lower(UsageLog.app_name) == request.app_name.lower(),
-            UsageLog.timestamp.like(f'{today_str}%')
+            UsageLog.timestamp >= today_start_utc,
+            UsageLog.timestamp < today_end_utc
         ).scalar() or 0
         
         # If agent reports more than DB has, add the difference
@@ -293,32 +299,33 @@ async def get_device_summary(
             detail="Device not found"
         )
     
-    # Today's usage - count unique report MINUTES (truncated to minute level)
-    # This correctly handles overlapping apps: all apps in same minute = 1 minute of usage
+    # Calculate "Today" in Device's Local Time
     from datetime import timezone
     now_utc = datetime.now(timezone.utc)
+    offset_seconds = device.timezone_offset or 0
+    device_local_now = now_utc + timedelta(seconds=offset_seconds)
     
-    # Use requested date or today
     if date:
         try:
             from dateutil import parser
             dt = parser.parse(date)
-            today_start = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            # Use provided date as local midnight
+            local_midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)
             is_historical = True
         except Exception:
-            today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+            local_midnight = device_local_now.replace(hour=0, minute=0, second=0, microsecond=0)
             is_historical = False
     else:
-        today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        local_midnight = device_local_now.replace(hour=0, minute=0, second=0, microsecond=0)
         is_historical = False
 
-    # SQLite stores timestamps as strings, so we need to compare as strings
-    # Format: YYYY-MM-DD for date comparison
-    today_str = today_start.strftime('%Y-%m-%d')
+    # Convert local midnight back to UTC for DB querying
+    today_start_utc = local_midnight - timedelta(seconds=offset_seconds)
+    today_end_utc = today_start_utc + timedelta(days=1)
     
-    # Calculate yesterday and week dates for comparison
-    yesterday_start = today_start - timedelta(days=1)
-    yesterday_str = yesterday_start.strftime('%Y-%m-%d')
+    today_str = local_midnight.strftime('%Y-%m-%d')
+    yesterday_start_utc = today_start_utc - timedelta(days=1)
+    yesterday_end_utc = today_start_utc
     
     # Count unique report minutes - truncate timestamp to minute level before counting
     # This ensures multiple apps logged in same minute count as 1 minute, not N
@@ -326,7 +333,8 @@ async def get_device_summary(
         func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{today_str}%')
+        UsageLog.timestamp >= today_start_utc,
+        UsageLog.timestamp < today_end_utc
     ).scalar() or 0
     
     # Each unique minute = 60 seconds of device activity
@@ -338,7 +346,8 @@ async def get_device_summary(
     # Total apps used today
     apps_today = db.query(func.count(func.distinct(UsageLog.app_name))).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{today_str}%')  # String prefix match for date
+        UsageLog.timestamp >= today_start_utc,
+        UsageLog.timestamp < today_end_utc
     ).scalar() or 0
     
     # Most used apps today
@@ -347,7 +356,8 @@ async def get_device_summary(
         func.sum(UsageLog.duration).label('total_duration')
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{today_str}%')  # String prefix match for date
+        UsageLog.timestamp >= today_start_utc,
+        UsageLog.timestamp < today_end_utc
     ).group_by(UsageLog.app_name).order_by(func.sum(UsageLog.duration).desc()).limit(100).all()
 
     # Get latest window titles for each app to show what's actually happening
@@ -357,7 +367,8 @@ async def get_device_summary(
         UsageLog.window_title
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{today_str}%'),
+        UsageLog.timestamp >= today_start_utc,
+        UsageLog.timestamp < today_end_utc,
         UsageLog.window_title.isnot(None),
         UsageLog.window_title != ""
     ).order_by(UsageLog.timestamp.desc()).all()
@@ -387,21 +398,23 @@ async def get_device_summary(
         func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{yesterday_str}%')
+        UsageLog.timestamp >= yesterday_start_utc,
+        UsageLog.timestamp < yesterday_end_utc
     ).scalar() or 0
     yesterday_usage = unique_minutes_yesterday * reporting_interval
     
     # Calculate week average (count of unique minutes for last 7 days / 7) 
     week_total = 0
     for i in range(1, 8):
-        day = today_start - timedelta(days=i)
-        day_str = day.strftime('%Y-%m-%d')
+        day_start_utc = today_start_utc - timedelta(days=i)
+        day_end_utc = day_start_utc + timedelta(days=1)
         
         day_minutes = db.query(
             func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
         ).filter(
             UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
+            UsageLog.timestamp >= day_start_utc,
+            UsageLog.timestamp < day_end_utc
         ).scalar() or 0
         
         week_total += day_minutes * reporting_interval
@@ -425,7 +438,8 @@ async def get_device_summary(
         app_usage_today = db.query(func.sum(UsageLog.duration)).filter(
             UsageLog.device_id == device_id,
             func.lower(UsageLog.app_name).in_([app_name.lower(), f"{app_name.lower()}.exe"]),
-            UsageLog.timestamp.like(f'{today_str}%')  # String prefix match for date
+            UsageLog.timestamp >= today_start_utc,
+            UsageLog.timestamp < today_end_utc
         ).scalar() or 0
         
         limit_seconds = (rule.time_limit or 0) * 60  # Convert minutes to seconds
@@ -493,7 +507,8 @@ async def get_device_summary(
         # Fetch raw logs for the selected day including is_focused flag
         logs_today = db.query(UsageLog.app_name, UsageLog.timestamp, UsageLog.duration, UsageLog.is_focused).filter(
             UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{today_str}%')
+            UsageLog.timestamp >= today_start_utc,
+            UsageLog.timestamp < today_end_utc
         ).order_by(UsageLog.timestamp.asc()).all()
 
         # 1. Focus Analysis (Parallel Tracks: Multi-monitor & Multitasking aware)
@@ -585,10 +600,13 @@ async def get_device_summary(
                     is_night_owl = True
                     break
 
-            for i in range(1, 8):
-                day = today_start - timedelta(days=i)
-                d_str = day.strftime('%Y-%m-%d')
-                first_d = db.query(func.min(UsageLog.timestamp)).filter(UsageLog.device_id == device_id, UsageLog.timestamp.like(f'{d_str}%')).scalar()
+                day_start_utc_h = today_start_utc - timedelta(days=i)
+                day_end_utc_h = day_start_utc_h + timedelta(days=1)
+                first_d = db.query(func.min(UsageLog.timestamp)).filter(
+                    UsageLog.device_id == device_id, 
+                    UsageLog.timestamp >= day_start_utc_h,
+                    UsageLog.timestamp < day_end_utc_h
+                ).scalar()
                 if first_d:
                     first_d_dt = parser.parse(first_d) if isinstance(first_d, str) else first_d
                     starts.append(first_d_dt.hour + first_d_dt.minute/60)
