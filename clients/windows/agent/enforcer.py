@@ -304,10 +304,21 @@ class RuleEnforcer:
                 start = rule.get("schedule_start_time")
                 end = rule.get("schedule_end_time")
                 if start and end:
-                    # Log schedule for debugging
-                    # self.logger.info(f"Checking Network Block: {start} <= {now_str} <= {end}")
-                    if start <= now_str <= end:
-                        self.is_network_blocked = True
+                    # FIX: Use minute-based comparison instead of string comparison
+                    try:
+                        start_parts = start.split(":")
+                        end_parts = end.split(":")
+                        now_parts = now_str.split(":")
+                        
+                        start_minutes = int(start_parts[0]) * 60 + int(start_parts[1] if len(start_parts) > 1 else 0)
+                        end_minutes = int(end_parts[0]) * 60 + int(end_parts[1] if len(end_parts) > 1 else 0)
+                        now_minutes = int(now_parts[0]) * 60 + int(now_parts[1] if len(now_parts) > 1 else 0)
+                        
+                        if start_minutes <= now_minutes <= end_minutes:
+                            self.is_network_blocked = True
+                            self.logger.debug(f"Network block active: {start} <= {now_str} <= {end}")
+                    except (ValueError, IndexError):
+                        pass
                 else:
                     self.is_network_blocked = True
             elif rule_type in ("website_block", "web_block"):
@@ -341,6 +352,13 @@ class RuleEnforcer:
             
         # 3. Update the state
         self.blocked_websites = new_blocked_websites
+        
+        # 4. LOG SUMMARY of loaded rules for debugging
+        self.logger.info(f"Rules loaded: {len(self.rules)} total, "
+                        f"blocked_apps={len(self.blocked_apps)}, "
+                        f"daily_limits={len(self.daily_limits)}, "
+                        f"device_schedules={len(self.device_schedules)}, "
+                        f"app_schedules={list(self.app_schedules.keys())}")
     
     def _kill_app(self, app_name: str, reason: str = "blocked", used_seconds: int = 0, limit_seconds: int = 0):
         """Kill application by name - kills ALL processes matching the name pattern."""
@@ -482,33 +500,60 @@ class RuleEnforcer:
             # If there are schedules for this app, user MUST be in one of them to run it
             if clean_name in self.app_schedules or orig_name in self.app_schedules:
                 target_key = clean_name if clean_name in self.app_schedules else orig_name
-                app_schedules = self.app_schedules[target_key]
+                app_schedules_list = self.app_schedules[target_key]
                 
                 # Use Trusted Time
                 now = self.get_trusted_datetime()
                 current_time_str = now.strftime("%H:%M")
                 
-                # Robust Day Check (Locate-independent)
+                # Robust Day Check (Locale-independent)
                 days_map = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
                 current_day = days_map[now.weekday()]
                 
                 is_allowed_now = False
-                for sch in app_schedules:
-                    # Check day
+                matched_schedule = None
+                
+                for sch in app_schedules_list:
+                    # Check day first
                     if sch.get("days"):
                         days_list = self._parse_schedule_days(sch.get("days"))
                         if current_day not in days_list:
                             continue
                     
-                    # Check time
-                    if sch.get("start_time") <= current_time_str <= sch.get("end_time"):
-                        is_allowed_now = True
-                        break
+                    # FIX: Use datetime comparison instead of string comparison
+                    try:
+                        start_time = sch.get("start_time", "00:00")
+                        end_time = sch.get("end_time", "23:59")
+                        
+                        # Parse times to minutes for accurate comparison
+                        start_parts = start_time.split(":")
+                        end_parts = end_time.split(":")
+                        current_parts = current_time_str.split(":")
+                        
+                        start_minutes = int(start_parts[0]) * 60 + int(start_parts[1] if len(start_parts) > 1 else 0)
+                        end_minutes = int(end_parts[0]) * 60 + int(end_parts[1] if len(end_parts) > 1 else 0)
+                        current_minutes = int(current_parts[0]) * 60 + int(current_parts[1] if len(current_parts) > 1 else 0)
+                        
+                        # Check if current time is within schedule
+                        if start_minutes <= current_minutes <= end_minutes:
+                            is_allowed_now = True
+                            matched_schedule = sch
+                            break
+                    except (ValueError, IndexError) as e:
+                        self.logger.warning(f"Schedule parse error for {app_name}: {e}")
+                        continue
+                
+                # DEBUG: Log schedule check result
+                self.logger.debug(f"Schedule check: {app_name}, Day:{current_day}, Time:{current_time_str}, "
+                                f"Schedules:{len(app_schedules_list)}, Allowed:{is_allowed_now}")
                 
                 if not is_allowed_now:
-                    self.logger.info(f"Checking schedule failure: {app_name}. Day:{current_day}, Time:{current_time_str}. Rules: {app_schedules}")
+                    self.logger.info(f"Schedule BLOCKED: {app_name}. Day:{current_day}, Time:{current_time_str}. "
+                                   f"Rules: {app_schedules_list}")
                     self.logger.warning(f"APP OUTSIDE SCHEDULE: {app_name} (Killing)")
                     self._kill_app(app_name, reason="outside_app_schedule")
+                else:
+                    self.logger.debug(f"Schedule ALLOWED: {app_name} matched {matched_schedule}")
     
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""
@@ -735,22 +780,21 @@ class RuleEnforcer:
             
             # Check if current time is within the schedule
             if start_time and end_time:
-                if start_time <= current_time_str <= end_time:
-                    is_within_schedule = True
+                # FIX: Use minute-based comparison instead of string comparison
+                try:
+                    start_parts = start_time.split(":")
+                    end_parts = end_time.split(":")
                     
-                    # Calculate minutes until end
-                    try:
-                        end_parts = end_time.split(":")
-                        end_hour = int(end_parts[0])
-                        end_min = int(end_parts[1]) if len(end_parts) > 1 else 0
-                        
-                        current_minutes = now.hour * 60 + now.minute
-                        end_minutes = end_hour * 60 + end_min
+                    start_minutes = int(start_parts[0]) * 60 + int(start_parts[1] if len(start_parts) > 1 else 0)
+                    end_minutes = int(end_parts[0]) * 60 + int(end_parts[1] if len(end_parts) > 1 else 0)
+                    current_minutes = now.hour * 60 + now.minute
+                    
+                    if start_minutes <= current_minutes <= end_minutes:
+                        is_within_schedule = True
                         minutes_until_end = end_minutes - current_minutes
-                    except:
-                        minutes_until_end = None
-                    
-                    break  # We found an active schedule
+                        break  # We found an active schedule
+                except (ValueError, IndexError):
+                    pass
         
         if is_within_schedule:
             # We're within allowed time
