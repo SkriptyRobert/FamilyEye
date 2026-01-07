@@ -533,7 +533,7 @@ class AppMonitor:
         """Return pending usage and clear it (for discrete reporting)."""
         with self.lock:
             snap = self.usage_pending.copy()
-            self.usage_pending = {}
+            self.usage_pending = defaultdict(float)  # FIX: Use defaultdict, not {}
             self.device_usage_pending = 0.0
             self._save_usage_cache()
             return snap
