@@ -6,6 +6,7 @@ import time
 from typing import Dict, Set, Optional, List
 from collections import defaultdict
 from .logger import get_logger
+from .system_noise_filter import system_noise_filter
 
 class AppMonitor:
     """Monitor running applications based on Window Visibility and CLI tools."""
@@ -42,21 +43,11 @@ class AppMonitor:
         'battlenet_helper': 'battle.net',
     }
 
-    # Basic noise reduction for system components that NEVER have useful windows
-    # Even without aggressive filtering, these just clutter logs with 0 importance
-    IGNORED_PROCESSES = {
-        'idle', 'system', 'registry', 'smss', 'csrss', 'wininit', 'services', 'lsass',
-        'svchost', 'fontdrvhost', 'winlogon', 'spoolsv', 'dwm', 'ctfmon', 'taskhostw',
-        'shellexperiencehost', 'searchhost', 'startmenuexperiencehost', 'userinit',
-        'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
-        'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd', 'runtime', 'runtimebroker',
-        'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray',
-        'phoneexperiencehost', 'searchapp', 'widgets', 'audiodg', 'spoolsv',
-        'dllhost', 'conhost', 'sihost', 'dashost' 
-    }
-    
-    # Windows that should be ignored even if they have visible windows
-    IGNORED_WINDOWS = IGNORED_PROCESSES
+    # NOTE: System noise filtering is now handled by SystemNoiseFilter class
+    # See system_noise_filter.py for the comprehensive Win10/11 process list
+    # Legacy IGNORED_PROCESSES kept for backward compatibility
+    IGNORED_PROCESSES = set()  # Delegated to SystemNoiseFilter
+    IGNORED_WINDOWS = set()    # Delegated to SystemNoiseFilter
     
     
     def __init__(self):
@@ -328,9 +319,13 @@ class AppMonitor:
                 proc = psutil.Process(pid)
                 app_name = self._get_app_name(proc)
                 
-                # Check if ignored
-                if app_name and (app_name in self.IGNORED_WINDOWS or 
-                               app_name in self.IGNORED_PROCESSES):
+                # Check if ignored using SystemNoiseFilter
+                exe_path = None
+                try:
+                    exe_path = proc.exe()
+                except:
+                    pass
+                if app_name and system_noise_filter.is_noise(app_name, exe_path):
                     return None
                     
                 return app_name
@@ -383,10 +378,10 @@ class AppMonitor:
                     if not app_name: continue
                     
                     # EARLY FILTER: Eliminate system noise immediately
-                    if app_name in self.IGNORED_PROCESSES:
+                    exe_path = info.get('exe')
+                    if system_noise_filter.is_noise(app_name, exe_path):
                         continue
 
-                    exe_path = info.get('exe')
                     original_name = self._get_original_filename(exe_path) if exe_path else app_name
                     window_title = self.pid_titles.get(pid, "")
 
