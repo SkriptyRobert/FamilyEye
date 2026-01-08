@@ -409,6 +409,11 @@ class AppMonitor:
                     raw_process_list.append(f"{app_name} (Orig: {original_name}, PID: {pid})")
 
                     if is_user_app:
+                        # SECONDARY FILTER: Some system apps have windows but are still noise
+                        # (e.g., explorer, systemsettings, tabtip, securityhealthsys)
+                        if system_noise_filter.is_noise(app_name, exe_path):
+                            continue
+                        
                         # Normalize agent name for branding - STRICT REBRANDING
                         if app_name.lower() in ["child_agent", "childagent", "agent_service", "familyeye"]:
                             app_name = "FamilyEye Agent"
