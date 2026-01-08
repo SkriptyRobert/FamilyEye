@@ -392,12 +392,21 @@ async def get_device_summary(
     first_report_iso = None
     if device.first_report_today_utc and not is_historical:
         # Convert first report to device local time for day comparison
-        first_local = device.first_report_today_utc + timedelta(seconds=offset_seconds)
+        # Ensure timezone consistency - strip tzinfo for comparison
+        first_utc = device.first_report_today_utc
+        if first_utc.tzinfo is not None:
+            first_utc = first_utc.replace(tzinfo=None)
+        first_local = first_utc + timedelta(seconds=offset_seconds)
         first_day_str = first_local.strftime('%Y-%m-%d')
+        
+        # Ensure device_local_now is also naive for comparison
+        device_local_now_naive = device_local_now
+        if hasattr(device_local_now, 'tzinfo') and device_local_now.tzinfo is not None:
+            device_local_now_naive = device_local_now.replace(tzinfo=None)
         
         # Only compute if first report is from today
         if first_day_str == today_str:
-            elapsed_delta = device_local_now - first_local
+            elapsed_delta = device_local_now_naive - first_local
             elapsed_today_seconds = max(0, int(elapsed_delta.total_seconds()))
             first_report_iso = device.first_report_today_utc.isoformat()
             logger.debug(f"Device {device_id} elapsed today: {elapsed_today_seconds}s (since {first_report_iso})")
