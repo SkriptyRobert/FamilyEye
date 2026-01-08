@@ -224,7 +224,16 @@ async def agent_fetch_rules(
         UsageLog.timestamp >= query_start_utc
     ).group_by(UsageLog.app_name).all()
     
-    usage_by_app = {row[0]: row[1] for row in usage_by_app_rows}
+    # CAP each app's time to not exceed elapsed time
+    # This prevents confusing display where app time > total time
+    # (can happen if apps run concurrently, but user expects logical consistency)
+    usage_by_app = {}
+    for row in usage_by_app_rows:
+        app_name = row[0]
+        app_duration = row[1] if row[1] else 0
+        # Cap to elapsed time - no app can show more time than monitoring has been active
+        capped_duration = min(app_duration, total_usage) if total_usage > 0 else app_duration
+        usage_by_app[app_name] = capped_duration
     
     return {
         "rules": rules,
