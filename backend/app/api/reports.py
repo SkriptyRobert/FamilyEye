@@ -53,6 +53,24 @@ async def agent_report_usage(
             device.timezone_offset = offset_seconds
             logger.debug(f"Updated timezone offset for device {device.id}: {offset_seconds}s")
 
+    # Track first report of the day (for elapsed time calculation in dashboard)
+    offset_seconds = device.timezone_offset or 0
+    device_local_now = now_utc + timedelta(seconds=offset_seconds)
+    today_local_str = device_local_now.strftime('%Y-%m-%d')
+    
+    # Check if first_report_today_utc is from a different day (or null)
+    needs_reset = False
+    if device.first_report_today_utc:
+        first_local = device.first_report_today_utc + timedelta(seconds=offset_seconds)
+        first_day_str = first_local.strftime('%Y-%m-%d')
+        needs_reset = (first_day_str != today_local_str)
+    else:
+        needs_reset = True
+        
+    if needs_reset:
+        device.first_report_today_utc = now_utc
+        logger.info(f"New day for device {device.id}: first_report_today_utc set to {now_utc.isoformat()}")
+
     # Log incoming report
     logger.info(f"Received usage report from device {device.id} ({device.name}): {len(request.usage_logs)} logs")
     
@@ -368,7 +386,23 @@ async def get_device_summary(
     
     today_usage = int(total_seconds)
     
-    logger.info(f"Device {device_id} precise usage: {today_usage}s")
+    # Calculate elapsed time since first report today (Wall-Clock "Active Time")
+    # This gives users a logical view: "Monitoring started at 17:17, now 17:47 = 30m elapsed"
+    elapsed_today_seconds = 0
+    first_report_iso = None
+    if device.first_report_today_utc and not is_historical:
+        # Convert first report to device local time for day comparison
+        first_local = device.first_report_today_utc + timedelta(seconds=offset_seconds)
+        first_day_str = first_local.strftime('%Y-%m-%d')
+        
+        # Only compute if first report is from today
+        if first_day_str == today_str:
+            elapsed_delta = device_local_now - first_local
+            elapsed_today_seconds = max(0, int(elapsed_delta.total_seconds()))
+            first_report_iso = device.first_report_today_utc.isoformat()
+            logger.debug(f"Device {device_id} elapsed today: {elapsed_today_seconds}s (since {first_report_iso})")
+    
+    logger.info(f"Device {device_id} precise usage: {today_usage}s, elapsed: {elapsed_today_seconds}s")
     
     # Total apps used today (from the fetched list to save query)
     apps_today = len(set(log.app_name for log in daily_logs))
@@ -726,6 +760,8 @@ async def get_device_summary(
         "is_online": device.is_online, # Use the model property logic
         "today_usage_seconds": today_usage,
         "today_usage_hours": round(today_usage / 3600, 2),
+        "elapsed_today_seconds": elapsed_today_seconds,  # NEW: Wall-clock elapsed since first report
+        "first_report_today": first_report_iso,  # NEW: Timestamp for dashboard display
         "yesterday_usage_seconds": yesterday_usage,
         "week_avg_seconds": week_avg,
         "total_usage_seconds": total_usage_all,

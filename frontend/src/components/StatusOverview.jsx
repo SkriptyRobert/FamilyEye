@@ -535,7 +535,9 @@ const StatusOverview = () => {
                     const state = getDeviceState(device, summary)
                     const typeInfo = getDeviceTypeInfo(device.device_type)
                     const isExpanded = expandedDevice === device.id
-                    const todayUsage = summary?.today_usage_seconds || 0
+                    // Use elapsed time (wall-clock since first report) for "Dnes aktivní" display
+                    // Falls back to app usage time if elapsed is not available (backward compat)
+                    const todayUsage = summary?.elapsed_today_seconds || summary?.today_usage_seconds || 0
                     // NOTE: Backend filters data, pass null config
                     const topApps = filterSystemApps(summary?.top_apps || [], null)
                     const appsWithLimits = getAppsWithLimits(device.id)

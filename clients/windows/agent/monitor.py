@@ -520,6 +520,17 @@ class AppMonitor:
         elif self.active_apps:
             # If no user apps detected, we don't count time.
             pass
+            
+        # SYNCHRONIZATION SAFETY CHECK (Time Paradox Fix)
+        # Ensure no individual app time exceeds total device time
+        # This fixes the "Edge 5m / Active 4m" issue caused by float drift or cache accumulation
+        if self.device_usage_today > 0:
+            for app_name in list(self.usage_today.keys()):
+                if self.usage_today[app_name] > self.device_usage_today:
+                    # Allow small float epsilon, but cap significant overage
+                    if self.usage_today[app_name] - self.device_usage_today > 1.0:
+                        self.logger.debug(f"Time Paradox corrected for {app_name}: {self.usage_today[app_name]:.1f}s -> {self.device_usage_today:.1f}s")
+                        self.usage_today[app_name] = self.device_usage_today
         
         # Periodically save cache (e.g. every minute) to minimize data loss on crash
         if current_time - self.last_cache_save > 60:
