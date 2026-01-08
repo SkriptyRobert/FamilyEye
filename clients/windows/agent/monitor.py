@@ -6,7 +6,6 @@ import time
 from typing import Dict, Set, Optional, List
 from collections import defaultdict
 from .logger import get_logger
-from .system_noise_filter import system_noise_filter
 
 class AppMonitor:
     """Monitor running applications based on Window Visibility and CLI tools."""
@@ -43,11 +42,21 @@ class AppMonitor:
         'battlenet_helper': 'battle.net',
     }
 
-    # NOTE: System noise filtering is now handled by SystemNoiseFilter class
-    # See system_noise_filter.py for the comprehensive Win10/11 process list
-    # Legacy IGNORED_PROCESSES kept for backward compatibility
-    IGNORED_PROCESSES = set()  # Delegated to SystemNoiseFilter
-    IGNORED_WINDOWS = set()    # Delegated to SystemNoiseFilter
+    # Basic noise reduction for system components that NEVER have useful windows
+    # Even without aggressive filtering, these just clutter logs with 0 importance
+    IGNORED_PROCESSES = {
+        'idle', 'system', 'registry', 'smss', 'csrss', 'wininit', 'services', 'lsass',
+        'svchost', 'fontdrvhost', 'winlogon', 'spoolsv', 'dwm', 'ctfmon', 'taskhostw',
+        'shellexperiencehost', 'searchhost', 'startmenuexperiencehost', 'userinit',
+        'identityhost', 'backgroundtaskhost', 'mobsync', 'hxtsr', 'runonce', 'smartscreen',
+        'onedrive', 'taskmgr', 'mmc', 'regedit', 'cmd', 'runtime', 'runtimebroker',
+        'applicationframehost', 'textinputhost', 'lockapp', 'securityhealthsystray',
+        'phoneexperiencehost', 'searchapp', 'widgets', 'audiodg', 'spoolsv',
+        'dllhost', 'conhost', 'sihost', 'dashost' 
+    }
+    
+    # Windows that should be ignored even if they have visible windows
+    IGNORED_WINDOWS = IGNORED_PROCESSES
     
     
     def __init__(self):
@@ -123,14 +132,7 @@ class AppMonitor:
             ts = time.time() 
             mono_ts = time.monotonic()
             
-            # Determine current date using trusted provider if available
-            if self.local_time_provider:
-                current_date_str = self.local_time_provider().strftime('%Y-%m-%d')
-            else:
-                current_date_str = time.strftime('%Y-%m-%d')
-            
             cache_data = {
-                "last_date_str": current_date_str,
                 "timestamp": ts,               # Wall clock (debug only)
                 "monotonic_timestamp": mono_ts,# Trusted internal clock
                 "boot_time": self.boot_time,   # Reboot detection ID
@@ -145,7 +147,7 @@ class AppMonitor:
             self.logger.error(f"Failed to cache usage stats: {e}")
             
     def _load_usage_cache(self):
-        """Load usage stats from local cache with improved persistence logic."""
+        """Load usage stats from local cache with Strict Monotonic Validation."""
         try:
             import json
             cache_path = self._get_cache_path()
@@ -155,60 +157,48 @@ class AppMonitor:
             with open(cache_path, 'r') as f:
                 cache_data = json.load(f)
                 
-            # 1. DATE CHECK (Master Switch)
-            # If the cache is from a previous day, we must reset.
-            cached_date = cache_data.get("last_date_str", "")
-            
-            # Determine current date using trusted provider if available
-            if self.local_time_provider:
-                current_date = self.local_time_provider().strftime('%Y-%m-%d')
-            else:
-                current_date = time.strftime('%Y-%m-%d')
-                
-            # If cache has no date (legacy) or date mismatch -> Start Fresh
-            if cached_date != current_date:
-                self.logger.info(f"Cache from different day ({cached_date} vs {current_date}). Starting fresh.")
-                return
-
-            # 2. REBOOT/CRASH DETECTION
-            # We want to persist daily totals (usage_today), but we might want to drop 
-            # inconsistent pending usage if the system crashed/rebooted.
-            
+            # CACHE VALIDATION (Strict Mode)
             cache_boot = cache_data.get("boot_time", 0)
-            current_boot = psutil.boot_time()
-            is_reboot = abs(cache_boot - current_boot) > 5
-            
-            # Check Monotonic Validity
             cache_mono = cache_data.get("monotonic_timestamp", 0)
+            
+            current_boot = psutil.boot_time() # Fresh boot time
             current_mono = time.monotonic()
             
-            if is_reboot:
-                self.logger.info("System reboot detected within same day. Restoring daily totals, clearing pending.")
-                # RESTORE TOTALS
-                self.usage_today = defaultdict(float, cache_data.get("usage_today", {}))
-                self.device_usage_today = cache_data.get("device_usage_today", 0.0)
-                
-                # DISCARD PENDING
-                # We can't be sure if pending was sent before the crash/reboot.
-                # Safer to drop small delta than duplicate or corrupt it.
-                self.usage_pending.clear()
-                self.device_usage_pending = 0.0
-                
-            else:
-                # Same session - Standard restore
-                # Restore everything including pending
-                self.usage_today = defaultdict(float, cache_data.get("usage_today", {}))
-                self.usage_pending = defaultdict(float, cache_data.get("usage_pending", {}))
-                self.device_usage_today = cache_data.get("device_usage_today", 0.0)
-                self.device_usage_pending = cache_data.get("device_usage_pending", 0.0)
-                
-                # Check for major time gaps (e.g. hibernation > 1h) just for logging
-                gap = current_mono - cache_mono
-                if gap > 3600:
-                    self.logger.info(f"Resuming after long sleep/gap ({gap:.0f}s). Stats preserved.")
+            # 1. REBOOT CHECK (Critical)
+            # Boot time is fixed per session. If it differs (>5s for float drift), it's a new session.
+            if abs(cache_boot - current_boot) > 5:
+                self.logger.info(f"System reboot detected (Boot delta: {abs(cache_boot - current_boot):.1f}s). Starting fresh.")
+                return
 
-            self.logger.info(f"Loaded usage stats (Apps: {len(self.usage_today)}, Active: {int(self.device_usage_today)}s)")
+            # 2. MONOTONIC AGE CHECK (Prevent huge gaps/sleep issues)
+            # If cache is older than 1 hour in MONOTONIC time, discard it.
+            # This handles hibernation correctly: Monotonic usually pauses or ticks.
+            # If it pauses, age is low -> OK. If it ticks -> age is high -> Discard.
+            age = current_mono - cache_mono
+            if age > 3600:
+                self.logger.info(f"Cache expired (Age: {age:.0f}s > 3600s). Starting fresh.")
+                return
             
+            # 3. FUTURE CHECK (Sanity)
+            if age < -10: # Allow small skew
+                self.logger.warning(f"Cache from future detected ({age:.0f}s). Discarding.")
+                return
+            
+            # Load today's cumulative stats
+            cached_today = cache_data.get("usage_today", cache_data.get("app_usage", {}))
+            for app, duration in cached_today.items():
+                self.usage_today[app] = duration
+            
+            self.device_usage_today = cache_data.get("device_usage_today", 0.0)
+                
+            # Load pending stats
+            cached_pending = cache_data.get("usage_pending", {})
+            for app, duration in cached_pending.items():
+                self.usage_pending[app] = duration
+            
+            self.device_usage_pending = cache_data.get("device_usage_pending", 0.0)
+                
+            self.logger.info(f"Loaded usage stats (Apps: {len(self.usage_today)}, Active: {int(self.device_usage_today)}s, Cache Age: {int(age)}s)")
         except Exception as e:
             self.logger.warning(f"Failed to load cached usage: {e}")
 
@@ -338,13 +328,9 @@ class AppMonitor:
                 proc = psutil.Process(pid)
                 app_name = self._get_app_name(proc)
                 
-                # Check if ignored using SystemNoiseFilter
-                exe_path = None
-                try:
-                    exe_path = proc.exe()
-                except:
-                    pass
-                if app_name and system_noise_filter.is_noise(app_name, exe_path):
+                # Check if ignored
+                if app_name and (app_name in self.IGNORED_WINDOWS or 
+                               app_name in self.IGNORED_PROCESSES):
                     return None
                     
                 return app_name
@@ -397,10 +383,10 @@ class AppMonitor:
                     if not app_name: continue
                     
                     # EARLY FILTER: Eliminate system noise immediately
-                    exe_path = info.get('exe')
-                    if system_noise_filter.is_noise(app_name, exe_path):
+                    if app_name in self.IGNORED_PROCESSES:
                         continue
 
+                    exe_path = info.get('exe')
                     original_name = self._get_original_filename(exe_path) if exe_path else app_name
                     window_title = self.pid_titles.get(pid, "")
 
@@ -428,9 +414,6 @@ class AppMonitor:
                     raw_process_list.append(f"{app_name} (Orig: {original_name}, PID: {pid})")
 
                     if is_user_app:
-                        # NOTE: No secondary filter here - "Aktivní procesy" in Statistics
-                        # should show ALL detected processes for advanced/technical users
-                        
                         # Normalize agent name for branding - STRICT REBRANDING
                         if app_name.lower() in ["child_agent", "childagent", "agent_service", "familyeye"]:
                             app_name = "FamilyEye Agent"
@@ -520,17 +503,6 @@ class AppMonitor:
         elif self.active_apps:
             # If no user apps detected, we don't count time.
             pass
-            
-        # SYNCHRONIZATION SAFETY CHECK (Time Paradox Fix)
-        # Ensure no individual app time exceeds total device time
-        # This fixes the "Edge 5m / Active 4m" issue caused by float drift or cache accumulation
-        if self.device_usage_today > 0:
-            for app_name in list(self.usage_today.keys()):
-                if self.usage_today[app_name] > self.device_usage_today:
-                    # Allow small float epsilon, but cap significant overage
-                    if self.usage_today[app_name] - self.device_usage_today > 1.0:
-                        self.logger.debug(f"Time Paradox corrected for {app_name}: {self.usage_today[app_name]:.1f}s -> {self.device_usage_today:.1f}s")
-                        self.usage_today[app_name] = self.device_usage_today
         
         # Periodically save cache (e.g. every minute) to minimize data loss on crash
         if current_time - self.last_cache_save > 60:
@@ -561,7 +533,7 @@ class AppMonitor:
         """Return pending usage and clear it (for discrete reporting)."""
         with self.lock:
             snap = self.usage_pending.copy()
-            self.usage_pending = defaultdict(float)  # FIX: Use defaultdict, not {}
+            self.usage_pending = {}
             self.device_usage_pending = 0.0
             self._save_usage_cache()
             return snap
@@ -593,32 +565,9 @@ class AppMonitor:
                 pass
 
     def get_running_processes(self):
-        """Return list of currently active trackable processes (filtered)."""
+        """Return list of currently active trackable processes."""
         with self.lock:
             return sorted(list(self.active_apps))
-    
-    def get_all_running_processes(self) -> List[str]:
-        """Return list of ALL running processes without any filter.
-        
-        Used for 'Aktivní procesy' in Statistics - gives admins/technical users
-        full visibility into what's running on the system.
-        """
-        try:
-            all_processes = set()
-            for proc in psutil.process_iter(['name']):
-                try:
-                    name = proc.info.get('name', '')
-                    if name:
-                        # Clean up the name (remove .exe extension for cleaner display)
-                        clean_name = name.lower().replace('.exe', '').strip()
-                        if clean_name and clean_name not in ('idle', 'system'):
-                            all_processes.add(clean_name)
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-            return sorted(list(all_processes))
-        except Exception as e:
-            self.logger.error(f"Error getting all processes: {e}")
-            return []
 
     # ========== NEW: Enhanced Tracking Methods ==========
     

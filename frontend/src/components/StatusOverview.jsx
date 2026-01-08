@@ -535,8 +535,6 @@ const StatusOverview = () => {
                     const state = getDeviceState(device, summary)
                     const typeInfo = getDeviceTypeInfo(device.device_type)
                     const isExpanded = expandedDevice === device.id
-                    // Use app activity sum for "Dnes aktivní" - properly handles PC restarts
-                    // Backend merges overlapping intervals: morning 3h + evening 2h = 5h correct
                     const todayUsage = summary?.today_usage_seconds || 0
                     // NOTE: Backend filters data, pass null config
                     const topApps = filterSystemApps(summary?.top_apps || [], null)

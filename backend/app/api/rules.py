@@ -200,20 +200,16 @@ async def agent_fetch_rules(
     from ..models import UsageLog
     from sqlalchemy import func
     
-    # Calculate daily usage as ELAPSED time since first activity today
-    # This aligns with user expectation: "PC is on for X minutes"
-    first_log_ts = db.query(func.min(UsageLog.timestamp)).filter(
+    # Count unique report minutes - truncate timestamp to minute level
+    unique_minutes = db.query(
+        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+    ).filter(
         UsageLog.device_id == device.id,
         UsageLog.timestamp >= query_start_utc
-    ).scalar()
+    ).scalar() or 0
     
-    if first_log_ts:
-        # Calculate elapsed seconds from first log until now (UTC)
-        # Use naive utcnow() to match naive database timestamps
-        elapsed_delta = datetime.utcnow() - first_log_ts
-        total_usage = max(0, int(elapsed_delta.total_seconds()))
-    else:
-        total_usage = 0
+    reporting_interval = 60  # seconds
+    total_usage = unique_minutes * reporting_interval
     
     # Usage by app (sum of durations for each app)
     usage_by_app_rows = db.query(
@@ -224,23 +220,12 @@ async def agent_fetch_rules(
         UsageLog.timestamp >= query_start_utc
     ).group_by(UsageLog.app_name).all()
     
-    # SIMPLE APPROACH: total_usage = elapsed time since first log
-    # Each app is capped to this elapsed time (prevents App > Total paradox)
-    # Note: If apps show more than elapsed, it's because agent reported stale data
-    # from before the first log timestamp - this is expected with polling.
-    usage_by_app = {}
-    for row in usage_by_app_rows:
-        app_name = row[0]
-        duration = row[1] if row[1] else 0
-        # Cap each app to elapsed time - no app can exceed total monitoring time
-        capped_duration = min(duration, total_usage) if total_usage > 0 else duration
-        usage_by_app[app_name] = capped_duration
+    usage_by_app = {row[0]: row[1] for row in usage_by_app_rows}
     
     return {
         "rules": rules,
         "daily_usage": int(total_usage),
         "usage_by_app": usage_by_app,
-        "server_time": datetime.now(timezone.utc),
-        "server_day_id": now_device.strftime("%Y-%m-%d")  # Device's local day for cross-midnight sync
+        "server_time": datetime.now(timezone.utc)
     }
 
