@@ -563,9 +563,32 @@ class AppMonitor:
                 pass
 
     def get_running_processes(self):
-        """Return list of currently active trackable processes."""
+        """Return list of currently active trackable processes (filtered)."""
         with self.lock:
             return sorted(list(self.active_apps))
+    
+    def get_all_running_processes(self) -> List[str]:
+        """Return list of ALL running processes without any filter.
+        
+        Used for 'Aktivní procesy' in Statistics - gives admins/technical users
+        full visibility into what's running on the system.
+        """
+        try:
+            all_processes = set()
+            for proc in psutil.process_iter(['name']):
+                try:
+                    name = proc.info.get('name', '')
+                    if name:
+                        # Clean up the name (remove .exe extension for cleaner display)
+                        clean_name = name.lower().replace('.exe', '').strip()
+                        if clean_name and clean_name not in ('idle', 'system'):
+                            all_processes.add(clean_name)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+            return sorted(list(all_processes))
+        except Exception as e:
+            self.logger.error(f"Error getting all processes: {e}")
+            return []
 
     # ========== NEW: Enhanced Tracking Methods ==========
     

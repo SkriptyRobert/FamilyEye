@@ -62,7 +62,7 @@ class UsageReporter:
         try:
             # 1. SNAP current usage from monitor into a new report hunk
             usage_stats = self.monitor.snap_pending_usage()
-            running_processes = self.monitor.get_running_processes()
+            running_processes = self.monitor.get_all_running_processes()
             
             if usage_stats or running_processes:
                 from datetime import datetime
