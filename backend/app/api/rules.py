@@ -224,15 +224,27 @@ async def agent_fetch_rules(
         UsageLog.timestamp >= query_start_utc
     ).group_by(UsageLog.app_name).all()
     
-    # CAP each app's time to not exceed elapsed time
-    # This prevents confusing display where app time > total time
-    # (can happen if apps run concurrently, but user expects logical consistency)
-    usage_by_app = {}
+    # Calculate Max App Duration to validate Total Usage
+    max_app_duration = 0
+    usage_by_app_raw = {}
     for row in usage_by_app_rows:
         app_name = row[0]
-        app_duration = row[1] if row[1] else 0
-        # Cap to elapsed time - no app can show more time than monitoring has been active
-        capped_duration = min(app_duration, total_usage) if total_usage > 0 else app_duration
+        duration = row[1] if row[1] else 0
+        usage_by_app_raw[app_name] = duration
+        if duration > max_app_duration:
+            max_app_duration = duration
+
+    # CORRECTED TOTAL USAGE LOGIC:
+    # 1. Total Usage cannot be less than Elapsed Time (First Log -> Now)
+    # 2. Total Usage cannot be less than the longest running app (Consistency)
+    # This solves the "App Time > Total Time" paradox caused by polling delays.
+    total_usage = max(total_usage, max_app_duration)
+
+    # Final consistency check (populate return dict)
+    usage_by_app = {}
+    for app_name, duration in usage_by_app_raw.items():
+        # Cap to ensure strict consistency (App Time <= Total Time)
+        capped_duration = min(duration, total_usage)
         usage_by_app[app_name] = capped_duration
     
     return {
