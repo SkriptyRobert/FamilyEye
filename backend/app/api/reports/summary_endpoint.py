@@ -417,6 +417,12 @@ def _calculate_smart_insights(db: Session, device_id: int, start_utc: datetime, 
             UsageLog.timestamp < end_utc
         ).order_by(UsageLog.timestamp.asc()).all()
 
+        # FILTER: Exclude blacklisted apps (retroactive fix)
+        logs_today = [
+            log for log in logs_today 
+            if app_filter.is_trackable(log.app_name)
+        ]
+
         # Focus Analysis - STRICT: Only is_focused=True
         context_switches = 0
         deep_work_seconds = 0

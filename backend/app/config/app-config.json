@@ -53,7 +53,9 @@
         "Net1",
         "Windowspackagemanager",
         "filecoauth",
-        "FamilyEye"
+        "FamilyEye",
+        "identity",
+        "storedesktopextension"
     ],
     "whitelist": {
         "gameLaunchers": [
