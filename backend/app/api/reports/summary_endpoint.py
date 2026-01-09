@@ -1,14 +1,7 @@
 """
-Reports and usage statistics endpoints.
+Device summary endpoint with Smart Insights.
 
-This module has been refactored into a modular structure:
-- Agent endpoints -> api/reports/agent_endpoints.py
-- Device usage endpoints -> api/reports/device_endpoints.py  
-- Statistics endpoints -> api/reports/stats_endpoints.py
-
-This file now contains only:
-1. The complex get_device_summary endpoint (includes Smart Insights)
-2. Router aggregation from sub-modules
+This endpoint is complex and kept separate for maintainability.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -17,23 +10,16 @@ from typing import Dict
 from datetime import datetime, timedelta, timezone
 import logging
 
-from ..database import get_db
-from ..models import UsageLog, Device, User, Rule
-from ..api.auth import get_current_parent
-from ..services.app_filter import app_filter
+from ...database import get_db
+from ...models import UsageLog, Device, User, Rule
+from ...api.auth import get_current_parent
+from ...services.app_filter import app_filter
 
-# Import sub-module routers
-from .reports.agent_endpoints import router as agent_router
-from .reports.device_endpoints import router as device_router, running_processes_cache
-from .reports.stats_endpoints import router as stats_router
+# Import running_processes_cache from sibling module
+from .device_endpoints import running_processes_cache
 
-# Create main router
+# Create router for this endpoint only
 router = APIRouter()
-
-# Include all sub-module routers
-router.include_router(agent_router)
-router.include_router(device_router)
-router.include_router(stats_router)
 
 logger = logging.getLogger("reports")
 

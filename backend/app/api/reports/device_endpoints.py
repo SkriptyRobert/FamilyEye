@@ -52,7 +52,7 @@ async def get_device_usage(
             detail="Device not found"
         )
     
-    start_date = datetime.utcnow() - timedelta(days=days)
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     usage_logs = db.query(UsageLog).filter(
         UsageLog.device_id == device_id,
@@ -85,7 +85,7 @@ async def cleanup_old_logs(
     db: Session = Depends(get_db)
 ):
     """Cleanup usage logs older than X days."""
-    cutoff_date = datetime.utcnow() - timedelta(days=days)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
     
     device_ids = db.query(Device.id).filter(Device.parent_id == current_user.id).all()
     device_ids = [d[0] for d in device_ids]

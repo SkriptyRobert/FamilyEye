@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict
 from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import logging
+import json
 
 from ...database import get_db
 from ...models import UsageLog, Device, Rule
@@ -92,7 +94,7 @@ async def agent_report_usage(
             exe_path=log_data.exe_path,
             duration=log_data.duration,
             is_focused=log_data.is_focused,
-            timestamp=log_data.timestamp or datetime.utcnow()
+            timestamp=log_data.timestamp or datetime.now(timezone.utc)
         )
         db.add(usage_log)
         total_duration += log_data.duration
@@ -107,13 +109,12 @@ async def agent_report_usage(
     
     # Store running processes
     if hasattr(request, 'running_processes') and request.running_processes:
-        import json
         processes_json = json.dumps(request.running_processes)
         device.current_processes = processes_json
         
         running_processes_cache[device.id] = {
             "processes": request.running_processes,
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.now(timezone.utc)
         }
         logger.debug(f"Saved {len(request.running_processes)} running processes for device {device.id}")
         

@@ -67,4 +67,4 @@ echo    📱 QR kod pro mobil: https://%LOCAL_IP%:8000/api/trust/qr.png
 echo.
 echo    Pro zastaveni: dev\STOP.bat
 echo.
-start https://localhost:8000
+start https://%LOCAL_IP%:8000

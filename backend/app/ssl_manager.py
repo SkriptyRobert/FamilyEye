@@ -5,7 +5,7 @@ Automatically generates and manages SSL certificates for secure communication.
 import os
 import socket
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 import logging
 
@@ -89,8 +89,8 @@ def generate_certificates(common_name: str = "FamilyEye", validity_days: int = 3
             .issuer_name(ca_issuer)
             .public_key(ca_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.utcnow())
-            .not_valid_after(datetime.utcnow() + timedelta(days=validity_days))
+            .not_valid_before(datetime.now(timezone.utc))
+            .not_valid_after(datetime.now(timezone.utc) + timedelta(days=validity_days))
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
                 critical=True,
@@ -159,8 +159,8 @@ def generate_certificates(common_name: str = "FamilyEye", validity_days: int = 3
             .issuer_name(ca_cert.subject)
             .public_key(server_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.utcnow())
-            .not_valid_after(datetime.utcnow() + timedelta(days=validity_days))
+            .not_valid_before(datetime.now(timezone.utc))
+            .not_valid_after(datetime.now(timezone.utc) + timedelta(days=validity_days))
             .add_extension(
                 x509.SubjectAlternativeName(san_list),
                 critical=False,

@@ -3,7 +3,7 @@ import uuid
 import qrcode
 from io import BytesIO
 import base64
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from ..models import PairingToken, Device, User
 from ..config import settings
@@ -13,7 +13,7 @@ def generate_pairing_token(parent_id: int, db: Session) -> PairingToken:
     """Generate a new pairing token."""
     token = str(uuid.uuid4())
     # datetime.utcnow is naive, but let's stick to what worked before or serve what the DB expects
-    expires_at = datetime.utcnow() + timedelta(minutes=settings.PAIRING_TOKEN_EXPIRE_MINUTES)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.PAIRING_TOKEN_EXPIRE_MINUTES)
     
     pairing_token = PairingToken(
         token=token,
@@ -32,7 +32,7 @@ def validate_pairing_token(token: str, db: Session) -> PairingToken:
     pairing_token = db.query(PairingToken).filter(
         PairingToken.token == token,
         PairingToken.used == False,
-        PairingToken.expires_at > datetime.utcnow()
+        PairingToken.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if not pairing_token:
