@@ -1,83 +1,19 @@
 import React, { useState } from 'react';
-import api from '../services/api'
 import {
-    Brain, Lightbulb, Info, X, Target,
+    Brain, Lightbulb, Info, X,
     Scale, Search, Moon, Sunrise, XCircle
 } from 'lucide-react'
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import './SmartInsights.css';
 
 const SmartInsights = ({ insights }) => {
-    const [activeTab, setActiveTab] = useState('focus'); // 'focus', 'anomalies', 'balance'
+    const [activeTab, setActiveTab] = useState('anomalies'); // 'anomalies', 'balance'
     const [showInfo, setShowInfo] = useState(false);
 
     console.log('SmartInsights Rendering, insights:', insights);
 
     if (!insights) return <div className="bento-card">Načítám analýzu...</div>;
 
-    const renderFocus = () => {
-        const flowIndex = insights.focus.flow_index || 0;
-        const hasData = flowIndex > 0;
-
-        const flowData = [
-            { name: 'Flow', value: Math.max(1, flowIndex) },
-            { name: 'Other', value: 100 - Math.max(1, flowIndex) }
-        ];
-        const COLORS = hasData
-            ? ['#a29bfe', 'rgba(255, 255, 255, 0.05)']
-            : ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'];
-
-        return (
-            <div className="insight-content focus-mode">
-                <div className="focus-layout">
-                    <div className="focus-chart-container">
-                        <ResponsiveContainer width="100%" height={120}>
-                            <PieChart>
-                                <Pie
-                                    data={flowData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={35}
-                                    outerRadius={50}
-                                    paddingAngle={0}
-                                    dataKey="value"
-                                    startAngle={90}
-                                    endAngle={-270}
-                                    stroke="none"
-                                >
-                                    {flowData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="chart-center-label">
-                            {hasData ? `${Math.round(flowIndex)}%` : 'N/A'}
-                        </div>
-                    </div>
-                    <div className="focus-details">
-                        <div className="stat-box-small">
-                            <span className="stat-value-small">{insights.focus.deep_work_minutes}m</span>
-                            <span className="stat-label-small">Hluboká práce</span>
-                        </div>
-                        <div className="stat-box-small">
-                            <span className="stat-value-small">{insights.focus.context_switches}x</span>
-                            <span className="stat-label-small">Přepnutí</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="stat-subtext-centered">
-                    {hasData ? (
-                        <><strong>Flow Index (Průtok):</strong> Podíl sezení delších než 15 min.</>
-                    ) : (
-                        <span className="text-muted">Nedostatek dat pro analýzu soustředění.</span>
-                    )}
-                    <br />
-                    <small>Krátká odskočení (do 60s) pozornost nenarušují.</small>
-                </div>
-            </div>
-        );
-    };
+    // renderFocus removed - Deep Focus feature disabled (see implementation_plan.md)
 
     const renderAnomalies = () => {
         const { anomalies } = insights;
@@ -164,12 +100,7 @@ const SmartInsights = ({ insights }) => {
             <div className="insights-header">
                 <h3><Lightbulb size={20} style={{ marginRight: '8px', color: 'var(--accent-color)' }} /> Chytrý přehled</h3>
                 <div className="insights-tabs">
-                    <button
-                        className={`insight-tab ${activeTab === 'focus' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('focus')}
-                    >
-                        Soustředění
-                    </button>
+
                     <button
                         className={`insight-tab ${activeTab === 'anomalies' ? 'active' : ''}`}
                         onClick={() => setActiveTab('anomalies')}
@@ -185,7 +116,7 @@ const SmartInsights = ({ insights }) => {
                 </div>
             </div>
 
-            {activeTab === 'focus' && renderFocus()}
+
             {activeTab === 'anomalies' && renderAnomalies()}
             {activeTab === 'balance' && renderBalance()}
 
@@ -195,10 +126,6 @@ const SmartInsights = ({ insights }) => {
 
             {showInfo && (
                 <div className="insight-educational-panel">
-                    <div className="edu-section">
-                        <h4><Target size={16} style={{ marginRight: '6px' }} /> Soustředění (Deep Work)</h4>
-                        <p>Vychází ze studií <strong>Cala Newporta</strong>. Mozek potřebuje cca 15 minut na plné „ponoření“ do úkolu. Časté přepínání (Attention Residue) podle <strong>Sophie Leroy</strong> snižuje kognitivní výkon až o 20 %.</p>
-                    </div>
                     <div className="edu-section">
                         <h4><Scale size={16} style={{ marginRight: '6px' }} /> Digitální Bilance</h4>
                         <p>Opírá se o doporučení <strong>WHO</strong> a <strong>AAP</strong>. Pro školní věk je 2h rekreačního času limit pro zachování zdravého spánku a psychické pohody.</p>

@@ -417,52 +417,14 @@ def _calculate_smart_insights(db: Session, device_id: int, start_utc: datetime, 
             UsageLog.timestamp < end_utc
         ).order_by(UsageLog.timestamp.asc()).all()
 
-        # Focus Analysis - STRICT: Only is_focused=True
+        # Focus Analysis - DISABLED (moved to experimental)
+        # Flow Index and Deep Work features were disabled due to unreliable data.
+        # The is_focused flag from agent depends on window detection accuracy,
+        # and 15-minute threshold is not meaningful for gaming/entertainment.
+        # Logic preserved in: backend/app/services/experimental/insights_service.py
         context_switches = 0
         deep_work_seconds = 0
-        
-        if logs_today:
-            focused_segments = []
-            has_explicit_focus = False
-
-            # First pass: Check for explicit focus
-            for log in logs_today:
-                if log.is_focused:
-                    has_explicit_focus = True
-                    break
-            
-            # Collection strategy
-            for log in logs_today:
-                app_name, timestamp, duration, is_focused = log
-                
-                # If we have explicit focus data, use ONLY that. 
-                # If not, treat ALL long usage as potential focus (fallback)
-                if has_explicit_focus and not is_focused:
-                    continue
-                    
-                ts_obj = timestamp if hasattr(timestamp, 'timestamp') else parser.parse(timestamp)
-                focused_segments.append((ts_obj.timestamp(), ts_obj.timestamp() + duration, app_name))
-
-            # Merge with 30s grace period
-            merged_intervals = []
-            if focused_segments:
-                focused_segments.sort(key=lambda x: x[0])
-                current_start, current_end, _ = focused_segments[0]
-                GRACE_PERIOD = 30
-                
-                for i in range(1, len(focused_segments)):
-                    next_start, next_end, _ = focused_segments[i]
-                    if next_start <= (current_end + GRACE_PERIOD):
-                        current_end = max(current_end, next_end)
-                    else:
-                        merged_intervals.append((current_start, current_end))
-                        current_start, current_end = next_start, next_end
-                merged_intervals.append((current_start, current_end))
-
-            deep_work_seconds = sum((e - s) for s, e in merged_intervals if (e - s) >= 15 * 60)
-            context_switches = max(0, len(merged_intervals) - 1)
-
-        flow_index = min(100, round((deep_work_seconds / today_usage * 100), 1)) if today_usage > 0 else 0
+        flow_index = 0
 
         # Anomaly Detection
         is_early_start = False
