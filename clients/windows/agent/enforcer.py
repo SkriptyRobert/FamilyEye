@@ -269,12 +269,19 @@ class RuleEnforcer:
             
             if rule_type == "app_block":
                 if app_name:
-                    if app_name.endswith('.exe'): app_name = app_name[:-4]
-                    self.blocked_apps.add(app_name)
+                    # Support comma-separated apps (e.g., "chrome,discord,steam")
+                    app_names = [a.strip().lower() for a in app_name.split(',') if a.strip()]
+                    for name in app_names:
+                        if name.endswith('.exe'): name = name[:-4]
+                        self.blocked_apps.add(name)
             elif rule_type == "time_limit":
                 if app_name and rule.get("time_limit"):
-                    if app_name.endswith('.exe'): app_name = app_name[:-4]
-                    self.daily_limits[app_name] = rule.get("time_limit", 0) * 60
+                    # Support comma-separated apps
+                    app_names = [a.strip().lower() for a in app_name.split(',') if a.strip()]
+                    limit_seconds = rule.get("time_limit", 0) * 60
+                    for name in app_names:
+                        if name.endswith('.exe'): name = name[:-4]
+                        self.daily_limits[name] = limit_seconds
             elif rule_type == "daily_limit":
                 # Daily device limit - total usage for the whole device
                 limit_minutes = rule.get("time_limit", 0)
@@ -283,21 +290,27 @@ class RuleEnforcer:
                     self.logger.info(f"Daily device limit set: {limit_minutes} minutes")
             elif rule_type == "schedule":
                 # Schedule rule - allowed time windows
-                schedule_info = {
+                base_schedule_info = {
                     "start_time": rule.get("schedule_start_time"),
                     "end_time": rule.get("schedule_end_time"),
-                    "days": rule.get("schedule_days"),  # e.g., "mon,tue,wed" or None for all days
-                    "app_name": app_name  # None means all device usage
+                    "days": rule.get("schedule_days"),  # e.g., "0,1,2,3,4" or None for all days
                 }
-                if schedule_info["start_time"] and schedule_info["end_time"]:
+                if base_schedule_info["start_time"] and base_schedule_info["end_time"]:
                     if not app_name:
+                        # Device-wide schedule
+                        schedule_info = {**base_schedule_info, "app_name": None}
                         self.device_schedules.append(schedule_info)
                         self.logger.info(f"Device Schedule: {schedule_info['start_time']} - {schedule_info['end_time']}")
                     else:
-                        if app_name not in self.app_schedules:
-                            self.app_schedules[app_name] = []
-                        self.app_schedules[app_name].append(schedule_info)
-                        self.logger.info(f"App Schedule ({app_name}): {schedule_info['start_time']} - {schedule_info['end_time']}")
+                        # App-specific schedule - support comma-separated apps
+                        app_names = [a.strip().lower() for a in app_name.split(',') if a.strip()]
+                        for name in app_names:
+                            if name.endswith('.exe'): name = name[:-4]
+                            if name not in self.app_schedules:
+                                self.app_schedules[name] = []
+                            schedule_info = {**base_schedule_info, "app_name": name}
+                            self.app_schedules[name].append(schedule_info)
+                            self.logger.info(f"App Schedule ({name}): {schedule_info['start_time']} - {schedule_info['end_time']}")
             elif rule_type == "lock_device":
                 self.is_locked = True
             elif rule_type == "network_block":

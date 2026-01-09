@@ -27,6 +27,8 @@ const RuleEditor = ({ deviceId }) => {
   const [showForm, setShowForm] = useState(false)
   const [frequentApps, setFrequentApps] = useState([]) // Dynamic frequent apps
   const [hiddenApps, setHiddenApps] = useState([]) // From localStorage
+  const [selectedApps, setSelectedApps] = useState([]) // Multi-app selection
+  const [appInputValue, setAppInputValue] = useState('') // Current input value
   const [formData, setFormData] = useState({
     rule_type: 'app_block',
     app_name: '',
@@ -150,9 +152,9 @@ const RuleEditor = ({ deviceId }) => {
     if (!selectedDeviceId) return
 
     // Validation
-    if (formData.rule_type === 'app_block' || formData.rule_type === 'time_limit') {
-      if (!formData.app_name.trim()) {
-        alert('Prosím zadejte název aplikace')
+    if (formData.rule_type === 'app_block' || formData.rule_type === 'time_limit' || formData.rule_type === 'schedule') {
+      if (selectedApps.length === 0) {
+        alert('Prosím vyberte alespoň jednu aplikaci')
         return
       }
     }
@@ -166,10 +168,13 @@ const RuleEditor = ({ deviceId }) => {
     try {
       await api.post('/api/rules/', {
         ...formData,
+        app_name: selectedApps.join(','), // Comma-separated apps
         device_id: selectedDeviceId,
         time_limit: formData.time_limit ? parseInt(formData.time_limit) : null
       })
       setShowForm(false)
+      setSelectedApps([]) // Reset app selection
+      setAppInputValue('')
       setFormData({
         rule_type: 'app_block',
         app_name: '',
@@ -198,8 +203,30 @@ const RuleEditor = ({ deviceId }) => {
     }
   }
 
+  // Add app to selection (from suggested or manual input)
+  const handleAddApp = (appName) => {
+    const trimmed = appName.trim().toLowerCase()
+    if (trimmed && !selectedApps.includes(trimmed)) {
+      setSelectedApps([...selectedApps, trimmed])
+    }
+    setAppInputValue('')
+  }
+
+  // Remove app from selection
+  const handleRemoveApp = (appName) => {
+    setSelectedApps(selectedApps.filter(a => a !== appName))
+  }
+
+  // Handle Enter key in app input
+  const handleAppInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddApp(appInputValue)
+    }
+  }
+
   const handleSuggestedClick = (app) => {
-    setFormData({ ...formData, app_name: app.keyword })
+    handleAddApp(app.keyword)
   }
 
   if (loading && devices.length === 0) {
@@ -269,13 +296,32 @@ const RuleEditor = ({ deviceId }) => {
                     />
                   ) : (
                     <>
+                      {/* Selected Apps Chips */}
+                      {selectedApps.length > 0 && (
+                        <div className="selected-apps-chips">
+                          {selectedApps.map(app => (
+                            <span key={app} className="app-chip">
+                              {app}
+                              <X
+                                size={14}
+                                onClick={() => handleRemoveApp(app)}
+                                style={{ cursor: 'pointer', marginLeft: '4px' }}
+                              />
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Input for adding apps */}
                       <input
                         type="text"
-                        value={formData.app_name}
-                        onChange={(e) => setFormData({ ...formData, app_name: e.target.value })}
-                        placeholder="Název (např. Epic, Chrome, Minecraft)"
+                        value={appInputValue}
+                        onChange={(e) => setAppInputValue(e.target.value)}
+                        onKeyDown={handleAppInputKeyDown}
+                        placeholder={selectedApps.length > 0 ? "Přidat další aplikaci..." : "Název (např. Epic, Chrome, Minecraft)"}
                         className="input"
                       />
+
                       <div className="suggested-apps" style={{ marginTop: '10px' }}>
                         <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>
                           {frequentApps.length > 0 ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpoužívanější aplikace:</> : 'Časté aplikace:'}
@@ -285,9 +331,10 @@ const RuleEditor = ({ deviceId }) => {
                             <button
                               key={app.keyword}
                               type="button"
-                              className="tag-button"
+                              className={`tag-button ${selectedApps.includes(app.keyword.toLowerCase()) ? 'selected' : ''}`}
                               onClick={() => handleSuggestedClick(app)}
                               title={app.duration ? `Použito: ${Math.round(app.duration / 60)} min` : ''}
+                              disabled={selectedApps.includes(app.keyword.toLowerCase())}
                             >
                               {app.name}
                             </button>
