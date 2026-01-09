@@ -354,7 +354,7 @@ async def pause_internet(
     return {
         "status": "success",
         "message": f"Internet paused for {duration_minutes} minutes",
-        "expires_at": (now + timedelta(minutes=duration_minutes)).isoformat()
+        "expires_at": (now_utc + timedelta(minutes=duration_minutes)).isoformat()
     }
 
 
