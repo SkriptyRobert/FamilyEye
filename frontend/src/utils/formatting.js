@@ -395,7 +395,7 @@ export const filterSystemApps = (apps, config = null) => {
         return true
     }).map(app => ({
         ...app,
-        display_name: mapAppName(app.app_name || app.name, config) || app.app_name
+        display_name: app.display_name || mapAppName(app.app_name || app.name, config) || app.app_name
     }))
 }
 
