@@ -52,7 +52,8 @@
         "Net",
         "Net1",
         "Windowspackagemanager",
-        "filecoauth"
+        "filecoauth",
+        "FamilyEye"
     ],
     "whitelist": {
         "gameLaunchers": [
