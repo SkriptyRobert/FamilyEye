@@ -41,6 +41,7 @@ class Device(Base):
     last_screenshot = Column(String, nullable=True) # Path or Base64 of last screenshot
     timezone_offset = Column(Integer, default=0) # Client offset from Server in seconds (Client - Server)
     first_report_today_utc = Column(DateTime(timezone=True), nullable=True)  # First report of current day (for elapsed time calc)
+    daily_usage_seconds = Column(Integer, default=0) # Total active time today (from Agent)
     
     # Relationships
     parent = relationship("User", foreign_keys=[parent_id], back_populates="parent_devices")
