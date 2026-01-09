@@ -28,10 +28,17 @@ const WeeklyBarChart = ({ deviceId, onDateSelect, selectedDate }) => {
             const response = await api.get(
                 `/api/reports/device/${deviceId}/weekly-pattern?weeks=1`
             )
-            setData(response.data)
+            // Ensure we have an array
+            if (Array.isArray(response.data)) {
+                setData(response.data)
+            } else {
+                console.warn('Unexpected response format:', response.data)
+                setData([])
+            }
         } catch (err) {
             console.error('Error fetching weekly data:', err)
             setError('Nepodařilo se načíst data')
+            setData([])
         } finally {
             setLoading(false)
         }

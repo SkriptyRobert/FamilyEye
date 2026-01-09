@@ -33,10 +33,18 @@ const ActivityHeatmap = ({ deviceId, days = 7, onDaysChange, largerDots = false 
             const response = await api.get(
                 `/api/reports/device/${deviceId}/usage-by-hour?days=${days}`
             )
-            setData(response.data)
+            // Handle response - API returns { device_id, days_analyzed, data: [...] }
+            const responseData = response.data?.data || response.data
+            if (Array.isArray(responseData)) {
+                setData(responseData)
+            } else {
+                console.warn('Unexpected response format:', response.data)
+                setData([])
+            }
         } catch (err) {
             console.error('Error fetching heatmap data:', err)
             setError('Nepodařilo se načíst data')
+            setData([])  // Clear data on error
         } finally {
             setLoading(false)
         }
