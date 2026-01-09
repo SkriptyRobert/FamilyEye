@@ -418,7 +418,17 @@ async def get_device_summary(
         UsageLog.timestamp < today_end_utc
     ).group_by(UsageLog.app_name).order_by(func.sum(UsageLog.duration).desc()).limit(100).all()
 
-    # Get latest window titles for each app to show what's actually happening
+    # LOGICAL CONSISTENCY CHECK:
+    # "Total Active" (merged intervals) can sometimes be lower than "Sum of App Usage" due to overlaps.
+    # However, "Total Active" should logically never be LOWER than the single most used app.
+    # Example: If Chrome is used for 2h, Total Active must be at least 2h.
+    if top_apps_query:
+        max_app_usage = top_apps_query[0].total_duration or 0
+        if max_app_usage > today_usage:
+            logger.info(f"Correcting usage mismatch for Device {device_id}: {today_usage}s -> {max_app_usage}s (matched to max app)")
+            today_usage = int(max_app_usage)
+            # Sync elapsed time to maintain consistency
+            elapsed_today_seconds = today_usage
     latest_titles = {}
     titles_query = db.query(
         UsageLog.app_name,
