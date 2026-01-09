@@ -583,51 +583,44 @@ async def get_device_summary(
             UsageLog.timestamp < today_end_utc
         ).order_by(UsageLog.timestamp.asc()).all()
 
-        # 1. Focus Analysis (Parallel Tracks: Multi-monitor & Multitasking aware)
+        # 1. Focus Analysis - STRICT: Only count is_focused=True logs
+        # FIX: Previous algorithm used all logs with 100s grace period, causing
+        # closed apps to continue counting toward deep work. Now we ONLY use
+        # logs where the app was actually in foreground focus.
         context_switches = 0
         deep_work_seconds = 0
         
         if logs_today:
             from dateutil import parser
-            app_tracks = {}
             
-            # Noise Minimization: Only track apps that were actually FOCUSED (or transition).
-            # Fix: Round timestamps to seconds for reliable matching (ignore microseconds)
-            ts_has_focus = {}
-            for log in logs_today:
-                ts_key = int(log[1].timestamp()) if hasattr(log[1], 'timestamp') else int(parser.parse(log[1]).timestamp())
-                if log[3]: # is_focused
-                    ts_has_focus[ts_key] = True
-            
-            # Collect ALL potential focus segments from eligible apps
-            all_segments = []
+            # FIX: ONLY collect segments from is_focused=True logs
+            # This ensures deep work stops immediately when focus is lost
+            focused_segments = []
             
             for log in logs_today:
                 app_name, timestamp, duration, is_focused = log
                 
-                # Timestamp matching logic (Sloppy match)
-                ts_obj = timestamp if hasattr(timestamp, 'timestamp') else parser.parse(timestamp)
-                ts_key = int(ts_obj.timestamp())
-                
-                # Filter Noise: If this second had a focused app, but this log isn't it -> Skip.
-                if ts_key in ts_has_focus and not is_focused:
+                # STRICT: Only focused apps count toward deep work
+                if not is_focused:
                     continue
                 
+                ts_obj = timestamp if hasattr(timestamp, 'timestamp') else parser.parse(timestamp)
                 start_ts = ts_obj.timestamp()
                 end_ts = start_ts + duration
-                all_segments.append((start_ts, end_ts))
+                focused_segments.append((start_ts, end_ts, app_name))
 
-            # Merge overlapping segments from ALL apps into one timeline
-            # This allows switching tools (IDE -> Browser -> IDE) to count as one Deep Work session
+            # Merge overlapping segments from focused apps into continuous work blocks
             merged_intervals = []
-            if all_segments:
-                all_segments.sort(key=lambda x: x[0])
+            if focused_segments:
+                focused_segments.sort(key=lambda x: x[0])
                 
-                current_start, current_end = all_segments[0]
-                GRACE_PERIOD = 100 # 100s tolerance for gaps
+                current_start, current_end, _ = focused_segments[0]
+                # FIX: Reduced from 100s to 30s - only brief pauses (typing, thinking)
+                # should merge, not app switches or closures
+                GRACE_PERIOD = 30
                 
-                for i in range(1, len(all_segments)):
-                    next_start, next_end = all_segments[i]
+                for i in range(1, len(focused_segments)):
+                    next_start, next_end, _ = focused_segments[i]
                     
                     # If start inside current (overlap) OR gap is within tolerance
                     if next_start <= (current_end + GRACE_PERIOD):
@@ -638,14 +631,17 @@ async def get_device_summary(
                         current_start, current_end = next_start, next_end
                 
                 merged_intervals.append((current_start, current_end))
+            
+            logger.debug(f"Focus analysis: {len(focused_segments)} focused segments -> {len(merged_intervals)} merged intervals")
 
             # Calculate Deep Work & Context Switches
             # Deep Work = Total time of merged blocks that are > 15 min
             deep_work_seconds = sum((end - start) for start, end in merged_intervals if (end - start) >= 15 * 60)
             
-            # Simple Context Switch estimation: Number of gaps/breaks in the merged timeline
-            # If we have N merged blocks, we had N-1 switches/breaks significantly long enough to break flow
+            # Context switches: gaps between focused work blocks
             context_switches = max(0, len(merged_intervals) - 1)
+            
+            logger.debug(f"Deep work: {deep_work_seconds}s, Context switches: {context_switches}")
 
         # Flow Index = (Total Time in Deep Work / Total Screen Time) * 100
         # today_usage here is the Screen Time calculated at the top of get_device_summary
