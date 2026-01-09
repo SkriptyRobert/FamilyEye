@@ -173,10 +173,30 @@ async def agent_fetch_rules(
     device = verify_device_api_key(request.device_id, request.api_key, db)
     db.commit()  # Persist last_seen update from verify_device_api_key
     
-    rules = db.query(Rule).filter(
+    rules_db = db.query(Rule).filter(
         Rule.device_id == device.id,
         Rule.enabled == True
     ).all()
+
+    # Pre-process rules to fix schedule format for agent (expand '0-6' to '0,1,2...')
+    rules = []
+    for r in rules_db:
+        # Pydantic v2 uses model_validate, fallback to from_orm if needed
+        try:
+            rule_model = RuleResponse.model_validate(r)
+        except AttributeError:
+            rule_model = RuleResponse.from_orm(r)
+
+        if rule_model.schedule_days and '-' in rule_model.schedule_days and ',' not in rule_model.schedule_days:
+            try:
+                parts = rule_model.schedule_days.split('-')
+                if len(parts) == 2:
+                    start, end = int(parts[0]), int(parts[1])
+                    if start <= end:
+                        rule_model.schedule_days = ",".join(str(i) for i in range(start, end + 1))
+            except (ValueError, TypeError):
+                pass
+        rules.append(rule_model)
     
     # Calculate daily usage as COUNT of unique MINUTES (truncated to minute level)
     # This ensures all apps logged in same minute count as 1 minute, not N
