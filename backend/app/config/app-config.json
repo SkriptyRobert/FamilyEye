@@ -51,7 +51,8 @@
         "Runtime",
         "Net",
         "Net1",
-        "Windowspackagemanager"
+        "Windowspackagemanager",
+        "filecoauth"
     ],
     "whitelist": {
         "gameLaunchers": [
