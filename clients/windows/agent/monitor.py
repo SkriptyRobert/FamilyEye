@@ -224,6 +224,16 @@ class AppMonitor:
                     # Check window style to filter out tooltips/hidden windows
                     style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
                     if style & win32con.WS_VISIBLE:
+                        # NEW: Check for 0x0 size windows (Ghosts)
+                        try:
+                            rect = win32gui.GetWindowRect(hwnd)
+                            width = rect[2] - rect[0]
+                            height = rect[3] - rect[1]
+                            if width * height <= 0:
+                                return # Skip ghost windows
+                        except Exception:
+                            pass # If we can't get rect, fall back to title check
+
                         title = win32gui.GetWindowText(hwnd)
                         if title:
                             _, pid = win32process.GetWindowThreadProcessId(hwnd)

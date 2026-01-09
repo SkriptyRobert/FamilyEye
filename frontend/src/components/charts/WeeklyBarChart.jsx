@@ -26,7 +26,7 @@ const WeeklyBarChart = ({ deviceId, onDateSelect, selectedDate }) => {
             setLoading(true)
             setError(null)
             const response = await api.get(
-                `/api/reports/device/${deviceId}/weekly-pattern?weeks=1`
+                `/api/reports/device/${deviceId}/weekly-current`
             )
             // Ensure we have an array
             if (Array.isArray(response.data)) {
@@ -76,7 +76,7 @@ const WeeklyBarChart = ({ deviceId, onDateSelect, selectedDate }) => {
             data.forEach(item => {
                 const dayIndex = item.day_of_week
                 if (dayIndex >= 0 && dayIndex < 7) {
-                    result[dayIndex].hours = item.avg_duration_hours || 0
+                    result[dayIndex].hours = item.total_hours || 0
                 }
             })
         }

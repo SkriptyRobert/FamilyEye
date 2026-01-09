@@ -232,7 +232,61 @@ async def get_weekly_pattern(
     return results
 
 
+@router.get("/device/{device_id}/weekly-current")
+async def get_weekly_current(
+    device_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Get daily usage for the current week (Monday-Sunday) with actual totals."""
+    cache_key = f"weekly_current:{device_id}"
+    cached = stats_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    
+    verify_device_ownership(device_id, current_user.id, db)
+    
+    now_utc = datetime.now(timezone.utc)
+    today_weekday = now_utc.weekday()  # 0 = Monday, 6 = Sunday
+    
+    # Calculate Monday of the current week
+    monday = now_utc - timedelta(days=today_weekday)
+    monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    results = []
+    for day_idx in range(7):
+        day = monday + timedelta(days=day_idx)
+        day_str = day.strftime('%Y-%m-%d')
+        day_end = day + timedelta(days=1)
+        
+        # Get total usage for this specific day
+        day_minutes = db.query(
+            func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+        ).filter(
+            UsageLog.device_id == device_id,
+            UsageLog.timestamp >= day,
+            UsageLog.timestamp < day_end
+        ).scalar() or 0
+        
+        total_seconds = day_minutes * 60
+        
+        results.append({
+            "day_of_week": day_idx,
+            "day_name": CZECH_DAYS[day_idx],
+            "date": day_str,
+            "total_seconds": total_seconds,
+            "total_hours": round(total_seconds / 3600, 2),
+            "is_today": day_idx == today_weekday,
+            "is_future": day_idx > today_weekday
+        })
+    
+    # Cache for shorter time since it's current week data
+    stats_cache.set(cache_key, results, ttl=60)
+    return results
+
+
 @router.get("/device/{device_id}/app-details")
+
 async def get_app_details(
     device_id: int,
     app_name: str,

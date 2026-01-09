@@ -391,10 +391,23 @@ def _calculate_smart_insights(db: Session, device_id: int, start_utc: datetime, 
         
         if logs_today:
             focused_segments = []
+            has_explicit_focus = False
+
+            # First pass: Check for explicit focus
+            for log in logs_today:
+                if log.is_focused:
+                    has_explicit_focus = True
+                    break
+            
+            # Collection strategy
             for log in logs_today:
                 app_name, timestamp, duration, is_focused = log
-                if not is_focused:
+                
+                # If we have explicit focus data, use ONLY that. 
+                # If not, treat ALL long usage as potential focus (fallback)
+                if has_explicit_focus and not is_focused:
                     continue
+                    
                 ts_obj = timestamp if hasattr(timestamp, 'timestamp') else parser.parse(timestamp)
                 focused_segments.append((ts_obj.timestamp(), ts_obj.timestamp() + duration, app_name))
 

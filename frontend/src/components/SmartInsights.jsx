@@ -16,11 +16,16 @@ const SmartInsights = ({ insights }) => {
     if (!insights) return <div className="bento-card">Načítám analýzu...</div>;
 
     const renderFocus = () => {
+        const flowIndex = insights.focus.flow_index || 0;
+        const hasData = flowIndex > 0;
+
         const flowData = [
-            { name: 'Flow', value: Math.max(1, insights.focus.flow_index) },
-            { name: 'Other', value: 100 - Math.max(1, insights.focus.flow_index) }
+            { name: 'Flow', value: Math.max(1, flowIndex) },
+            { name: 'Other', value: 100 - Math.max(1, flowIndex) }
         ];
-        const COLORS = ['#a29bfe', 'rgba(255, 255, 255, 0.05)'];
+        const COLORS = hasData
+            ? ['#a29bfe', 'rgba(255, 255, 255, 0.05)']
+            : ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'];
 
         return (
             <div className="insight-content focus-mode">
@@ -47,7 +52,7 @@ const SmartInsights = ({ insights }) => {
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="chart-center-label">
-                            {Math.round(insights.focus.flow_index)}%
+                            {hasData ? `${Math.round(flowIndex)}%` : 'N/A'}
                         </div>
                     </div>
                     <div className="focus-details">
@@ -62,7 +67,12 @@ const SmartInsights = ({ insights }) => {
                     </div>
                 </div>
                 <div className="stat-subtext-centered">
-                    <strong>Flow Index (Průtok):</strong> Podíl sezení delších než 15 min. <br />
+                    {hasData ? (
+                        <><strong>Flow Index (Průtok):</strong> Podíl sezení delších než 15 min.</>
+                    ) : (
+                        <span className="text-muted">Nedostatek dat pro analýzu soustředění.</span>
+                    )}
+                    <br />
                     <small>Krátká odskočení (do 60s) pozornost nenarušují.</small>
                 </div>
             </div>

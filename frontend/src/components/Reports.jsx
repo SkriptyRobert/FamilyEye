@@ -35,6 +35,17 @@ const Reports = ({ deviceId }) => {
   const [heatmapDays, setHeatmapDays] = useState(7)
   const [selectedDateFilter, setSelectedDateFilter] = useState(null)
 
+  // Advanced mode state (persisted)
+  const [advancedMode, setAdvancedMode] = useState(() => {
+    return localStorage.getItem('stats_advanced_mode') === 'true'
+  })
+
+  const toggleAdvancedMode = () => {
+    const newVal = !advancedMode
+    setAdvancedMode(newVal)
+    localStorage.setItem('stats_advanced_mode', newVal)
+  }
+
   useEffect(() => {
     // NOTE: initAppConfig removed - backend handles filtering
     fetchDevices()
@@ -138,22 +149,35 @@ const Reports = ({ deviceId }) => {
     <div className="reports-container bento-layout">
       {/* Header */}
       <div className="reports-header">
-        <h2><BarChart3 size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Statistiky</h2>
-        <select
-          value={selectedDeviceId || ''}
-          onChange={(e) => {
-            setSelectedDeviceId(parseInt(e.target.value))
-            setSelectedDateFilter(null)
-          }}
-          className="device-select"
-        >
-          <option value="">Vyberte zařízení</option>
-          {devices.map((device) => (
-            <option key={device.id} value={device.id}>
-              {device.name}
-            </option>
-          ))}
-        </select>
+        <div className="header-left">
+          <h2><BarChart3 size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Statistiky</h2>
+        </div>
+
+        <div className="header-controls">
+          <button
+            className={`mode-toggle ${advancedMode ? 'active' : ''}`}
+            onClick={toggleAdvancedMode}
+            title={advancedMode ? "Vypnout detailní režim" : "Zapnout detailní režim (zobrazí procesy)"}
+          >
+            <Monitor size={16} />
+            <span>{advancedMode ? 'Profi' : 'Lite'}</span>
+          </button>
+          <select
+            value={selectedDeviceId || ''}
+            onChange={(e) => {
+              setSelectedDeviceId(parseInt(e.target.value))
+              setSelectedDateFilter(null)
+            }}
+            className="device-select"
+          >
+            <option value="">Vyberte zařízení</option>
+            {devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {selectedDeviceId && summary && (
@@ -291,8 +315,8 @@ const Reports = ({ deviceId }) => {
             </Suspense>
           </div>
 
-          {/* Running Processes Panel - IT Style Monitor */}
-          {summary.running_processes && summary.running_processes.length > 0 && (
+          {/* Running Processes Panel - IT Style Monitor (Advanced Mode) */}
+          {(advancedMode || (summary.running_processes && summary.running_processes.length > 0)) && (
             <div className="process-monitor-panel">
               <div className="monitor-header">
                 <div className="monitor-title">
