@@ -46,14 +46,15 @@
         "Skypeapp",
         "Securityhealthsys",
         "Searchapp",
-        "Explorer",
         "Python",
         "Runtime",
         "Net",
         "Net1",
         "Windowspackagemanager",
         "filecoauth",
-        "FamilyEye"
+        "FamilyEye",
+        "identity",
+        "storedesktopextension"
     ],
     "whitelist": {
         "gameLaunchers": [

@@ -417,6 +417,12 @@ def _calculate_smart_insights(db: Session, device_id: int, start_utc: datetime, 
             UsageLog.timestamp < end_utc
         ).order_by(UsageLog.timestamp.asc()).all()
 
+        # FILTER: Exclude blacklisted apps (retroactive fix)
+        logs_today = [
+            log for log in logs_today 
+            if app_filter.is_trackable(log.app_name)
+        ]
+
         # Focus Analysis - DISABLED (moved to experimental)
         # Flow Index and Deep Work features were disabled due to unreliable data.
         # The is_focused flag from agent depends on window detection accuracy,

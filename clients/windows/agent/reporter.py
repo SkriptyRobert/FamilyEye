@@ -127,7 +127,9 @@ class UsageReporter:
             for idx, report_hunk in enumerate(self.report_queue):
                 response_data = api_client.send_reports(
                     report_hunk["usage_logs"], 
-                    running_processes=report_hunk.get("running_processes")
+                    running_processes=report_hunk.get("running_processes"),
+                    device_uptime_seconds=report_hunk.get("device_uptime_seconds"),
+                    device_usage_today_seconds=report_hunk.get("device_usage_today_seconds")
                 )
                 
                 if response_data is not None:

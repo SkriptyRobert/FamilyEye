@@ -70,6 +70,11 @@ async def agent_report_usage(
 
     logger.info(f"Received usage report from device {device.id} ({device.name}): {len(request.usage_logs)} logs")
     
+    # NEW: Update device daily usage from Agent's internal tracker (Total Time)
+    if request.device_usage_today_seconds is not None:
+        device.daily_usage_seconds = request.device_usage_today_seconds
+        logger.debug(f"Updated device {device.id} daily usage: {device.daily_usage_seconds}s")
+    
     # Process usage logs
     total_duration = 0
     filtered_count = 0

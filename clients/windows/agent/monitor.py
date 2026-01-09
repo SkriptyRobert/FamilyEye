@@ -5,6 +5,7 @@ import psutil
 import time
 from typing import Dict, Set, Optional, List
 from collections import defaultdict
+import ctypes
 from .logger import get_logger
 
 class AppMonitor:
@@ -324,6 +325,45 @@ class AppMonitor:
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return None
     
+    def _is_real_window(self, hwnd) -> bool:
+        """
+        Validate if a window is truly a user-facing 'active' window.
+        Filters out:
+        - Invisible windows
+        - Minimized (Iconic) windows
+        - Cloaked windows (UWP background processes/suspended apps)
+        - Tool windows (optional, usually skipped by GetForegroundWindow anyway)
+        """
+        try:
+            import win32gui
+            
+            # 1. Basic Visibility
+            if not win32gui.IsWindowVisible(hwnd):
+                return False
+                
+            # 2. Minimized Check (Iconic)
+            # If active window is minimized (e.g. desktop has focus), it's not "Deep Work"
+            if win32gui.IsIconic(hwnd):
+                return False
+                
+            # 3. DWM Cloaked Check (Windows 8+)
+            # Crucial for filtering 'Storedesktopextension', 'ApplicationFrameHost', etc.
+            # DWMWA_CLOAKED = 14
+            # 0 = Not cloaked, >0 = Cloaked (e.g. 1=App, 2=Shell, 4=Inherited)
+            try:
+                cloaked = ctypes.c_int(0)
+                dwmapi = ctypes.windll.dwmapi
+                # S_OK = 0
+                if dwmapi.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked)) == 0:
+                    if cloaked.value != 0:
+                        return False
+            except Exception:
+                pass # DWM check failed (old OS?), assume visible if IsWindowVisible passed
+
+            return True
+        except Exception:
+            return False
+
     def _get_active_window_app(self) -> Optional[str]:
         """Get application name of currently active window (Focus)."""
         try:
@@ -332,6 +372,10 @@ class AppMonitor:
             
             hwnd = win32gui.GetForegroundWindow()
             if not hwnd: return None
+
+            # NEW: Strict Validation
+            if not self._is_real_window(hwnd):
+                return None
 
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
             try:
@@ -357,20 +401,8 @@ class AppMonitor:
         if elapsed <= 0: elapsed = 0.1
         
         # 1. Identify which PID is in the Foreground (Focus) for Smart Insights Tagging
-        self.focused_app = None
-        try:
-            import win32gui
-            import win32process
-            hwnd = win32gui.GetForegroundWindow()
-            if hwnd:
-                _, foreground_pid = win32process.GetWindowThreadProcessId(hwnd)
-                try:
-                    f_proc = psutil.Process(foreground_pid)
-                    self.focused_app = self._get_app_name(f_proc)
-                except:
-                    pass
-        except Exception:
-            pass
+        # Refactored to use robust _get_active_window_app logic
+        self.focused_app = self._get_active_window_app()
 
         # 2. Identify which PIDs have visible windows and their titles
         self.pid_titles = self._get_pids_with_visible_windows()
@@ -543,7 +575,7 @@ class AppMonitor:
         """Return pending usage and clear it (for discrete reporting)."""
         with self.lock:
             snap = self.usage_pending.copy()
-            self.usage_pending = {}
+            self.usage_pending = defaultdict(float)
             self.device_usage_pending = 0.0
             self._save_usage_cache()
             return snap

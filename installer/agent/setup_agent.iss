@@ -1,7 +1,7 @@
 [Setup]
 AppName=FamilyEye Agent
-AppVersion=2.1.3
-AppVerName=FamilyEye Agent 2.1.3
+AppVersion=2.1.5
+AppVerName=FamilyEye Agent 2.1.5
 AppPublisher=FamilyEye s.r.o.
 AppPublisherURL=https://familyeye.cz
 AppSupportURL=https://familyeye.cz/podpora
@@ -12,7 +12,7 @@ DefaultGroupName=FamilyEye Agent
 DisableProgramGroupPage=yes
 
 OutputDir=output
-OutputBaseFilename=FamilyEyeAgent_Setup_2.1.3
+OutputBaseFilename=FamilyEyeAgent_Setup_2.1.5
 UninstallDisplayName=FamilyEye Agent
 
 Compression=lzma2/ultra64

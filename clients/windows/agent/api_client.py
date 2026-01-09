@@ -129,7 +129,15 @@ class BackendAPIClient:
                 self.is_online = False
             return None
             
-    def send_reports(self, usage_logs: List[Dict], running_processes: List[str] = None) -> Optional[Dict]:
+    def send_reports(self, usage_logs: List[Dict], running_processes: List[str] = None, **kwargs) -> Optional[Dict]:
+        """
+        Send usage logs to backend.
+        
+        Args:
+            usage_logs: List of activity logs
+            running_processes: List of active PIDs/Apps
+            **kwargs: Additional metrics (device_uptime_seconds, device_usage_today_seconds)
+        """
         """Send usage logs to backend. Returns response JSON on success."""
         if not usage_logs and not running_processes:
             return {}
@@ -142,7 +150,9 @@ class BackendAPIClient:
                 "api_key": config.get("api_key"),
                 "usage_logs": usage_logs,
                 "client_timestamp": datetime.now().isoformat(),
-                "running_processes": running_processes
+                "running_processes": running_processes,
+                "device_uptime_seconds": kwargs.get("device_uptime_seconds"),
+                "device_usage_today_seconds": kwargs.get("device_usage_today_seconds")
             }
             
             response = self.session.post(url, json=payload, timeout=10)
