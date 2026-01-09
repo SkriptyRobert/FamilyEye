@@ -166,6 +166,41 @@ async def get_device_summary(
             ls = ls.replace(tzinfo=timezone.utc)
         last_seen_iso = ls.isoformat()
 
+    # Merge and deduplicate top apps by friendly name
+    top_apps_map = {}
+    
+    for app in top_apps_query:
+        if not app_filter.is_trackable(app[0]):
+            continue
+
+        raw_name = app[0]
+        duration = app[1]
+        friendly_name = app_filter.get_friendly_name(raw_name)
+        
+        # Use a case-insensitive key for grouping
+        key = friendly_name.lower()
+        
+        if key in top_apps_map:
+            top_apps_map[key]["duration_seconds"] += duration
+            # Prefer showing the Friendly Name as display name
+            top_apps_map[key]["display_name"] = friendly_name 
+        else:
+            top_apps_map[key] = {
+                "app_name": raw_name, # Keep one raw name as reference
+                "duration_seconds": duration,
+                "display_name": friendly_name,
+                "window_title": latest_titles.get(raw_name, ""),
+                "category": app_filter.get_category(raw_name),
+                "icon_type": app_filter.get_icon_type(raw_name)
+            }
+            
+    # Convert back to list and sort by duration
+    final_top_apps = sorted(
+        top_apps_map.values(), 
+        key=lambda x: x["duration_seconds"], 
+        reverse=True
+    )
+
     return {
         "device_id": device_id,
         "device_name": device.name,
@@ -179,14 +214,7 @@ async def get_device_summary(
         "total_usage_seconds": total_usage_all,
         "total_usage_hours": round(total_usage_all / 3600, 2),
         "apps_used_today": apps_today,
-        "top_apps": [{
-            "app_name": app[0], 
-            "duration_seconds": app[1],
-            "display_name": app_filter.get_friendly_name(app[0]),
-            "window_title": latest_titles.get(app[0], ""),
-            "category": app_filter.get_category(app[0]),
-            "icon_type": app_filter.get_icon_type(app[0])
-        } for app in top_apps_query if app_filter.is_trackable(app[0])],
+        "top_apps": final_top_apps,
         "active_rules": active_rules,
         "apps_with_limits": apps_with_limits,
         "daily_limit": daily_limit_info,
