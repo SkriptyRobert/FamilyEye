@@ -34,9 +34,9 @@ class AppFilterService:
     
     def _get_config_path(self) -> Path:
         """Get path to app-config.json."""
-        # Path is backend/config/app-config.json
+        # Path is backend/app/config/app-config.json
         # This file is in backend/app/services/
-        return Path(__file__).parent.parent.parent / "config" / "app-config.json"
+        return Path(__file__).parent.parent / "config" / "app-config.json"
     
     def _load_config(self):
         """Load configuration from JSON file."""

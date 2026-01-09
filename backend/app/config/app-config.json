@@ -51,6 +51,7 @@
         "Runtime",
         "Net",
         "Net1",
+        "Windowspackagemanager"
     ],
     "whitelist": {
         "gameLaunchers": [
