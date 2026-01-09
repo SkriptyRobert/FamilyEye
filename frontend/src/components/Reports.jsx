@@ -35,16 +35,7 @@ const Reports = ({ deviceId }) => {
   const [heatmapDays, setHeatmapDays] = useState(7)
   const [selectedDateFilter, setSelectedDateFilter] = useState(null)
 
-  // Advanced mode state (persisted)
-  const [advancedMode, setAdvancedMode] = useState(() => {
-    return localStorage.getItem('stats_advanced_mode') === 'true'
-  })
 
-  const toggleAdvancedMode = () => {
-    const newVal = !advancedMode
-    setAdvancedMode(newVal)
-    localStorage.setItem('stats_advanced_mode', newVal)
-  }
 
   useEffect(() => {
     // NOTE: initAppConfig removed - backend handles filtering
@@ -154,14 +145,7 @@ const Reports = ({ deviceId }) => {
         </div>
 
         <div className="header-controls">
-          <button
-            className={`mode-toggle ${advancedMode ? 'active' : ''}`}
-            onClick={toggleAdvancedMode}
-            title={advancedMode ? "Vypnout detailní režim" : "Zapnout detailní režim (zobrazí procesy)"}
-          >
-            <Monitor size={16} />
-            <span>{advancedMode ? 'Profi' : 'Lite'}</span>
-          </button>
+
           <select
             value={selectedDeviceId || ''}
             onChange={(e) => {
@@ -315,37 +299,44 @@ const Reports = ({ deviceId }) => {
             </Suspense>
           </div>
 
-          {/* Running Processes Panel - IT Style Monitor (Advanced Mode) */}
-          {(advancedMode || (summary.running_processes && summary.running_processes.length > 0)) && (
-            <div className="process-monitor-panel">
-              <div className="monitor-header">
-                <div className="monitor-title">
-                  <span className="pulse-dot"></span>
-                  <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní procesy</h4>
-                  <span className="process-count">{summary.running_processes.length}</span>
-                </div>
-                <span className="monitor-timestamp">
-                  {summary.running_processes_updated
-                    ? formatRelativeTime(summary.running_processes_updated)
-                    : '...'}
-                </span>
+          {/* Running Processes Panel - Always Visible */}
+          <div className="process-monitor-panel">
+            <div className="monitor-header">
+              <div className="monitor-title">
+                <span className={`pulse-dot ${(summary.running_processes?.length > 0) ? 'active' : 'inactive'}`}></span>
+                <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní procesy</h4>
+                <span className="process-count">{summary.running_processes?.length || 0}</span>
               </div>
-              <div className="process-table">
-                <div className="process-table-header">
-                  <span className="col-name">PROCES</span>
-                  <span className="col-status">STAV</span>
-                </div>
-                <div className="process-table-body">
-                  {summary.running_processes.map((process, index) => (
+              <span className="monitor-timestamp">
+                {summary.running_processes_updated
+                  ? formatRelativeTime(summary.running_processes_updated)
+                  : '...'}
+              </span>
+            </div>
+
+            <div className="process-table">
+              <div className="process-table-header">
+                <span className="col-name">PROCES</span>
+                <span className="col-status">STAV</span>
+              </div>
+              <div className="process-table-body">
+                {summary.running_processes && summary.running_processes.length > 0 ? (
+                  summary.running_processes.map((process, index) => (
                     <div key={index} className="process-row">
                       <span className="col-name">{process}</span>
                       <span className="col-status running">⬤ BĚŽÍ</span>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="process-row empty-state">
+                    <span className="col-name muted" style={{ padding: '12px', textAlign: 'center', width: '100%' }}>
+                      Žádné sledované procesy nebyly detekovány
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
 
           {/* Quick Stats Footer */}
@@ -364,8 +355,7 @@ const Reports = ({ deviceId }) => {
             </div>
           </div>
         </div>
-      )
-      }
+      )}
 
       {/* App Details Modal */}
       {
@@ -384,11 +374,3 @@ const Reports = ({ deviceId }) => {
 }
 
 export default Reports
-
-
-
-
-
-
-
-

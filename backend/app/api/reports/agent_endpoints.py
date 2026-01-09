@@ -17,12 +17,12 @@ from ...models import UsageLog, Device, Rule
 from ...schemas import AgentReportRequest, CriticalEventRequest
 from ..devices import verify_device_api_key
 from ...services.app_filter import app_filter
+from .device_endpoints import running_processes_cache
 
 router = APIRouter()
 logger = logging.getLogger("agent_endpoints")
 
-# In-memory cache for running processes per device
-running_processes_cache: Dict[int, dict] = {}
+# running_processes_cache is now imported from device_endpoints
 
 
 @router.post("/agent/report", status_code=status.HTTP_201_CREATED)
@@ -108,7 +108,7 @@ async def agent_report_usage(
     logger.info(f"Saved {len(request.usage_logs) - filtered_count} usage logs, trackable duration: {trackable_duration}s ({trackable_duration // 60}m)")
     
     # Store running processes
-    if hasattr(request, 'running_processes') and request.running_processes:
+    if hasattr(request, 'running_processes') and request.running_processes is not None:
         processes_json = json.dumps(request.running_processes)
         device.current_processes = processes_json
         
