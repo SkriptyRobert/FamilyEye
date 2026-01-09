@@ -1,0 +1,109 @@
+/* DayPicker Component Styles */
+/* Matches FamilyEye dark theme design system */
+
+.day-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.day-picker-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Individual day toggle button */
+.day-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.day-toggle:hover {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.day-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Selected state */
+.day-toggle.selected {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+    box-shadow: 0 0 12px rgba(102, 126, 234, 0.4);
+}
+
+.day-toggle.selected:hover {
+    background: #5a6fd6;
+    border-color: #5a6fd6;
+    color: white;
+}
+
+/* Quick preset links */
+.day-presets {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.day-preset-link {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    transition: all 0.2s ease;
+}
+
+.day-preset-link:hover {
+    color: var(--accent-color);
+    text-decoration-style: solid;
+}
+
+.day-preset-link.active {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+    .day-toggle {
+        width: 38px;
+        height: 38px;
+        font-size: 11px;
+    }
+
+    .day-picker-buttons {
+        gap: 6px;
+    }
+
+    .day-presets {
+        gap: 12px;
+    }
+
+    .day-preset-link {
+        font-size: 11px;
+    }
+}

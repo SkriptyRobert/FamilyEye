@@ -6,6 +6,7 @@ import {
   Shield, AlertTriangle, Smartphone, LinkIcon, Copy, CheckCircle, Monitor, Check
 } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
+import DayPicker from './DayPicker'
 import './RuleEditor.css'
 
 // Fallback suggested apps (shown when no data available)
@@ -337,14 +338,10 @@ const RuleEditor = ({ deviceId }) => {
                     </div>
                   </div>
                   <label style={{ marginTop: '10px' }}>Dny v týdnu</label>
-                  <input
-                    type="text"
-                    value={formData.schedule_days}
-                    onChange={(e) => setFormData({ ...formData, schedule_days: e.target.value })}
-                    placeholder="0-6 (např. 0,1,2,3,4 pro pracovní dny)"
-                    className="input"
+                  <DayPicker
+                    selectedDays={formData.schedule_days}
+                    onChange={(days) => setFormData({ ...formData, schedule_days: days })}
                   />
-                  <small style={{ color: 'var(--text-secondary)' }}>0=Po, 1=Út, ..., 6=Ne</small>
                 </div>
               )}
 
