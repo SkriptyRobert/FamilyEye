@@ -43,13 +43,14 @@
         "smartscreen",
         "SnippingTool",
         "Systemsettings",
-        "Winstore.app",
         "Skypeapp",
         "Securityhealthsys",
         "Searchapp",
         "Explorer",
         "Python",
-        "Runtime"
+        "Runtime",
+        "Net",
+        "Net1",
     ],
     "whitelist": {
         "gameLaunchers": [
@@ -82,7 +83,12 @@
             "xboxapp",
             "gamebar",
             "playnite",
-            "lutris"
+            "lutris",
+            "packagemanager"
+        ],
+        "store": [
+            "storedesktopextension",
+            "winstore.app"
         ],
         "games": [
             "minecraft",
@@ -324,6 +330,8 @@
         ]
     },
     "friendlyNames": {
+        "storedesktopextension": "Microsoft Store",
+        "winstore.app": "Microsoft Store",
         "epicgameslauncher": "Epic Games",
         "steam": "Steam",
         "origin": "EA Origin",
@@ -483,6 +491,7 @@
         "productivity": "file-text",
         "development": "code",
         "creative": "image",
-        "education": "book"
+        "education": "book",
+        "store": "download"
     }
 }

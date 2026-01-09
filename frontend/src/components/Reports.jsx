@@ -304,7 +304,7 @@ const Reports = ({ deviceId }) => {
             <div className="monitor-header">
               <div className="monitor-title">
                 <span className={`pulse-dot ${(summary.running_processes?.length > 0) ? 'active' : 'inactive'}`}></span>
-                <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní procesy</h4>
+                <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní aplikace</h4>
                 <span className="process-count">{summary.running_processes?.length || 0}</span>
               </div>
               <span className="monitor-timestamp">
@@ -316,7 +316,7 @@ const Reports = ({ deviceId }) => {
 
             <div className="process-table">
               <div className="process-table-header">
-                <span className="col-name">PROCES</span>
+                <span className="col-name">APLIKACE</span>
                 <span className="col-status">STAV</span>
               </div>
               <div className="process-table-body">
