@@ -218,6 +218,10 @@ def _calculate_precise_usage(db: Session, device_id: int, start_utc: datetime, e
     
     all_segments = []
     for log in daily_logs:
+        # Retroactive filtering: Skip logs for apps that are now blacklisted
+        if not app_filter.is_trackable(log.app_name):
+            continue
+            
         ts_obj = log.timestamp if hasattr(log.timestamp, 'timestamp') else parser.parse(log.timestamp)
         start_ts = ts_obj.timestamp()
         if log.duration > 0:
