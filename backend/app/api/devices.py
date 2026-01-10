@@ -118,6 +118,35 @@ async def pair_device(
         )
 
 
+@router.get("/pairing/status/{token}", response_model=PairingStatusResponse)
+async def check_pairing_status(
+    token: str,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Check if a pairing token has been used."""
+    from ..models import PairingToken, Device
+    
+    pairing_token = db.query(PairingToken).filter(
+        PairingToken.token == token,
+        PairingToken.parent_id == current_user.id
+    ).first()
+    
+    if not pairing_token:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pairing token not found"
+        )
+        
+    device = None
+    if pairing_token.used and pairing_token.device_id:
+        device = db.query(Device).filter(Device.id == pairing_token.device_id).first()
+        
+    return {
+        "used": pairing_token.used,
+        "device": device
+    }
+
 @router.get("/", response_model=List[DeviceResponse])
 async def get_devices(
     current_user: User = Depends(get_current_parent),

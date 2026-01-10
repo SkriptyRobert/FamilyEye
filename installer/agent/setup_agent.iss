@@ -293,7 +293,7 @@ begin
   TestButton := TNewButton.Create(WizardForm);
   TestButton.Parent := ServerPage.Surface;
   TestButton.Left := 0;
-  TestButton.Top := 120;  // Moved down to avoid overlapping input field
+  TestButton.Top := 160;  // Moved further down to avoid overlapping input field
   TestButton.Width := 150;
   TestButton.Height := 30;
   TestButton.Caption := ExpandConstant('{cm:TestConnection}');
@@ -303,7 +303,7 @@ begin
   StatusLabel := TNewStaticText.Create(WizardForm);
   StatusLabel.Parent := ServerPage.Surface;
   StatusLabel.Left := 160;
-  StatusLabel.Top := 126; // Moved down to align with button
+  StatusLabel.Top := 166; // Aligned with button
   StatusLabel.Caption := '';
   StatusLabel.Font.Style := [fsBold];
   
@@ -326,13 +326,8 @@ begin
   ChildAccountPage := CreateInputQueryPage(PairingPage.ID,
     ExpandConstant('{cm:ChildAccountSetup}'),
     ExpandConstant('{cm:ChildAccountSetupDesc}'),
-    'PROČ VYTVOŘIT NOVÝ ÚČET?' + #13#10 +
-    'Účet bez admin práv = dítě nemůže odinstalovat agenta,' + #13#10 +
-    'měnit systémová nastavení ani obejít ochranu.' + #13#10#13#10 +
-    'DŮLEŽITÉ PRO RODIČE:' + #13#10 +
-    'Ujistěte se, že máte svůj vlastní administrátorský účet!' + #13#10 +
-    'Bez něj byste ztratili kontrolu nad počítačem.' + #13#10#13#10 +
-    'Pokud dětský účet již existuje, nechte pole prázdná.');
+    'Dětský účet bez admin práv = dítě nemůže odinstalovat agenta.' + #13#10#13#10 +
+    'Nechte pole prázdná, pokud účet již existuje.');
   ChildAccountPage.Add(ExpandConstant('{cm:ChildUsername}'), False);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPassword}'), True);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
