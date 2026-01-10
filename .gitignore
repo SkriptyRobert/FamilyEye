@@ -17,3 +17,21 @@ clients/windows/agent/build/
 installer/agent/dist/
 installer/agent/build/
 installer/agent/output/
+
+# Database (Critical Security)
+*.db
+*.sqlite
+*.sqlite3
+parental_control.db
+
+# Node modules & Frontend
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS specific checks
+.DS_Store
+Thumbs.db
