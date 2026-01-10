@@ -1,5 +1,5 @@
 import React from 'react'
-import { Lock, WifiOff, Camera, Maximize2 } from 'lucide-react'
+import { Lock, WifiOff, Monitor, ExternalLink } from 'lucide-react'
 import './QuickActionsBar.css'
 
 /**
