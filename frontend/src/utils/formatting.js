@@ -584,18 +584,3 @@ export const formatLimitText = (usedSeconds, limitMinutes) => {
 // All filtering is now handled by backend/app/services/app_filter.py
 // Frontend just displays what backend sends.
 // ============================================
-
-/**
- * Simple app name cleaner (kept for display purposes)
- */
-const cleanAppNameSimple = (name) => {
-    if (!name) return 'Unknown'
-    return name
-        .replace(/\.exe$/i, '')
-        .replace(/([a-z])([A-Z])/g, '$1 $2')
-        .replace(/[_-]/g, ' ')
-        .trim()
-        .split(' ')
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(' ')
-}

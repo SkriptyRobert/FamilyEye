@@ -13,8 +13,6 @@ const SmartInsights = ({ insights }) => {
 
     if (!insights) return <div className="bento-card">Načítám analýzu...</div>;
 
-    // renderFocus removed - Deep Focus feature disabled (see implementation_plan.md)
-
     const renderAnomalies = () => {
         const { anomalies } = insights;
         const items = [];
