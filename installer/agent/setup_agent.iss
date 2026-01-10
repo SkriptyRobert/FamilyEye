@@ -92,23 +92,9 @@ Source: "..\..\clients\windows\agent\familyeye_icon.png"; DestDir: "{app}\agent"
 Source: "{tmp}\config.json"; DestDir: "{commonappdata}\FamilyEye\Agent"; Flags: external ignoreversion skipifsourcedoesntexist
 
 [UninstallDelete]
-; Clean up ProgramData files and folders
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\service_core.log"
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\ui_agent.log"
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\Logs\service_wrapper.log"
-Type: dirifempty; Name: "{commonappdata}\FamilyEye\Agent\Logs"
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\config.json"
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\rules_cache.json"
-Type: files; Name: "{commonappdata}\FamilyEye\Agent\usage_cache.json"
-Type: dirifempty; Name: "{commonappdata}\FamilyEye\Agent"
-Type: dirifempty; Name: "{commonappdata}\FamilyEye"
-
-; Use {app} just for cleaning remaining bin folder binaries if any
-Type: filesandordirs; Name: "{app}\logs"
-Type: files; Name: "{app}\config.json"
-Type: files; Name: "{app}\rules_cache.json"
-Type: files; Name: "{app}\child_agent.log"
-Type: dirifempty; Name: "{app}"
+; Force-delete all FamilyEye data (aggressive cleanup)
+Type: filesandordirs; Name: "{commonappdata}\FamilyEye"
+Type: filesandordirs; Name: "{app}"
 
 [Registry]
 ; ChildAgent auto-start via HKLM Run key (works for all users)
@@ -226,9 +212,11 @@ begin
   ServerPage := CreateInputQueryPage(wpSelectDir,
     ExpandConstant('{cm:ServerConfig}'),
     ExpandConstant('{cm:ServerConfigDesc}'),
-    'Zadejte adresu serveru, kde běží rodičovský dashboard.' + #13#10 +
-    'Tuto adresu najdete na dashboardu v sekci "Přidat zařízení".' + #13#10#13#10 +
-    'Příklad: https://monitor.familyeye.cz');
+    'Adresa serveru propojí tento počítač s vaším rodičovským účtem.' + #13#10 +
+    'Díky tomu uvidíte aktivitu dítěte na dashboardu.' + #13#10#13#10 +
+    'Kde ji najdu?' + #13#10 +
+    'Na dashboardu klikněte na "+ Přidat" a adresa se zobrazí.' + #13#10#13#10 +
+    'Příklad: https://192.168.0.100:8000');
   ServerPage.Add(ExpandConstant('{cm:ServerURL}'), False);
   ServerPage.Values[0] := 'https://';
   
@@ -254,11 +242,12 @@ begin
   PairingPage := CreateInputQueryPage(ServerPage.ID,
     ExpandConstant('{cm:PairingConfig}'),
     ExpandConstant('{cm:PairingConfigDesc}'),
-    'Párovací token získáte na rodičovském dashboardu:' + #13#10 +
-    '1. Přihlaste se na dashboard' + #13#10 +
-    '2. Klikněte na "Přidat zařízení"' + #13#10 +
-    '3. Vygenerujte nový párovací kód' + #13#10 +
-    '4. Zkopírujte token a vložte sem');
+    'Token je jednorázový bezpečnostní kód platný 5 minut.' + #13#10 +
+    'Zajišťuje, že pouze vy můžete přidat toto zařízení.' + #13#10#13#10 +
+    'Jak ho získám?' + #13#10 +
+    '1. Na dashboardu klikněte "+ Přidat"' + #13#10 +
+    '2. Klikněte "Vygenerovat párovací kód"' + #13#10 +
+    '3. Zkopírujte kód a vložte ho sem');
   PairingPage.Add(ExpandConstant('{cm:PairingToken}'), False);
   PairingPage.Add(ExpandConstant('{cm:DeviceName}'), False);
   PairingPage.Values[0] := '';
@@ -268,9 +257,13 @@ begin
   ChildAccountPage := CreateInputQueryPage(PairingPage.ID,
     ExpandConstant('{cm:ChildAccountSetup}'),
     ExpandConstant('{cm:ChildAccountSetupDesc}'),
-    'Pro maximální bezpečnost doporučujeme vytvořit dětský účet bez administrátorských práv.' + #13#10 +
-    'Dítě pak nebude moci odinstalovat agenta ani měnit systémová nastavení.' + #13#10#13#10 +
-    'Pokud účet již existuje, nechte pole prázdná.');
+    'PROČ VYTVOŘIT NOVÝ ÚČET?' + #13#10 +
+    'Účet bez admin práv = dítě nemůže odinstalovat agenta,' + #13#10 +
+    'měnit systémová nastavení ani obejít ochranu.' + #13#10#13#10 +
+    'DŮLEŽITÉ PRO RODIČE:' + #13#10 +
+    'Ujistěte se, že máte svůj vlastní administrátorský účet!' + #13#10 +
+    'Bez něj byste ztratili kontrolu nad počítačem.' + #13#10#13#10 +
+    'Pokud dětský účet již existuje, nechte pole prázdná.');
   ChildAccountPage.Add(ExpandConstant('{cm:ChildUsername}'), False);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPassword}'), True);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
@@ -280,13 +273,16 @@ begin
   SecurityPage := CreateInputOptionPage(ChildAccountPage.ID,
     ExpandConstant('{cm:SecuritySetup}'),
     ExpandConstant('{cm:SecuritySetupDesc}'),
-    'Vyberte nastavení zabezpečení:',
+    'Tato nastavení chrání před obejitím rodičovské kontroly.' + #13#10 +
+    'Doporučujeme nechat vše zapnuté.' + #13#10#13#10 +
+    'TIP: Pro maximální ochranu zapněte v BIOSu "Secure Boot"' + #13#10 +
+    'a heslo na BIOS – zabrání bootování z USB.',
     False, False);
-  SecurityPage.Add(ExpandConstant('{cm:ConfigureFirewall}'));
-  SecurityPage.Add(ExpandConstant('{cm:BlockTaskManager}'));
-  SecurityPage.Add(ExpandConstant('{cm:BlockControlPanel}'));
-  SecurityPage.Add(ExpandConstant('{cm:BlockRegistry}'));
-  SecurityPage.Values[0] := True;  // Firewall checked by default
+  SecurityPage.Add('Firewall – povolí jen nutnou komunikaci agenta');
+  SecurityPage.Add('Zakázat Správce úloh – dítě nemůže ukončit agenta');
+  SecurityPage.Add('Omezit Ovládací panely – zabrání změnám nastavení');
+  SecurityPage.Add('Zakázat Registry – zabrání pokročilým úpravám');
+  SecurityPage.Values[0] := True;  // Firewall
   SecurityPage.Values[1] := True;  // Task Manager
   SecurityPage.Values[2] := True;  // Control Panel
   SecurityPage.Values[3] := True;  // Registry
@@ -322,7 +318,12 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
-    // Check if we created a child account
+    // 1. Undo security restrictions (remove from .DEFAULT hive)
+    RegDeleteValue(HKEY_USERS, '.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Policies\System', 'DisableTaskMgr');
+    RegDeleteValue(HKEY_USERS, '.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer', 'NoControlPanel');
+    RegDeleteValue(HKEY_USERS, '.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Policies\System', 'DisableRegistryTools');
+    
+    // 2. Check if we created a child account
     if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'SOFTWARE\FamilyEyeAgent', 'ChildAccount', ChildUser) then
     begin
       if ChildUser <> '' then
@@ -340,6 +341,9 @@ begin
         end;
       end;
     end;
+    
+    // 3. Delete FamilyEye registry key
+    RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE, 'SOFTWARE\FamilyEyeAgent');
   end;
 end;
 
