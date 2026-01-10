@@ -59,6 +59,13 @@ const DevicePairing = () => {
                 qrCode: qrResponse.data.qr_code,
                 expiresAt: new Date(expires_at)
             })
+
+            // Okamžitě vypočítat a nastavit čas, aby neproblikl stav "vypršelo"
+            const now = new Date()
+            const expires = new Date(expires_at)
+            const diff = Math.max(0, Math.floor((expires.getTime() - now.getTime()) / 1000))
+            setTimeLeft(diff)
+
             setStep(2)
         } catch (err) {
             console.error('Pairing error:', err)
@@ -111,7 +118,7 @@ const DevicePairing = () => {
 
     const formatTimeRemaining = () => {
         if (!pairingData.expiresAt) return ''
-        if (timeLeft <= 0) return 'Platnost vypršela'
+        if (timeLeft <= 0) return 'Token vypršel'
 
         const minutes = Math.floor(timeLeft / 60)
         const seconds = timeLeft % 60
@@ -193,7 +200,7 @@ const DevicePairing = () => {
                                 <span className="copy-icon"><Copy size={16} /></span>
                             </div>
                             <div className={`info-expires ${timeLeft < 60 ? 'critical' : timeLeft < 180 ? 'warning' : ''}`}>
-                                {timeLeft <= 0 ? 'Kód vypršel' : `Platnost: ${formatTimeRemaining()}`}
+                                {timeLeft <= 0 ? 'Token vypršel' : `Platnost: ${formatTimeRemaining()}`}
                             </div>
                         </div>
                     </div>
