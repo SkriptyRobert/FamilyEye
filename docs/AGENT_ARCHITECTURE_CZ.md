@@ -59,6 +59,18 @@ Agent používá logiku `MAX(Backend, Lokální)` pro určení aktuálního stav
 
 ---
 
+## 4. Odolnost proti výpadkům a offline režim
+
+Sytém FamilyEye je navržen tak, aby byl odolný proti výpadkům internetu i pokusům o obcházení.
+
+*   **Měření se nezastaví:** Agent na počítači nepotřebuje internet k tomu, aby sledoval aktivitu. Neustále (v sekundových intervalech) kontroluje běžící procesy a aktivní okna.
+*   **Lokální paměť (Cache):** Veškerý čas strávený v aplikacích si agent ukládá do své lokální paměti na disku (tzv. `usage_cache.json`). I když není internet, agent pokračuje v měření.
+*   **Sledování nových aplikací:** Agent zaznamená i aplikace, které uživatel otevřel až během výpadku.
+*   **Dopočítání po připojení:** Jakmile se internet opět připojí, agent okamžitě rozpozná online stav a odesílá všechna nasbíraná data z doby offline v jedné dávce na server (`report_queue.json`).
+*   **Offline Enforcing:** Pokud je nastaven limit (např. 2 hodiny), agent jej vynucuje i offline. Pokud uživatel dosáhne limitu během výpadku internetu, agent aplikaci ukončí na základě lokálně uložených pravidel.
+
+---
+
 ## Shrnutí Toku Dat
 
 1.  **Agent (Monitor)** naměří 1 minutu aktivity ve hře "Minecraft".
