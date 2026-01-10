@@ -776,7 +776,28 @@ class RuleEnforcer:
         current_time_str = now.strftime("%H:%M")
         current_day = now.strftime("%a").lower()[:3]
         
-        # Check if we're within ANY allowed device schedule
+        # NEW: First check if TODAY is covered by ANY schedule rule
+        # If today has no schedule, don't enforce any restrictions
+        today_has_schedule = False
+        for schedule in self.device_schedules:
+            allowed_days = schedule.get("days")
+            if not allowed_days:
+                # No days specified = applies to all days
+                today_has_schedule = True
+                break
+            allowed_days_list = self._parse_schedule_days(allowed_days)
+            if current_day in allowed_days_list:
+                today_has_schedule = True
+                break
+        
+        if not today_has_schedule:
+            # Today is NOT covered by any schedule - no enforcement, PC is allowed
+            self._schedule_warning_shown = False
+            self._schedule_shutdown_initiated = False
+            self.shutdown_manager.reset_shutdown_flag()
+            return
+        
+        # Today HAS a schedule - check if we're within ANY allowed time window
         is_within_schedule = False
         minutes_until_end = None
         
