@@ -126,6 +126,10 @@ async def check_pairing_status(
 ):
     """Check if a pairing token has been used."""
     from ..models import PairingToken, Device
+    import logging
+    logger = logging.getLogger("pairing_status")
+    
+    logger.info(f"Checking pairing status for token: {token[:8]}... by user {current_user.id}")
     
     pairing_token = db.query(PairingToken).filter(
         PairingToken.token == token,
@@ -133,6 +137,7 @@ async def check_pairing_status(
     ).first()
     
     if not pairing_token:
+        logger.warning(f"Token not found: {token[:8]}...")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pairing token not found"
@@ -141,6 +146,9 @@ async def check_pairing_status(
     device = None
     if pairing_token.used and pairing_token.device_id:
         device = db.query(Device).filter(Device.id == pairing_token.device_id).first()
+        logger.info(f"Token used, device found: {device.name if device else 'None'}")
+    else:
+        logger.info(f"Token not used yet (used={pairing_token.used}, device_id={pairing_token.device_id})")
         
     return {
         "used": pairing_token.used,
