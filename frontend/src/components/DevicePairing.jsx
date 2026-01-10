@@ -54,15 +54,18 @@ const DevicePairing = () => {
             // Získat QR kód
             const qrResponse = await api.get(`/api/devices/pairing/qr/${token}`)
 
+            // Okamžitě vypočítat a nastavit čas, aby neproblikl stav "vypršelo"
+            // Backend posílá UTC čas, ale bez 'Z', takže ho musíme přidat, aby se interpretoval jako UTC
+            const expiresStr = expires_at.endsWith('Z') ? expires_at : expires_at + 'Z'
+            const expires = new Date(expiresStr)
+
             setPairingData({
                 token,
                 qrCode: qrResponse.data.qr_code,
-                expiresAt: new Date(expires_at)
+                expiresAt: expires
             })
 
-            // Okamžitě vypočítat a nastavit čas, aby neproblikl stav "vypršelo"
             const now = new Date()
-            const expires = new Date(expires_at)
             const diff = Math.max(0, Math.floor((expires.getTime() - now.getTime()) / 1000))
             setTimeLeft(diff)
 
