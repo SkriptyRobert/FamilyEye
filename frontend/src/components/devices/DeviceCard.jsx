@@ -183,13 +183,11 @@ const DeviceCard = memo(({
 
             {/* Quick actions */}
             <QuickActionsBar
-                deviceId={device.id}
-                isOnline={device.is_online}
-                lastScreenshot={device.last_screenshot}
-                pending={actionPending}
-                feedback={actionFeedback}
-                onAction={onDeviceAction}
-                onViewScreenshot={onShowScreenshot}
+                device={device}
+                actionPending={actionPending}
+                actionFeedback={actionFeedback}
+                onDeviceAction={onDeviceAction}
+                onShowScreenshot={onShowScreenshot}
             />
 
             {/* Expanded content */}
@@ -285,7 +283,7 @@ const DeviceCard = memo(({
                         <div className="detail-section limits-section-expanded">
                             <h4 className="section-title"><Calendar size={16} /> Denní limit zařízení</h4>
                             <div className={`limit-item-expanded ${summary.daily_limit.percentage_used >= 100 ? 'red' :
-                                    summary.daily_limit.percentage_used >= 65 ? 'orange' : 'green'
+                                summary.daily_limit.percentage_used >= 65 ? 'orange' : 'green'
                                 }`}>
                                 <div className="limit-header">
                                     <span className="limit-app-name">Celkový čas dnes</span>
@@ -296,7 +294,7 @@ const DeviceCard = memo(({
                                 <div className="limit-bar-container">
                                     <div
                                         className={`limit-bar ${summary.daily_limit.percentage_used >= 100 ? 'red' :
-                                                summary.daily_limit.percentage_used >= 65 ? 'orange' : 'green'
+                                            summary.daily_limit.percentage_used >= 65 ? 'orange' : 'green'
                                             }`}
                                         style={{ width: `${Math.min(100, summary.daily_limit.percentage_used)}%` }}
                                     />
