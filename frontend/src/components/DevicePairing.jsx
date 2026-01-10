@@ -43,6 +43,35 @@ const DevicePairing = () => {
         return () => clearInterval(timer)
     }, [pairingData.expiresAt, step])
 
+    // Auto-polling pro detekci úspěšného spárování
+    useEffect(() => {
+        if (step !== 2 || !pairingData.token) return
+
+        let mounted = true
+
+        const checkStatus = async () => {
+            try {
+                // Používáme specifický endpoint pro kontrolu stavu tokenu
+                const response = await api.get(`/api/devices/pairing/status/${pairingData.token}`)
+
+                if (mounted && response.data.used && response.data.device) {
+                    setPairedDevice(response.data.device)
+                    setStep(3)
+                }
+            } catch (err) {
+                // Tichá chyba, neblokujeme UI
+                console.debug('Pairing status check:', err)
+            }
+        }
+
+        const statusInterval = setInterval(checkStatus, 3000)
+
+        return () => {
+            mounted = false
+            clearInterval(statusInterval)
+        }
+    }, [step, pairingData.token])
+
     const generateToken = async () => {
         setLoading(true)
         setError(null)
@@ -97,6 +126,19 @@ const DevicePairing = () => {
                 setPairedDevice(newDevice)
                 setStep(3)
             } else {
+                // Fallback: zkusíme i nový endpoint, kdyby náhodou
+                if (pairingData.token) {
+                    try {
+                        const tokenResponse = await api.get(`/api/devices/pairing/status/${pairingData.token}`)
+                        if (tokenResponse.data.used && tokenResponse.data.device) {
+                            setPairedDevice(tokenResponse.data.device)
+                            setStep(3)
+                            return
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
                 setError('Zatím nebylo spárováno žádné zařízení. Dokončete instalaci na dětském počítači.')
             }
         } catch (err) {

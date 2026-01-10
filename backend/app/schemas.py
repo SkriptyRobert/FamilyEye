@@ -147,6 +147,11 @@ class PairingResponse(BaseModel):
     backend_url: str
 
 
+class PairingStatusResponse(BaseModel):
+    used: bool
+    device: Optional[DeviceResponse] = None
+
+
 # Agent schemas
 class AgentRulesRequest(BaseModel):
     device_id: str

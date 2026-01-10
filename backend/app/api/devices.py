@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 from ..database import get_db
 from ..models import Device, User
-from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, PairingTokenResponse, PairingRequest, PairingResponse
+from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, PairingTokenResponse, PairingRequest, PairingResponse, PairingStatusResponse
 from ..api.auth import get_current_parent
 from ..services.pairing_service import (
     generate_pairing_token,
