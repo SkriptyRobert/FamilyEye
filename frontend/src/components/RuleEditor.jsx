@@ -29,6 +29,7 @@ const RuleEditor = ({ deviceId }) => {
   const [hiddenApps, setHiddenApps] = useState([]) // From localStorage
   const [selectedApps, setSelectedApps] = useState([]) // Multi-app selection
   const [appInputValue, setAppInputValue] = useState('') // Current input value
+  const [scheduleTarget, setScheduleTarget] = useState('apps') // 'device' | 'apps' // Current input value
   const [formData, setFormData] = useState({
     rule_type: 'app_block',
     app_name: '',
@@ -152,7 +153,14 @@ const RuleEditor = ({ deviceId }) => {
     if (!selectedDeviceId) return
 
     // Validation
-    if (formData.rule_type === 'app_block' || formData.rule_type === 'time_limit' || formData.rule_type === 'schedule') {
+    if (formData.rule_type === 'app_block' || formData.rule_type === 'time_limit') {
+      if (selectedApps.length === 0) {
+        alert('Prosím vyberte alespoň jednu aplikaci')
+        return
+      }
+    }
+    // Schedule validation - only require apps if target is 'apps'
+    if (formData.rule_type === 'schedule' && scheduleTarget === 'apps') {
       if (selectedApps.length === 0) {
         alert('Prosím vyberte alespoň jednu aplikaci')
         return
@@ -166,15 +174,21 @@ const RuleEditor = ({ deviceId }) => {
     }
 
     try {
+      // For device schedule, send empty app_name
+      const appNameValue = formData.rule_type === 'schedule' && scheduleTarget === 'device'
+        ? ''
+        : selectedApps.join(',')
+
       await api.post('/api/rules/', {
         ...formData,
-        app_name: selectedApps.join(','), // Comma-separated apps
+        app_name: appNameValue,
         device_id: selectedDeviceId,
         time_limit: formData.time_limit ? parseInt(formData.time_limit) : null
       })
       setShowForm(false)
       setSelectedApps([]) // Reset app selection
       setAppInputValue('')
+      setScheduleTarget('apps') // Reset schedule target
       setFormData({
         rule_type: 'app_block',
         app_name: '',
@@ -283,7 +297,7 @@ const RuleEditor = ({ deviceId }) => {
                 </select>
               </div>
 
-              {formData.rule_type !== 'daily_limit' && (
+              {formData.rule_type !== 'daily_limit' && !(formData.rule_type === 'schedule' && scheduleTarget === 'device') && (
                 <div className="form-group">
                   <label>{(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') ? 'Webová adresa' : 'Název aplikace'}</label>
                   {(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') ? (
@@ -364,7 +378,35 @@ const RuleEditor = ({ deviceId }) => {
 
               {formData.rule_type === 'schedule' && (
                 <div className="form-group">
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  {/* Schedule Target Selector */}
+                  <label>Rozvrh platí pro:</label>
+                  <div className="schedule-target-selector">
+                    <label className={`radio-option ${scheduleTarget === 'device' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="scheduleTarget"
+                        value="device"
+                        checked={scheduleTarget === 'device'}
+                        onChange={(e) => setScheduleTarget(e.target.value)}
+                      />
+                      <Monitor size={16} />
+                      <span>Celé zařízení</span>
+                    </label>
+                    <label className={`radio-option ${scheduleTarget === 'apps' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="scheduleTarget"
+                        value="apps"
+                        checked={scheduleTarget === 'apps'}
+                        onChange={(e) => setScheduleTarget(e.target.value)}
+                      />
+                      <Shield size={16} />
+                      <span>Vybrané aplikace</span>
+                    </label>
+                  </div>
+
+                  {/* Time inputs */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                     <div style={{ flex: 1 }}>
                       <label>Od</label>
                       <input
