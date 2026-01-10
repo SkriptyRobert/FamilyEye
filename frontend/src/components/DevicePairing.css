@@ -208,7 +208,10 @@
 }
 
 .info-value.copyable:hover {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-color);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
 }
 
 .info-value.token {
@@ -226,9 +229,49 @@
 }
 
 .info-expires {
-    font-size: 12px;
+    font-size: 13px;
+    color: #10b981;
+    /* Green when ok */
+    margin-top: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-expires::before {
+    content: '●';
+    font-size: 8px;
+}
+
+.info-expires.warning {
     color: #f59e0b;
-    margin-top: 8px;
+    /* Orange */
+}
+
+.info-expires.critical {
+    color: #ef4444;
+    /* Red */
+    font-weight: 700;
+    animation: pulse-red-text 1.5s infinite;
+}
+
+@keyframes pulse-red-text {
+    0% {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
 }
 
 /* ============================================

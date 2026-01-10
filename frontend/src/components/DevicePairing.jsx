@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import { Smartphone, Link as LinkIcon, Copy, CheckCircle, Monitor, Check } from 'lucide-react'
 import './DevicePairing.css'
@@ -17,6 +17,31 @@ const DevicePairing = () => {
         expiresAt: null
     })
     const [pairedDevice, setPairedDevice] = useState(null)
+    const [timeLeft, setTimeLeft] = useState(0)
+
+    // Odpočet platnosti tokenu
+    useEffect(() => {
+        if (!pairingData.expiresAt || step !== 2) return
+
+        const updateTimer = () => {
+            const now = new Date()
+            const diff = Math.max(0, Math.floor((pairingData.expiresAt.getTime() - now.getTime()) / 1000))
+            setTimeLeft(diff)
+            return diff
+        }
+
+        const initialDiff = updateTimer()
+        if (initialDiff <= 0) return
+
+        const timer = setInterval(() => {
+            const currentDiff = updateTimer()
+            if (currentDiff <= 0) {
+                clearInterval(timer)
+            }
+        }, 1000)
+
+        return () => clearInterval(timer)
+    }, [pairingData.expiresAt, step])
 
     const generateToken = async () => {
         setLoading(true)
@@ -86,8 +111,11 @@ const DevicePairing = () => {
 
     const formatTimeRemaining = () => {
         if (!pairingData.expiresAt) return ''
-        const remaining = Math.max(0, Math.floor((pairingData.expiresAt - Date.now()) / 1000 / 60))
-        return `${remaining} minut`
+        if (timeLeft <= 0) return 'Platnost vypršela'
+
+        const minutes = Math.floor(timeLeft / 60)
+        const seconds = timeLeft % 60
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`
     }
 
     return (
@@ -164,8 +192,8 @@ const DevicePairing = () => {
                                 {pairingData.token}
                                 <span className="copy-icon"><Copy size={16} /></span>
                             </div>
-                            <div className="info-expires">
-                                Platnost: {formatTimeRemaining()}
+                            <div className={`info-expires ${timeLeft < 60 ? 'critical' : timeLeft < 180 ? 'warning' : ''}`}>
+                                {timeLeft <= 0 ? 'Kód vypršel' : `Platnost: ${formatTimeRemaining()}`}
                             </div>
                         </div>
                     </div>
