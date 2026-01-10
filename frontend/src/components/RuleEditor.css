@@ -28,15 +28,19 @@
   color: var(--text-primary);
   font-weight: 500;
   cursor: pointer;
-  /* Ensure it fits content */
-  min-width: 320px;
-  max-width: 100%;
-  width: auto;
+  /* Ensure it fits content dynamicallly */
+  min-width: 250px;
+  width: fit-content;
+  max-width: 600px;
+  flex-shrink: 0;
+  /* Prevent shrinking in flex container */
 }
 
 @media (max-width: 768px) {
   .device-select {
     min-width: 100%;
+    width: 100%;
+    max-width: none;
   }
 }
 
