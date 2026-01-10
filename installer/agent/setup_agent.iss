@@ -483,105 +483,103 @@ begin
   URL := ServerURL + '/api/devices/pairing/pair';
   PostData := '{"token":"' + PairingToken + '","device_name":"' + DeviceName + '","device_type":"windows","mac_address":"' + MacAddress + '","device_id":"' + DeviceID + '"}';
   
-  PostData := '{"token":"' + PairingToken + '","device_name":"' + DeviceName + '","device_type":"windows","mac_address":"' + MacAddress + '","device_id":"' + DeviceID + '"}';
-  
-  // Retry loop
+  // Retry loop (up to 3 attempts)
   for i := 1 to 3 do
   begin
-      try
-        WinHttpReq := CreateOleObject('WinHttp.WinHttpRequest.5.1');
-        WinHttpReq.Open('POST', URL, False);
-        WinHttpReq.SetRequestHeader('Content-Type', 'application/json');
-        WinHttpReq.SetTimeouts(5000, 5000, 5000, 15000); // 15s receive timeout
-    
     try
-      WinHttpReq.Option[4] := 256 + 512 + 4096 + 8192;
-    except
-    end;
-    
-    WinHttpReq.Send(PostData);
-    
-    if WinHttpReq.Status = 200 then
-    begin
-      Response := WinHttpReq.ResponseText;
+      WinHttpReq := CreateOleObject('WinHttp.WinHttpRequest.5.1');
+      WinHttpReq.Open('POST', URL, False);
+      WinHttpReq.SetRequestHeader('Content-Type', 'application/json');
+      WinHttpReq.SetTimeouts(5000, 5000, 5000, 15000);
       
-      ApiKey := '';
-      p1 := Pos('"api_key":', Response);
-      if p1 > 0 then
-      begin
-        TempS := Copy(Response, p1 + 10, Length(Response));
-        p1 := Pos('"', TempS);
-        if p1 > 0 then
-        begin
-          TempS := Copy(TempS, p1 + 1, Length(TempS));
-          p2 := Pos('"', TempS);
-          if p2 > 0 then
-            ApiKey := Copy(TempS, 1, p2 - 1);
-        end;
+      // Accept self-signed certificates
+      try
+        WinHttpReq.Option[4] := 256 + 512 + 4096 + 8192;
+      except
       end;
       
-      DeviceID := '';
-      p1 := Pos('"device_id":', Response);
-      if p1 > 0 then
+      WinHttpReq.Send(PostData);
+      
+      if WinHttpReq.Status = 200 then
       begin
-        TempS := Copy(Response, p1 + 12, Length(Response));
-        p1 := Pos('"', TempS);
-        if p1 > 0 then
-        begin
-          TempS := Copy(TempS, p1 + 1, Length(TempS));
-          p2 := Pos('"', TempS);
-          if p2 > 0 then
-            DeviceID := Copy(TempS, 1, p2 - 1);
-        end;
-      end;
-      
-      if ApiKey = '' then
-      begin
-        MsgBox('Chyba: Server nevrátil api_key v odpovědi.', mbError, MB_OK);
-        Exit;
-      end;
-      
-      if DeviceID = '' then
-        DeviceID := 'windows-' + GetPCName + '-' + RandomPart;
-      
-      // SAVE TO TEMP FIRST - {app} might not exist yet
-      ConfigFile := ExpandConstant('{tmp}\config.json');
-      SaveStringToFile(ConfigFile,
-        '{' + #13#10 +
-        '  "backend_url": "' + ServerURL + '",' + #13#10 +
-        '  "device_id": "' + DeviceID + '",' + #13#10 +
-        '  "api_key": "' + ApiKey + '",' + #13#10 +
-        '  "polling_interval": 30,' + #13#10 +
-        '  "reporting_interval": 60,' + #13#10 +
-        '  "cache_duration": 300,' + #13#10 +
-        '  "ssl_verify": false' + #13#10 +
-        '}' + #13#10,
-        False);
+        Response := WinHttpReq.ResponseText;
         
-      // SECURE THE FILE IMMEDIATELY
-      // Grant Full Control to Administrators (S-1-5-32-544) and SYSTEM (S-1-5-18)
-      // Remove inheritance so Users don't get access
-      if FileExists(ConfigFile) then
+        ApiKey := '';
+        p1 := Pos('"api_key":', Response);
+        if p1 > 0 then
+        begin
+          TempS := Copy(Response, p1 + 10, Length(Response));
+          p1 := Pos('"', TempS);
+          if p1 > 0 then
+          begin
+            TempS := Copy(TempS, p1 + 1, Length(TempS));
+            p2 := Pos('"', TempS);
+            if p2 > 0 then
+              ApiKey := Copy(TempS, 1, p2 - 1);
+          end;
+        end;
+        
+        DeviceID := '';
+        p1 := Pos('"device_id":', Response);
+        if p1 > 0 then
+        begin
+          TempS := Copy(Response, p1 + 12, Length(Response));
+          p1 := Pos('"', TempS);
+          if p1 > 0 then
+          begin
+            TempS := Copy(TempS, p1 + 1, Length(TempS));
+            p2 := Pos('"', TempS);
+            if p2 > 0 then
+              DeviceID := Copy(TempS, 1, p2 - 1);
+          end;
+        end;
+        
+        if ApiKey = '' then
+        begin
+          MsgBox('Chyba: Server nevrátil api_key v odpovědi.', mbError, MB_OK);
+          Exit;
+        end;
+        
+        if DeviceID = '' then
+          DeviceID := 'windows-' + GetPCName + '-' + RandomPart;
+        
+        // SAVE CONFIG TO TEMP
+        ConfigFile := ExpandConstant('{tmp}\config.json');
+        SaveStringToFile(ConfigFile,
+          '{' + #13#10 +
+          '  "backend_url": "' + ServerURL + '",' + #13#10 +
+          '  "device_id": "' + DeviceID + '",' + #13#10 +
+          '  "api_key": "' + ApiKey + '",' + #13#10 +
+          '  "polling_interval": 30,' + #13#10 +
+          '  "reporting_interval": 60,' + #13#10 +
+          '  "cache_duration": 300,' + #13#10 +
+          '  "ssl_verify": false' + #13#10 +
+          '}', False);
+          
+        // SECURE THE FILE IMMEDIATELY
+        if FileExists(ConfigFile) then
+        begin
+          Exec('icacls', '"' + ConfigFile + '" /inheritance:r /grant *S-1-5-32-544:F /grant *S-1-5-18:F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        end;
+        
+        Result := True;
+        Exit; // Success, exit function
+      end
+      else
       begin
-        Exec('icacls', '"' + ConfigFile + '" /inheritance:r /grant *S-1-5-32-544:F /grant *S-1-5-18:F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        // Non-200 response - only show error on last attempt
+        if i = 3 then
+          MsgBox('Server vrátil chybu: ' + IntToStr(WinHttpReq.Status) + #13#10 + WinHttpReq.ResponseText, mbError, MB_OK);
       end;
-      
-      Result := True;
-      Break; // Success, exit retry loop
-    end
-    else
-    begin
-      // Only show error on last attempt
+    except
+      // Exception - only show error on last attempt
       if i = 3 then
-        MsgBox('Server vrátil chybu: ' + IntToStr(WinHttpReq.Status) + #13#10 + WinHttpReq.ResponseText, mbError, MB_OK);
+        MsgBox('Nepodařilo se připojit k serveru. Zkontrolujte připojení.', mbError, MB_OK);
     end;
-  except
-    // Only show error on last attempt
-    if i = 3 then
-        Result := False;
-    // Wait a bit before retry? Inno doesn't have Sleep easily accessible without API import, so just retry immediately
   end;
-  end; // End retry loop
+  
+  // All retries failed
+  Result := False;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
