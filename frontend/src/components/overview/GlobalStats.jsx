@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import { Monitor, Smartphone, Activity } from 'lucide-react'
-import { formatDuration } from '../../utils/formatting'
-import '../StatusOverview.css' // Keep reusing base styles for now, or move to module
+import { formatDuration, getDeviceTypeInfo } from '../../utils/formatting'
+import '../StatusOverview.css'
 
 const GlobalStats = memo(({ devices = [], summaries = {} }) => {
     // Calculate totals
@@ -13,8 +13,11 @@ const GlobalStats = memo(({ devices = [], summaries = {} }) => {
 
     // Calculate counts
     const counts = devices.reduce((acc, device) => {
-        const type = device.device_type?.toLowerCase() || ''
-        if (type.includes('pc') || type.includes('desk') || type.includes('lap')) {
+        const typeInfo = getDeviceTypeInfo(device.device_type)
+        // Use label to reliably detect PCs (Počítač/Notebook) vs Mobiles
+        const isPc = typeInfo.label === 'Počítač' || typeInfo.label === 'Notebook'
+
+        if (isPc) {
             acc.pc++
         } else {
             acc.mobile++

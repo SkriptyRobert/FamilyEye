@@ -175,7 +175,8 @@
 
 .device-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    /* Use auto-fit to expand cards to fill space, and increase min width to avoid narrow cards */
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
     width: 100%;
 }
