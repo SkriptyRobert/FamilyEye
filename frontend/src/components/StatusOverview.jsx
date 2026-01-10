@@ -174,8 +174,9 @@ const StatusOverview = () => {
                 <AllAppsModal
                     deviceId={showAllAppsModal}
                     device={devices.find(d => d.id === showAllAppsModal)}
-                    summary={summaries[showAllAppsModal]}
+                    apps={summaries[showAllAppsModal]?.top_apps || []}
                     rules={rules[showAllAppsModal] || []}
+                    lastFetch={lastFetch}
                     onClose={() => setShowAllAppsModal(null)}
                     actionPending={actionPending}
                     actionFeedback={actionFeedback}
