@@ -28,12 +28,16 @@
   color: var(--text-primary);
   font-weight: 500;
   cursor: pointer;
-  /* Ensure it fits content but has a reasonable minimum */
-  min-width: 450px !important;
+  /* Ensure it fits content */
+  min-width: 320px;
   max-width: 100%;
   width: auto;
-  border-color: var(--accent-color);
-  /* Verify style update */
+}
+
+@media (max-width: 768px) {
+  .device-select {
+    min-width: 100%;
+  }
 }
 
 .device-select:focus {
