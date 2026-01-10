@@ -136,6 +136,7 @@ var
   ServerPage: TInputQueryWizardPage;
   PairingPage: TInputQueryWizardPage;
   ChildAccountPage: TInputQueryWizardPage;
+  ParentAccountPage: TInputQueryWizardPage;
   SecurityPage: TInputOptionWizardPage;
   StatusLabel: TNewStaticText;
   TestButton: TNewButton;
@@ -143,6 +144,7 @@ var
   PairingToken: String;
   DeviceName: String;
   PairingSuccess: Boolean;
+  NeedParentAccount: Boolean;
   CreateChildAccountCheckbox: TNewCheckBox;
 
 function GetPCName: String;
@@ -150,6 +152,73 @@ begin
   Result := GetEnv('COMPUTERNAME');
   if Result = '' then
     Result := 'Počítač';
+end;
+
+// Count how many admin accounts exist on the system
+function CountAdminAccounts: Integer;
+var
+  ResultCode: Integer;
+  TempFile: String;
+  Lines: TArrayOfString;
+  i: Integer;
+begin
+  Result := 0;
+  TempFile := ExpandConstant('{tmp}\admins.txt');
+  
+  // Run net localgroup and save output
+  if Exec('cmd', '/c net localgroup Administrators > "' + TempFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if LoadStringsFromFile(TempFile, Lines) then
+    begin
+      // Count lines that look like usernames (skip headers)
+      for i := 0 to GetArrayLength(Lines) - 1 do
+      begin
+        // Skip empty lines and header lines
+        if (Length(Lines[i]) > 0) and (Pos('---', Lines[i]) = 0) and 
+           (Pos('Alias', Lines[i]) = 0) and (Pos('Members', Lines[i]) = 0) and
+           (Pos('command', Lines[i]) = 0) then
+        begin
+          Result := Result + 1;
+        end;
+      end;
+    end;
+  end;
+  
+  // Cleanup
+  DeleteFile(TempFile);
+end;
+
+// Check if a username exists on the system
+function UserExists(Username: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  if Exec('net', 'user "' + Username + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    Result := (ResultCode = 0);
+  end;
+end;
+
+// Create parent admin account
+function CreateParentAccount(Username, Password: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  if (Username = '') or (Password = '') then
+    Exit;
+  
+  // Create user
+  if Exec('net', 'user "' + Username + '" "' + Password + '" /add', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if ResultCode = 0 then
+    begin
+      // Add to Administrators group
+      Exec('net', 'localgroup Administrators "' + Username + '" /add', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      Result := True;
+    end;
+  end;
 end;
 
 procedure TestConnectionClick(Sender: TObject);
@@ -269,8 +338,21 @@ begin
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
   ChildAccountPage.Values[0] := 'Dite';
   
+  // Stránka pro rodičovský účet (zobrazí se jen pokud je potřeba)
+  ParentAccountPage := CreateInputQueryPage(ChildAccountPage.ID,
+    'Rodičovský administrátorský účet',
+    'Zajistěte si přístup k počítači',
+    'DŮLEŽITÉ: Na tomto počítači existuje jen jeden admin účet.' + #13#10 +
+    'Pokud dětský účet degradujeme, potřebujete záložní admin účet.' + #13#10#13#10 +
+    'BEZ TOHOTO ÚČTU ZTRATÍTE KONTROLU NAD POČÍTAČEM!' + #13#10 +
+    'Vytvořte si heslo, které dítě nezná.');
+  ParentAccountPage.Add('Uživatelské jméno rodiče:', False);
+  ParentAccountPage.Add('Heslo:', True);
+  ParentAccountPage.Add('Potvrzení hesla:', True);
+  ParentAccountPage.Values[0] := 'Rodic';
+  
   // Stránka pro zabezpečení
-  SecurityPage := CreateInputOptionPage(ChildAccountPage.ID,
+  SecurityPage := CreateInputOptionPage(ParentAccountPage.ID,
     ExpandConstant('{cm:SecuritySetup}'),
     ExpandConstant('{cm:SecuritySetupDesc}'),
     'Tato nastavení chrání před obejitím rodičovské kontroly.' + #13#10 +
@@ -288,6 +370,7 @@ begin
   SecurityPage.Values[3] := True;  // Registry
   
   PairingSuccess := False;
+  NeedParentAccount := False;
 end;
 
 function CreateChildAccount(Username, Password: String): Boolean;
@@ -604,24 +687,100 @@ begin
         Result := False;
         Exit;
       end;
+      
+      // Check if we need parent account (only 1 admin on system)
+      if CountAdminAccounts <= 1 then
+      begin
+        NeedParentAccount := True;
+        MsgBox('POZOR: Na tomto počítači je jen jeden administrátorský účet.' + #13#10 +
+               'Pro zachování kontroly nad počítačem musíte vytvořit rodičovský admin účet.', 
+               mbInformation, MB_OK);
+      end
+      else
+      begin
+        NeedParentAccount := False;
+      end;
+    end
+    else
+    begin
+      NeedParentAccount := False;
     end;
+  end;
+  
+  // Validate ParentAccountPage
+  if CurPageID = ParentAccountPage.ID then
+  begin
+    if NeedParentAccount then
+    begin
+      if ParentAccountPage.Values[0] = '' then
+      begin
+        MsgBox('Musíte zadat uživatelské jméno pro rodičovský účet!', mbError, MB_OK);
+        Result := False;
+        Exit;
+      end;
+      
+      if ParentAccountPage.Values[1] <> ParentAccountPage.Values[2] then
+      begin
+        MsgBox('Hesla se neshodují!', mbError, MB_OK);
+        Result := False;
+        Exit;
+      end;
+      
+      if Length(ParentAccountPage.Values[1]) < 4 then
+      begin
+        MsgBox('Heslo musí mít alespoň 4 znaky.', mbError, MB_OK);
+        Result := False;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  
+  // Skip ParentAccountPage if we don't need it
+  if PageID = ParentAccountPage.ID then
+  begin
+    Result := not NeedParentAccount;
   end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ChildUsername, ChildPassword: String;
+  ParentUsername, ParentPassword: String;
   ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
   begin
     // Cleanup old Scheduled Tasks if they exist (from previous versions)
-    // Note: Agent restart now uses CreateProcessAsUser, not schtasks
     Exec('schtasks.exe', '/Delete /TN "FamilyEye\ChildAgent" /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     Exec('schtasks.exe', '/Delete /TN "FamilyEye\FamilyEyeAgent" /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     
-    // FamilyEyeAgent auto-start at login is handled by Registry Run key (see [Registry] section)
+    // 1. Create parent admin account if needed
+    if NeedParentAccount then
+    begin
+      ParentUsername := ParentAccountPage.Values[0];
+      ParentPassword := ParentAccountPage.Values[1];
+      
+      if (ParentUsername <> '') and (ParentPassword <> '') then
+      begin
+        if CreateParentAccount(ParentUsername, ParentPassword) then
+        begin
+          MsgBox('Rodičovský admin účet "' + ParentUsername + '" byl vytvořen.' + #13#10 +
+                 'ZAPAMATUJTE SI HESLO - bez něj ztratíte kontrolu!', mbInformation, MB_OK);
+        end
+        else
+        begin
+          MsgBox('VAROVÁNÍ: Nepodařilo se vytvořit rodičovský účet!' + #13#10 +
+                 'Pokračování může vést ke ztrátě kontroly nad počítačem.', mbError, MB_OK);
+        end;
+      end;
+    end;
     
+    // 2. Create child account
     ChildUsername := ChildAccountPage.Values[0];
     ChildPassword := ChildAccountPage.Values[1];
     
