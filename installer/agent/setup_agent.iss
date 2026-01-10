@@ -120,13 +120,9 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 
 [UninstallRun]
-; (Scheduled Task no longer used - using Registry Run key instead)
-; Stop and delete service (New Name)
+; Stop and delete service
 Filename: "net"; Parameters: "stop FamilyEyeAgent"; Flags: runhidden waituntilterminated
 Filename: "sc"; Parameters: "delete FamilyEyeAgent"; Flags: runhidden waituntilterminated
-; Stop and delete service (Old Name - just in case)
-Filename: "net"; Parameters: "stop ParentalControlAgent"; Flags: runhidden waituntilterminated
-Filename: "sc"; Parameters: "delete ParentalControlAgent"; Flags: runhidden waituntilterminated
 ; Kill processes if still running
 Filename: "taskkill"; Parameters: "/F /IM agent_service.exe"; Flags: runhidden
 Filename: "taskkill"; Parameters: "/F /IM FamilyEyeAgent.exe"; Flags: runhidden
@@ -136,13 +132,11 @@ Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEy
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowAgent"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowDNS"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowBackend"""; Flags: runhidden
-; LAN ranges (0-3)
+; Remove LAN ranges (0-3)
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_0"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_1"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_2"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_3"""; Flags: runhidden
-; Cleanup legacy rules
-Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""ParentalControl_BlockAll"""; Flags: runhidden
 
 [Run]
 ; Registrovat a spustit službu
@@ -214,11 +208,10 @@ function InitializeSetup: Boolean;
 var
   ResultCode: Integer;
 begin
-  // Stop and remove service if running before installation (handle both old and new names)
-  Exec('net', 'stop ParentalControlAgent', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Exec('sc', 'delete ParentalControlAgent', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Stop and remove service if running before installation
   Exec('net', 'stop FamilyEyeAgent', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec('sc', 'delete FamilyEyeAgent', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  
   // Also try to kill the process if stuck
   Exec('taskkill', '/F /IM agent_service.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   
@@ -408,11 +401,16 @@ begin
   URL := ServerURL + '/api/devices/pairing/pair';
   PostData := '{"token":"' + PairingToken + '","device_name":"' + DeviceName + '","device_type":"windows","mac_address":"' + MacAddress + '","device_id":"' + DeviceID + '"}';
   
-  try
-    WinHttpReq := CreateOleObject('WinHttp.WinHttpRequest.5.1');
-    WinHttpReq.Open('POST', URL, False);
-    WinHttpReq.SetRequestHeader('Content-Type', 'application/json');
-    WinHttpReq.SetTimeouts(10000, 10000, 10000, 10000);
+  PostData := '{"token":"' + PairingToken + '","device_name":"' + DeviceName + '","device_type":"windows","mac_address":"' + MacAddress + '","device_id":"' + DeviceID + '"}';
+  
+  // Retry loop
+  for i := 1 to 3 do
+  begin
+      try
+        WinHttpReq := CreateOleObject('WinHttp.WinHttpRequest.5.1');
+        WinHttpReq.Open('POST', URL, False);
+        WinHttpReq.SetRequestHeader('Content-Type', 'application/json');
+        WinHttpReq.SetTimeouts(5000, 5000, 5000, 15000); // 15s receive timeout
     
     try
       WinHttpReq.Option[4] := 256 + 512 + 4096 + 8192;
@@ -487,14 +485,21 @@ begin
       end;
       
       Result := True;
+      Break; // Success, exit retry loop
     end
     else
     begin
-      MsgBox('Server vrátil chybu: ' + IntToStr(WinHttpReq.Status) + #13#10 + WinHttpReq.ResponseText, mbError, MB_OK);
+      // Only show error on last attempt
+      if i = 3 then
+        MsgBox('Server vrátil chybu: ' + IntToStr(WinHttpReq.Status) + #13#10 + WinHttpReq.ResponseText, mbError, MB_OK);
     end;
   except
-    Result := False;
+    // Only show error on last attempt
+    if i = 3 then
+        Result := False;
+    // Wait a bit before retry? Inno doesn't have Sleep easily accessible without API import, so just retry immediately
   end;
+  end; // End retry loop
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -505,17 +510,29 @@ begin
   
   if CurPageID = ServerPage.ID then
   begin
-    ServerURL := ServerPage.Values[0];
+    ServerURL := Trim(ServerPage.Values[0]);
     
-    if (Pos('http://', ServerURL) <> 1) and (Pos('https://', ServerURL) <> 1) then
+    // Normalize URL
+    if (Pos('http://', LowerCase(ServerURL)) <> 1) and (Pos('https://', LowerCase(ServerURL)) <> 1) then
     begin
-      MsgBox('Adresa serveru musí začínat http:// nebo https://', mbError, MB_OK);
-      Result := False;
-      Exit;
+        // Default to https if missing
+        ServerURL := 'https://' + ServerURL;
     end;
     
-    if ServerURL[Length(ServerURL)] = '/' then
+    // Remove trailing slash
+    if (Length(ServerURL) > 0) and (ServerURL[Length(ServerURL)] = '/') then
       ServerURL := Copy(ServerURL, 1, Length(ServerURL) - 1);
+      
+    // Remove port if user accidentally pasted it twice or in wrong format (basic check)
+    // Update the input field with cleaned value
+    ServerPage.Values[0] := ServerURL;
+    
+    if Length(ServerURL) < 10 then
+    begin
+       MsgBox('Adresa serveru se zdá být neplatná.', mbError, MB_OK);
+       Result := False;
+       Exit;
+    end;
   end;
   
   if CurPageID = PairingPage.ID then
