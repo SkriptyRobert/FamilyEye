@@ -572,3 +572,227 @@
     border-color: var(--accent-color, #6366f1);
     color: var(--accent-color, #6366f1);
 }
+
+/* =============================================================================
+   MOBILE RESPONSIVE STYLES
+   ============================================================================= */
+
+@media (max-width: 767px) {
+
+    /* Device card mobile layout */
+    .device-card {
+        padding: var(--space-4, 16px);
+        border-radius: var(--radius-lg, 12px);
+    }
+
+    .device-card:hover {
+        transform: none;
+        /* Disable hover transform on mobile */
+    }
+
+    /* Header stacks vertically on small screens */
+    .device-header {
+        flex-direction: column;
+        gap: var(--space-2, 8px);
+    }
+
+    .device-identity {
+        width: 100%;
+    }
+
+    .device-type-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .device-name {
+        font-size: var(--font-size-base, 1rem);
+    }
+
+    .device-meta {
+        text-align: left;
+        width: 100%;
+        padding-left: 52px;
+        /* Align with name after icon */
+    }
+
+    /* Usage value slightly smaller */
+    .usage-value {
+        font-size: var(--font-size-xl, 1.25rem);
+    }
+
+    /* Limit chips horizontal scroll on mobile */
+    .limit-chips {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        padding-bottom: var(--space-1, 4px);
+    }
+
+    .limit-chips>* {
+        scroll-snap-align: start;
+        flex-shrink: 0;
+    }
+
+    /* Details section full width */
+    .detail-section {
+        padding: var(--space-3, 12px);
+    }
+
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1, 4px);
+    }
+
+    .detail-icon {
+        display: none;
+        /* Hide icons on mobile to save space */
+    }
+
+    /* Section header stacks */
+    .section-header-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2, 8px);
+    }
+
+    .section-title {
+        font-size: var(--font-size-sm, 0.875rem);
+    }
+
+    .show-all-apps-btn {
+        width: 100%;
+        justify-content: center;
+        padding: var(--space-2, 8px);
+    }
+
+    /* Limit items */
+    .limit-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-1, 4px);
+    }
+
+    .limit-app-name {
+        font-size: var(--font-size-sm, 0.875rem);
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .limit-bar-container {
+        height: 8px;
+        /* Thicker for visibility */
+    }
+
+    /* Limit quick actions wrap and grow */
+    .limit-quick-actions {
+        flex-wrap: wrap;
+    }
+
+    .limit-action-btn {
+        flex: 1;
+        min-width: 60px;
+        min-height: 40px;
+        justify-content: center;
+        padding: var(--space-2, 8px);
+        font-size: var(--font-size-sm, 0.875rem);
+    }
+
+    /* App items in list */
+    .app-item-with-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .app-item-main {
+        min-width: auto;
+    }
+
+    .top-app-icon-group {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .top-app-name-details {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .top-app-name-internal {
+        font-size: var(--font-size-sm, 0.875rem);
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .top-app-window-title {
+        display: none;
+        /* Hide window title on mobile */
+    }
+
+    /* App quick actions full width on mobile */
+    .app-quick-actions {
+        width: 100%;
+        justify-content: stretch;
+        gap: var(--space-2, 8px);
+        margin-top: var(--space-2, 8px);
+    }
+
+    .app-action-btn {
+        flex: 1;
+        min-height: 40px;
+        justify-content: center;
+        padding: var(--space-2, 8px);
+    }
+
+    /* Full width action buttons */
+    .action-btn-full {
+        min-height: 48px;
+        font-size: var(--font-size-base, 1rem);
+    }
+}
+
+/* Extra small screens (< 375px) */
+@media (max-width: 374px) {
+    .device-card {
+        padding: var(--space-3, 12px);
+    }
+
+    .device-type-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .device-meta {
+        padding-left: 48px;
+    }
+
+    .usage-value {
+        font-size: var(--font-size-lg, 1.125rem);
+    }
+
+    .limit-action-btn {
+        font-size: var(--font-size-xs, 0.75rem);
+        padding: var(--space-1, 4px) var(--space-2, 8px);
+    }
+
+    .top-app-name-internal {
+        max-width: 100px;
+    }
+}
+
+/* Tablet landscape and small desktop */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .app-item-with-actions {
+        gap: var(--space-3, 12px);
+    }
+
+    .app-item-main {
+        min-width: 250px;
+    }
+}
