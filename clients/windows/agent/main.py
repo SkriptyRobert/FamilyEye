@@ -45,7 +45,7 @@ except ImportError:
 from .process_monitor import ProcessMonitor
 
 
-class ParentalControlAgent:
+class FamilyEyeAgent:
     """Main agent class.
     
     Runs in Session 0 as Windows Service. Handles:
@@ -96,7 +96,7 @@ class ParentalControlAgent:
     
     def start(self):
         """Start agent."""
-        self.logger.section("Parental Control Agent - Starting")
+        self.logger.section("FamilyEye Agent - Starting")
         
         if not config.is_configured():
             self.logger.error("Agent not configured")

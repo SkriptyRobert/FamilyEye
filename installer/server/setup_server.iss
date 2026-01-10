@@ -5,10 +5,10 @@
 ; S průvodcem nastavením během instalace
 ; ============================================
 
-#define MyAppName "Parental Control Server"
-#define MyAppVersion "2.0.0"
-#define MyAppPublisher "Parental Control s.r.o."
-#define MyAppURL "https://parentalcontrol.cz"
+#define MyAppName "FamilyEye Server"
+#define MyAppVersion "2.1.5"
+#define MyAppPublisher "BertSoftware"
+#define MyAppURL "https://github.com/SkriptyRobert/FamilyEye"
 
 [Setup]
 AppId={{B1C2D3E4-F5G6-7890-HIJK-LM1234567890}
@@ -20,8 +20,8 @@ AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/podpora
 AppUpdatesURL={#MyAppURL}/aktualizace
 
-DefaultDirName={commonpf}\ParentalControl\Server
-DefaultGroupName=Parental Control
+DefaultDirName={commonpf}\FamilyEye\Server
+DefaultGroupName=FamilyEye
 DisableProgramGroupPage=yes
 
 OutputDir=output
@@ -72,7 +72,7 @@ Name: "typical"; Description: "Typická instalace (doporučeno)"
 Name: "custom"; Description: "Vlastní instalace"
 
 [Components]
-Name: "main"; Description: "Parental Control Server"; Types: typical custom; Flags: fixed
+Name: "main"; Description: "FamilyEye Server"; Types: typical custom; Flags: fixed
 Name: "dashboard"; Description: "Webový dashboard"; Types: typical custom; Flags: fixed
 Name: "autostart"; Description: "Automatické spuštění při startu Windows"; Types: typical
 
@@ -259,7 +259,7 @@ begin
   if CurUninstallStep = usUninstall then
   begin
     // Zastavit službu
-    Exec('net', 'stop ParentalControlServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Exec('sc', 'delete ParentalControlServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('net', 'stop FamilyEyeServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec('sc', 'delete FamilyEyeServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;

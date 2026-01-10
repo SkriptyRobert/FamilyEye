@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 init_db()
 
 app = FastAPI(
-    title="Parental Control API",
-    description="Backend API for parental control system",
+    title="FamilyEye API",
+    description="Backend API for FamilyEye parental control system",
     version="1.0.0"
 )
 

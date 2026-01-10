@@ -1,4 +1,4 @@
-# 📦 Parental Control - Instalační balíčky
+# 📦 FamilyEye - Instalační balíčky
 
 ## 🎯 Přehled
 
@@ -53,7 +53,7 @@ Projekt obsahuje dva oddělené instalátory:
 1. Nainstalujte Inno Setup 6
 2. Otevřete installer/agent/setup_agent.iss
 3. Build → Compile
-4. Výstup: installer/agent/output/ParentalControlAgent_Setup_2.0.0.exe
+4. Výstup: installer/agent/output/ParentalControlAgent_Setup_2.1.5.exe
 ```
 
 ---

@@ -1,4 +1,4 @@
-"""Enterprise-grade logging system for Parental Control Agent."""
+"""Enterprise-grade logging system for FamilyEye Agent."""
 import logging
 import sys
 from datetime import datetime
@@ -47,7 +47,7 @@ class EnterpriseLogger:
         self.level = level
         
         # Setup logging
-        self.logger = logging.getLogger(f"ParentalControl.{self.component}")
+        self.logger = logging.getLogger(f"FamilyEye.{self.component}")
         self.logger.setLevel(level)
         
         # Console handler with custom format

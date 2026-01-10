@@ -2,10 +2,10 @@
 AppName=FamilyEye Agent
 AppVersion=2.1.5
 AppVerName=FamilyEye Agent 2.1.5
-AppPublisher=FamilyEye s.r.o.
-AppPublisherURL=https://familyeye.cz
-AppSupportURL=https://familyeye.cz/podpora
-AppUpdatesURL=https://familyeye.cz/aktualizace
+AppPublisher=BertSoftware
+AppPublisherURL=https://github.com/SkriptyRobert/FamilyEye
+AppSupportURL=https://github.com/SkriptyRobert/FamilyEye/issues
+AppUpdatesURL=https://github.com/SkriptyRobert/FamilyEye/releases
 
 DefaultDirName={commonpf}\FamilyEye\Agent
 DefaultGroupName=FamilyEye Agent
