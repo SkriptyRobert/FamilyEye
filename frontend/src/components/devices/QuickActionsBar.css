@@ -3,12 +3,18 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2, 8px);
-    padding: var(--space-3, 12px) 0;
+    justify-content: space-between;
+    /* Push action group left and screenshot btn right */
+    gap: var(--space-3, 12px);
+    padding: var(--space-3, 12px) 0 0 0;
+    /* Top padding only */
+    border-top: 1px solid var(--border-light, rgba(255, 255, 255, 0.1));
+    margin-top: var(--space-2, 8px);
 }
 
 .quick-actions.offline {
     justify-content: center;
+    border-top: none;
 }
 
 .action-group {
@@ -20,9 +26,9 @@
 .action-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1, 4px);
+    gap: var(--space-2, 8px);
     padding: var(--space-2, 8px) var(--space-3, 12px);
-    font-size: var(--font-size-xs, 0.75rem);
+    font-size: var(--font-size-sm, 0.8125rem);
     font-weight: var(--font-weight-medium, 500);
     border-radius: var(--radius-md, 8px);
     border: 1px solid var(--border-color, #e2e8f0);
@@ -30,12 +36,17 @@
     color: var(--text-primary, #0f172a);
     cursor: pointer;
     transition: all var(--transition-fast, 150ms);
+    min-height: 36px;
 }
 
 .action-btn:hover:not(:disabled) {
     background: var(--bg-tertiary, #f1f5f9);
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.action-btn:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .action-btn:disabled,
@@ -45,27 +56,33 @@
     transform: none;
 }
 
+/* Specific button colors on hover */
 .action-btn.lock:hover:not(:disabled) {
     border-color: var(--color-warning, #f59e0b);
     color: var(--color-warning, #f59e0b);
+    background: rgba(245, 158, 11, 0.05);
 }
 
 .action-btn.internet:hover:not(:disabled) {
     border-color: var(--color-error, #ef4444);
     color: var(--color-error, #ef4444);
+    background: rgba(239, 68, 68, 0.05);
 }
 
 .action-btn.screenshot:hover:not(:disabled) {
     border-color: var(--accent-color, #6366f1);
     color: var(--accent-color, #6366f1);
+    background: rgba(99, 102, 241, 0.05);
 }
 
+/* Feedback message */
 .action-feedback {
     width: 100%;
-    padding: var(--space-2, 8px) var(--space-3, 12px);
+    padding: var(--space-2, 8px);
     font-size: var(--font-size-xs, 0.75rem);
     border-radius: var(--radius-md, 8px);
     text-align: center;
+    margin-top: var(--space-2, 8px);
 }
 
 .action-feedback.sending {
@@ -83,25 +100,68 @@
     color: var(--color-error, #ef4444);
 }
 
+/* View Screenshot Button - Styled as a secondary/ghost button */
 .view-screenshot-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1, 4px);
-    padding: var(--space-1, 4px) var(--space-2, 8px);
+    gap: var(--space-2, 6px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
     font-size: var(--font-size-xs, 0.75rem);
-    color: var(--accent-color, #6366f1);
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--text-secondary, #64748b);
     background: transparent;
-    border: none;
+    /* Ghost style */
+    border: 1px solid transparent;
+    border-radius: var(--radius-md, 8px);
     cursor: pointer;
     transition: all var(--transition-fast, 150ms);
+    min-height: 36px;
+    margin-left: auto;
+    /* Ensure it pushes right if flex container doesn't justify */
 }
 
 .view-screenshot-btn:hover {
-    text-decoration: underline;
+    color: var(--accent-color, #6366f1);
+    background: rgba(99, 102, 241, 0.05);
+    border-color: rgba(99, 102, 241, 0.2);
+    text-decoration: none;
 }
 
 .offline-notice {
     font-size: var(--font-size-sm, 0.875rem);
     color: var(--text-muted, #94a3b8);
     font-style: italic;
+}
+
+/* Mobile adjustments */
+@media (max-width: 767px) {
+    .quick-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3, 12px);
+    }
+
+    .action-group {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        /* 3 equal columns for actions */
+        width: 100%;
+    }
+
+    .action-btn {
+        justify-content: center;
+        flex-direction: column;
+        /* Stack icon and text on very small screens? No, keep row but centered */
+        gap: 4px;
+        font-size: 11px;
+        padding: 8px 4px;
+    }
+
+    .view-screenshot-btn {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        border-color: var(--border-color);
+        /* Make it visible like a normal button on mobile */
+    }
 }
