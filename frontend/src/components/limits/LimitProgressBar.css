@@ -1,0 +1,177 @@
+/* LimitProgressBar Component Styles */
+.limit-progress-bar {
+    padding: var(--space-3, 12px);
+    border-radius: var(--radius-md, 8px);
+    background: var(--bg-tertiary, #f1f5f9);
+    margin-bottom: var(--space-2, 8px);
+}
+
+.limit-progress-bar.green {
+    border-left: 3px solid var(--color-success, #10b981);
+}
+
+.limit-progress-bar.orange {
+    border-left: 3px solid var(--color-warning, #f59e0b);
+}
+
+.limit-progress-bar.red {
+    border-left: 3px solid var(--color-error, #ef4444);
+}
+
+.limit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-2, 8px);
+}
+
+.limit-app-name {
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--text-primary, #0f172a);
+}
+
+.limit-text {
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-medium, 500);
+    font-variant-numeric: tabular-nums;
+}
+
+.limit-text.green {
+    color: var(--color-success, #10b981);
+}
+
+.limit-text.orange {
+    color: var(--color-warning, #f59e0b);
+}
+
+.limit-text.red {
+    color: var(--color-error, #ef4444);
+}
+
+.limit-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-full, 9999px);
+    overflow: hidden;
+    margin-bottom: var(--space-2, 8px);
+}
+
+.limit-bar {
+    height: 100%;
+    border-radius: var(--radius-full, 9999px);
+    transition: width var(--transition-slow, 300ms);
+}
+
+.limit-bar.green {
+    background: var(--color-success, #10b981);
+}
+
+.limit-bar.orange {
+    background: var(--color-warning, #f59e0b);
+}
+
+.limit-bar.red {
+    background: var(--color-error, #ef4444);
+}
+
+.limit-footer {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Status badges */
+.limit-ok-badge,
+.limit-warning-badge,
+.limit-critical-badge,
+.limit-exceeded-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    border-radius: var(--radius-full, 9999px);
+}
+
+.limit-ok-badge {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success, #10b981);
+}
+
+.limit-warning-badge {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--color-warning, #f59e0b);
+}
+
+.limit-critical-badge {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error-light, #f87171);
+}
+
+.limit-exceeded-badge {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--color-error, #ef4444);
+}
+
+/* Quick action buttons */
+.limit-quick-actions {
+    display: flex;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-3, 12px);
+}
+
+.limit-action-btn {
+    padding: var(--space-1, 4px) var(--space-3, 12px);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-secondary, #ffffff);
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms);
+}
+
+.limit-action-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary, #f1f5f9);
+}
+
+.limit-action-btn:disabled,
+.limit-action-btn.pending {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.limit-action-btn.subtract {
+    color: var(--color-error, #ef4444);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.limit-action-btn.add,
+.limit-action-btn.add-more {
+    color: var(--color-success, #10b981);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Feedback */
+.limit-action-feedback {
+    margin-top: var(--space-2, 8px);
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    border-radius: var(--radius-sm, 6px);
+}
+
+.limit-action-feedback.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success, #10b981);
+}
+
+.limit-action-feedback.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error, #ef4444);
+}
+
+.limit-action-feedback.sending {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color, #6366f1);
+}
