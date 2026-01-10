@@ -37,6 +37,9 @@
     cursor: pointer;
     transition: all var(--transition-fast, 150ms);
     min-height: 36px;
+    min-width: 110px;
+    /* Consistent width for desktop */
+    justify-content: center;
 }
 
 .action-btn:hover:not(:disabled) {
@@ -155,6 +158,8 @@
         gap: 4px;
         font-size: 11px;
         padding: 8px 4px;
+        min-width: 0;
+        /* Let grid handle width */
     }
 
     .view-screenshot-btn {
