@@ -29,6 +29,10 @@
   font-weight: 500;
   cursor: pointer;
   transition: border-color 0.2s;
+  /* Ensure it fits content but has a reasonable minimum */
+  min-width: 250px;
+  max-width: 100%;
+  width: auto;
 }
 
 .device-select:focus {
@@ -39,6 +43,7 @@
 .rule-form {
   margin: 24px 0;
   padding: 24px;
+  /* ... */
   background: var(--bg-primary);
   border-radius: 12px;
   border: 1px solid var(--border-color);
@@ -74,6 +79,10 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   transition: all 0.2s;
+  width: 100%;
+  /* Ensure full width */
+  box-sizing: border-box;
+  /* Include padding in width */
 }
 
 .input:focus {
