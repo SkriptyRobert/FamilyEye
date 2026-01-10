@@ -53,7 +53,7 @@ export function useQuickActions(onSuccess = null) {
                     break
                 case 'screenshot':
                     endpoint = `/api/devices/${deviceId}/request-screenshot`
-                    successMessage = 'Požadavek na screenshot odeslán'
+                    successMessage = 'Příkaz odeslán. Snímek se objeví vpravo →'
                     break
                 default:
                     return

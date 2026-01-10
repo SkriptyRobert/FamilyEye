@@ -7,78 +7,84 @@ import './QuickActionsBar.css'
  * Extracted from StatusOverview.jsx
  * 
  * @param {Object} props
- * @param {string} props.deviceId - Device ID
- * @param {boolean} props.isOnline - Whether device is online
- * @param {string} props.lastScreenshot - URL of last screenshot (optional)
- * @param {Object} props.pending - Pending actions state { [actionKey]: boolean }
- * @param {Object} props.feedback - Action feedback { [actionKey]: { status, message } }
- * @param {Function} props.onAction - Handler for device actions (lock, pause-internet, screenshot)
- * @param {Function} props.onViewScreenshot - Handler to open screenshot modal
+ * @param {Object} props.device - Device object { id, status, ... }
+ * @param {Object} props.actionPending - Pending actions state { [actionKey]: boolean }
+ * @param {Object} props.actionFeedback - Action feedback { [actionKey]: { status, message } }
+ * @param {Function} props.onDeviceAction - Handler for device actions (lock, pause-internet, screenshot)
+ * @param {Function} props.onShowScreenshot - Handler to open screenshot modal
  */
 const QuickActionsBar = ({
-    deviceId,
-    isOnline = false,
-    lastScreenshot = null,
-    pending = {},
-    feedback = {},
-    onAction,
-    onViewScreenshot
+    device,
+    actionPending,
+    actionFeedback,
+    onDeviceAction, // (deviceId, action)
+    onShowScreenshot
 }) => {
-    const lockKey = `${deviceId}-lock`
-    const internetKey = `${deviceId}-pause-internet`
-    const screenshotKey = `${deviceId}-screenshot`
+    // Helper to check if specific action is pending
+    const isPending = (action) => actionPending[`${device.id}-${action}`]
 
-    const currentFeedback = feedback[lockKey] || feedback[internetKey] || feedback[screenshotKey]
+    // Helper to check feedback for specific action
+    const getFeedback = (action) => actionFeedback[`${device.id}-${action}`]
 
-    if (!isOnline) {
-        return (
-            <div className="quick-actions offline">
-                <span className="offline-notice">Zařízení není dostupné</span>
-            </div>
-        )
-    }
+    // Check if screenshot was just successful to highlight view button
+    const screenshotFeedback = getFeedback('screenshot')
+    const isScreenshotReady = screenshotFeedback?.status === 'success'
 
     return (
-        <div className="quick-actions" onClick={e => e.stopPropagation()}>
-            <div className="action-group">
-                <button
-                    className={`action-btn lock ${pending[lockKey] ? 'pending' : ''}`}
-                    onClick={() => onAction(deviceId, 'lock')}
-                    disabled={pending[lockKey]}
-                >
-                    <Lock size={14} /> Zamknout
-                </button>
-                <button
-                    className={`action-btn internet ${pending[internetKey] ? 'pending' : ''}`}
-                    onClick={() => onAction(deviceId, 'pause-internet')}
-                    disabled={pending[internetKey]}
-                >
-                    <WifiOff size={14} /> Internet
-                </button>
-                <button
-                    className={`action-btn screenshot ${pending[screenshotKey] ? 'pending' : ''}`}
-                    onClick={() => onAction(deviceId, 'screenshot')}
-                    disabled={pending[screenshotKey]}
-                    title="Pořídit screenshot"
-                >
-                    <Camera size={14} /> Foto
-                </button>
-            </div>
+        <div className={`quick-actions ${device.status === 'offline' ? 'offline' : ''}`}>
+            {device.status === 'offline' ? (
+                <p className="offline-notice">Zařízení je offline - rychlé akce nejsou dostupné</p>
+            ) : (
+                <>
+                    <div className="action-group">
+                        <button
+                            className={`action-btn lock ${isPending('lock') ? 'pending' : ''}`}
+                            onClick={() => onDeviceAction(device.id, 'lock')}
+                            disabled={isPending('lock')}
+                        >
+                            <Lock size={16} /> Zamknout
+                        </button>
 
-            {currentFeedback && (
-                <div className={`action-feedback ${currentFeedback.status}`}>
-                    {currentFeedback.message}
-                </div>
+                        <button
+                            className={`action-btn internet ${isPending('pause-internet') ? 'pending' : ''}`}
+                            onClick={() => onDeviceAction(device.id, 'pause-internet')} // Default 1h
+                            disabled={isPending('pause-internet')}
+                        >
+                            <WifiOff size={16} /> Internet
+                        </button>
+
+                        <button
+                            className={`action-btn screenshot ${isPending('screenshot') ? 'pending' : ''}`}
+                            onClick={() => onDeviceAction(device.id, 'screenshot')}
+                            disabled={isPending('screenshot')}
+                            title="Pořídit aktuální snímek obrazovky"
+                        >
+                            <Monitor size={16} /> Vyfotit obrazovku
+                        </button>
+                    </div>
+
+                    <div className="action-group-secondary">
+                        <button
+                            className={`view-screenshot-btn ${isScreenshotReady ? 'pulse-attention' : ''}`}
+                            onClick={() => onShowScreenshot(device.id)}
+                            title="Zobrazit poslední snímek"
+                        >
+                            Zobrazit snímek <ExternalLink size={14} />
+                        </button>
+                    </div>
+                </>
             )}
 
-            {lastScreenshot && (
-                <button
-                    className="view-screenshot-btn"
-                    onClick={() => onViewScreenshot(deviceId)}
-                >
-                    <Maximize2 size={12} /> Poslední snímek
-                </button>
-            )}
+            {/* Display feedback for any action that has it */}
+            {['lock', 'unlock', 'pause-internet', 'resume-internet', 'screenshot'].map(action => {
+                const fb = getFeedback(action)
+                if (!fb) return null
+                return (
+                    <div key={action} className={`action-feedback ${fb.status}`}>
+                        {fb.message}
+                    </div>
+                )
+            })}
         </div>
     )
 }
