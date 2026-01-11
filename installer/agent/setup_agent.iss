@@ -417,11 +417,11 @@ begin
   ChildAccountPage := CreateInputQueryPage(PairingPage.ID,
     ExpandConstant('{cm:ChildAccountSetup}'),
     ExpandConstant('{cm:ChildAccountSetupDesc}'),
-    '✅ DOPORUČENÍ: Vytvořte dítěti vlastní účet bez admin práv.' + #13#10 +
-    'Dítě pak nebude moci odinstalovat ochranu ani měnit nastavení.' + #13#10#13#10 +
-    '💡 Pokud dětský účet již existuje (např. "Honzik"), zadejte jeho jméno' + #13#10 +
-    'a pole hesla nechte PRÁZDNÁ - použijeme stávající účet.' + #13#10#13#10 +
-    '⚠️ Administrátorský účet jako dětský NELZE použít!');
+    'DOPORUCENI: Vytvorte diteti vlastni ucet bez admin prav.' + #13#10 +
+    'Dite pak nebude moci odinstalovat ochranu ani menit nastaveni.' + #13#10#13#10 +
+    'Pokud detsky ucet jiz existuje (napr. "Honzik"), zadejte jeho jmeno' + #13#10 +
+    'a pole hesla nechte PRAZDNA - pouzijeme stavajici ucet.' + #13#10#13#10 +
+    'POZOR: Administratorsky ucet jako detsky NELZE pouzit!');
   ChildAccountPage.Add(ExpandConstant('{cm:ChildUsername}'), False);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPassword}'), True);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
@@ -764,10 +764,10 @@ begin
       // NEW: Check if user is trying to use an admin account
       if IsUserAdmin(ChildUsername) then
       begin
-        MsgBox('⛔ CHYBA: Účet "' + ChildUsername + '" je administrátor!' + #13#10#13#10 +
-               'Dětský účet NESMÍ mít administrátorská práva,' + #13#10 +
-               'protože by dítě mohlo odinstalovat ochranu.' + #13#10#13#10 +
-               'Zadejte jiné uživatelské jméno.', mbError, MB_OK);
+        MsgBox('CHYBA: Ucet "' + ChildUsername + '" je administrator!' + #13#10#13#10 +
+               'Detsky ucet NESMI mit administratorska prava,' + #13#10 +
+               'protoze by dite mohlo odinstalovat ochranu.' + #13#10#13#10 +
+               'Zadejte jine uzivatelske jmeno.', mbError, MB_OK);
         Result := False;
         Exit;
       end;
@@ -778,16 +778,16 @@ begin
         // Existing account - no password needed
         if (ChildPassword = '') and (ChildPasswordConfirm = '') then
         begin
-          MsgBox('✅ Účet "' + ChildUsername + '" již existuje.' + #13#10 +
-                 'Použijeme tento stávající účet pro dítě.' + #13#10#13#10 +
-                 'Na tento účet budou aplikována bezpečnostní omezení.', mbInformation, MB_OK);
+          MsgBox('Ucet "' + ChildUsername + '" jiz existuje.' + #13#10 +
+                 'Pouzijeme tento stavajici ucet pro dite.' + #13#10#13#10 +
+                 'Na tento ucet budou aplikovana bezpecnostni omezeni.', mbInformation, MB_OK);
           // Skip password validation - using existing account
         end
         else
         begin
-          MsgBox('⚠️ Účet "' + ChildUsername + '" již existuje!' + #13#10#13#10 +
-                 'Pokud chcete použít existující účet, nechte heslo PRÁZDNÉ.' + #13#10 +
-                 'Pokud chcete vytvořit NOVÝ účet, zadejte jiné uživatelské jméno.', mbInformation, MB_OK);
+          MsgBox('Ucet "' + ChildUsername + '" jiz existuje!' + #13#10#13#10 +
+                 'Pokud chcete pouzit existujici ucet, nechte heslo PRAZDNE.' + #13#10 +
+                 'Pokud chcete vytvorit NOVY ucet, zadejte jine uzivatelske jmeno.', mbInformation, MB_OK);
           Result := False;
           Exit;
         end;
@@ -833,12 +833,12 @@ begin
     else
     begin
       // Empty username - show warning
-      if MsgBox('⚠️ Nezadali jste dětský účet!' + #13#10#13#10 +
-                'Bez vlastního dětského účtu:' + #13#10 +
-                '• Dítě bude používat VÁŠE nastavení' + #13#10 +
-                '• Dítě MŮŽE odinstalovat ochranu' + #13#10 +
-                '• Bezpečnost bude výrazně nižší' + #13#10#13#10 +
-                'Opravdu chcete pokračovat BEZ dětského účtu?', mbConfirmation, MB_YESNO) = IDNO then
+      if MsgBox('VAROVANI: Nezadali jste detsky ucet!' + #13#10#13#10 +
+                'Bez vlastniho detskeho uctu:' + #13#10 +
+                '- Dite bude pouzivat VASE nastaveni' + #13#10 +
+                '- Dite MUZE odinstalovat ochranu' + #13#10 +
+                '- Bezpecnost bude vyrazne nizsi' + #13#10#13#10 +
+                'Opravdu chcete pokracovat BEZ detskeho uctu?', mbConfirmation, MB_YESNO) = IDNO then
       begin
         Result := False;
         Exit;
@@ -932,8 +932,8 @@ begin
         if CreateChildAccount(ChildUsername, ChildPassword) then
         begin
           ApplySecurityRestrictions(ChildUsername);
-          MsgBox('✅ Dětský účet "' + ChildUsername + '" byl úspěšně vytvořen.' + #13#10 +
-                 'Po přihlášení na tento účet bude dítě monitorováno.', mbInformation, MB_OK);
+          MsgBox('Detsky ucet "' + ChildUsername + '" byl uspesne vytvoren.' + #13#10 +
+                 'Po prihlaseni na tento ucet bude dite monitorovano.', mbInformation, MB_OK);
         end
         else
         begin
@@ -945,8 +945,8 @@ begin
       begin
         // EXISTING account - just apply restrictions
         ApplySecurityRestrictions(ChildUsername);
-        MsgBox('✅ Na existující účet "' + ChildUsername + '" byla aplikována bezpečnostní omezení.' + #13#10 +
-               'Po přihlášení na tento účet bude dítě monitorováno.', mbInformation, MB_OK);
+        MsgBox('Na existujici ucet "' + ChildUsername + '" byla aplikovana bezpecnostni omezeni.' + #13#10 +
+               'Po prihlaseni na tento ucet bude dite monitorovano.', mbInformation, MB_OK);
       end;
     end;
     
