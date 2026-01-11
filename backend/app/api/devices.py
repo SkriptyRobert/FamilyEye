@@ -5,7 +5,7 @@ from typing import List
 from datetime import datetime
 import uuid
 from ..database import get_db
-from ..models import Device, User
+from ..models import Device, User, PairingToken
 from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, PairingTokenResponse, PairingRequest, PairingResponse, PairingStatusResponse
 from ..api.auth import get_current_parent
 from ..services.pairing_service import (
@@ -118,7 +118,6 @@ async def pair_device(
         )
 
 
-@router.get("/pairing/status/{token}", response_model=PairingStatusResponse)
 @router.get("/pairing/status/{token}", response_model=PairingStatusResponse)
 async def check_pairing_status(
     token: str,
