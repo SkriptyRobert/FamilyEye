@@ -1,7 +1,7 @@
 [Setup]
 AppName=FamilyEye Agent
-AppVersion=2.1.5
-AppVerName=FamilyEye Agent 2.1.5
+AppVersion=2.2.0
+AppVerName=FamilyEye Agent 2.2.0
 AppPublisher=BertSoftware
 AppPublisherURL=https://github.com/SkriptyRobert/FamilyEye
 AppSupportURL=https://github.com/SkriptyRobert/FamilyEye/issues
@@ -12,7 +12,7 @@ DefaultGroupName=FamilyEye Agent
 DisableProgramGroupPage=yes
 
 OutputDir=output
-OutputBaseFilename=FamilyEyeAgent_Setup_2.1.5
+OutputBaseFilename=FamilyEyeAgent_Setup_2.2.0
 UninstallDisplayName=FamilyEye Agent
 
 Compression=lzma2/ultra64
@@ -204,6 +204,93 @@ begin
   end;
 end;
 
+// Check if a specific user is an Administrator
+function IsUserAdmin(Username: String): Boolean;
+var
+  ResultCode: Integer;
+  TempFile: String;
+  Lines: TArrayOfString;
+  i: Integer;
+begin
+  Result := False;
+  TempFile := ExpandConstant('{tmp}\admincheck.txt');
+  
+  // Get list of Administrators group members
+  if Exec('cmd', '/c net localgroup Administrators > "' + TempFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  begin
+    if LoadStringsFromFile(TempFile, Lines) then
+    begin
+      for i := 0 to GetArrayLength(Lines) - 1 do
+      begin
+        if Pos(Username, Lines[i]) > 0 then
+        begin
+          Result := True;
+          Break;
+        end;
+      end;
+    end;
+  end;
+  
+  DeleteFile(TempFile);
+end;
+
+// Get list of all non-admin user accounts (for dropdown selection)
+function GetNonAdminAccounts: String;
+var
+  ResultCode: Integer;
+  TempFile, TempAdmins: String;
+  AllUsers, AdminUsers: TArrayOfString;
+  i, j: Integer;
+  IsAdmin: Boolean;
+  UserList: String;
+begin
+  Result := '';
+  TempFile := ExpandConstant('{tmp}\allusers.txt');
+  TempAdmins := ExpandConstant('{tmp}\admins2.txt');
+  
+  // Get all users
+  if not Exec('cmd', '/c net user > "' + TempFile + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Exit;
+    
+  // Get admin users
+  Exec('cmd', '/c net localgroup Administrators > "' + TempAdmins + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  
+  if LoadStringsFromFile(TempFile, AllUsers) and LoadStringsFromFile(TempAdmins, AdminUsers) then
+  begin
+    UserList := '';
+    for i := 0 to GetArrayLength(AllUsers) - 1 do
+    begin
+      // Skip header lines and empty lines
+      if (Length(AllUsers[i]) > 0) and (Pos('---', AllUsers[i]) = 0) and 
+         (Pos('User accounts', AllUsers[i]) = 0) and (Pos('command', AllUsers[i]) = 0) and
+         (Pos('\\', AllUsers[i]) = 0) then
+      begin
+        // Check if this user is NOT an admin
+        IsAdmin := False;
+        for j := 0 to GetArrayLength(AdminUsers) - 1 do
+        begin
+          if Pos(Trim(AllUsers[i]), AdminUsers[j]) > 0 then
+          begin
+            IsAdmin := True;
+            Break;
+          end;
+        end;
+        
+        if not IsAdmin then
+        begin
+          if UserList <> '' then
+            UserList := UserList + ', ';
+          UserList := UserList + Trim(AllUsers[i]);
+        end;
+      end;
+    end;
+    Result := UserList;
+  end;
+  
+  DeleteFile(TempFile);
+  DeleteFile(TempAdmins);
+end;
+
 // Create parent admin account
 function CreateParentAccount(Username, Password: String): Boolean;
 var
@@ -326,12 +413,15 @@ begin
   PairingPage.Values[0] := '';
   PairingPage.Values[1] := GetPCName + ' - Dětský počítač';
   
-  // Stránka pro dětský účet
+  // Stránka pro dětský účet - s auto-detekcí
   ChildAccountPage := CreateInputQueryPage(PairingPage.ID,
     ExpandConstant('{cm:ChildAccountSetup}'),
     ExpandConstant('{cm:ChildAccountSetupDesc}'),
-    'Dětský účet bez admin práv = dítě nemůže odinstalovat agenta.' + #13#10#13#10 +
-    'Nechte pole prázdná, pokud účet již existuje.');
+    '✅ DOPORUČENÍ: Vytvořte dítěti vlastní účet bez admin práv.' + #13#10 +
+    'Dítě pak nebude moci odinstalovat ochranu ani měnit nastavení.' + #13#10#13#10 +
+    '💡 Pokud dětský účet již existuje (např. "Honzik"), zadejte jeho jméno' + #13#10 +
+    'a pole hesla nechte PRÁZDNÁ - použijeme stávající účet.' + #13#10#13#10 +
+    '⚠️ Administrátorský účet jako dětský NELZE použít!');
   ChildAccountPage.Add(ExpandConstant('{cm:ChildUsername}'), False);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPassword}'), True);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
@@ -671,18 +761,60 @@ begin
     
     if ChildUsername <> '' then
     begin
-      if ChildPassword <> ChildPasswordConfirm then
+      // NEW: Check if user is trying to use an admin account
+      if IsUserAdmin(ChildUsername) then
       begin
-        MsgBox('Hesla se neshodují!', mbError, MB_OK);
+        MsgBox('⛔ CHYBA: Účet "' + ChildUsername + '" je administrátor!' + #13#10#13#10 +
+               'Dětský účet NESMÍ mít administrátorská práva,' + #13#10 +
+               'protože by dítě mohlo odinstalovat ochranu.' + #13#10#13#10 +
+               'Zadejte jiné uživatelské jméno.', mbError, MB_OK);
         Result := False;
         Exit;
       end;
       
-      if Length(ChildPassword) < 4 then
+      // NEW: Check if account already exists
+      if UserExists(ChildUsername) then
       begin
-        MsgBox('Heslo musí mít alespoň 4 znaky.', mbError, MB_OK);
-        Result := False;
-        Exit;
+        // Existing account - no password needed
+        if (ChildPassword = '') and (ChildPasswordConfirm = '') then
+        begin
+          MsgBox('✅ Účet "' + ChildUsername + '" již existuje.' + #13#10 +
+                 'Použijeme tento stávající účet pro dítě.' + #13#10#13#10 +
+                 'Na tento účet budou aplikována bezpečnostní omezení.', mbInformation, MB_OK);
+          // Skip password validation - using existing account
+        end
+        else
+        begin
+          MsgBox('⚠️ Účet "' + ChildUsername + '" již existuje!' + #13#10#13#10 +
+                 'Pokud chcete použít existující účet, nechte heslo PRÁZDNÉ.' + #13#10 +
+                 'Pokud chcete vytvořit NOVÝ účet, zadejte jiné uživatelské jméno.', mbInformation, MB_OK);
+          Result := False;
+          Exit;
+        end;
+      end
+      else
+      begin
+        // New account - password required
+        if ChildPassword = '' then
+        begin
+          MsgBox('Pro vytvoření nového účtu musíte zadat heslo.', mbError, MB_OK);
+          Result := False;
+          Exit;
+        end;
+        
+        if ChildPassword <> ChildPasswordConfirm then
+        begin
+          MsgBox('Hesla se neshodují!', mbError, MB_OK);
+          Result := False;
+          Exit;
+        end;
+        
+        if Length(ChildPassword) < 4 then
+        begin
+          MsgBox('Heslo musí mít alespoň 4 znaky.', mbError, MB_OK);
+          Result := False;
+          Exit;
+        end;
       end;
       
       // Check if we need parent account (only 1 admin on system)
@@ -700,6 +832,17 @@ begin
     end
     else
     begin
+      // Empty username - show warning
+      if MsgBox('⚠️ Nezadali jste dětský účet!' + #13#10#13#10 +
+                'Bez vlastního dětského účtu:' + #13#10 +
+                '• Dítě bude používat VÁŠE nastavení' + #13#10 +
+                '• Dítě MŮŽE odinstalovat ochranu' + #13#10 +
+                '• Bezpečnost bude výrazně nižší' + #13#10#13#10 +
+                'Opravdu chcete pokračovat BEZ dětského účtu?', mbConfirmation, MB_YESNO) = IDNO then
+      begin
+        Result := False;
+        Exit;
+      end;
       NeedParentAccount := False;
     end;
   end;
@@ -777,22 +920,33 @@ begin
       end;
     end;
     
-    // 2. Create child account
+    // 2. Handle child account (create new OR apply restrictions to existing)
     ChildUsername := ChildAccountPage.Values[0];
     ChildPassword := ChildAccountPage.Values[1];
     
-    if (ChildUsername <> '') and (ChildPassword <> '') then
+    if ChildUsername <> '' then
     begin
-      if CreateChildAccount(ChildUsername, ChildPassword) then
+      if (ChildPassword <> '') then
       begin
-        ApplySecurityRestrictions(ChildUsername);
-        MsgBox('Dětský účet "' + ChildUsername + '" byl úspěšně vytvořen.' + #13#10 +
-               'Po přihlášení na tento účet bude dítě monitorováno.', mbInformation, MB_OK);
+        // NEW account - create it
+        if CreateChildAccount(ChildUsername, ChildPassword) then
+        begin
+          ApplySecurityRestrictions(ChildUsername);
+          MsgBox('✅ Dětský účet "' + ChildUsername + '" byl úspěšně vytvořen.' + #13#10 +
+                 'Po přihlášení na tento účet bude dítě monitorováno.', mbInformation, MB_OK);
+        end
+        else
+        begin
+          MsgBox('Nepodařilo se vytvořit dětský účet.' + #13#10 +
+                 'Účet možná již existuje nebo nemáte dostatečná oprávnění.', mbError, MB_OK);
+        end;
       end
       else
       begin
-        MsgBox('Nepodařilo se vytvořit dětský účet.' + #13#10 +
-               'Účet možná již existuje nebo nemáte dostatečná oprávnění.', mbError, MB_OK);
+        // EXISTING account - just apply restrictions
+        ApplySecurityRestrictions(ChildUsername);
+        MsgBox('✅ Na existující účet "' + ChildUsername + '" byla aplikována bezpečnostní omezení.' + #13#10 +
+               'Po přihlášení na tento účet bude dítě monitorováno.', mbInformation, MB_OK);
       end;
     end;
     
