@@ -119,25 +119,22 @@ async def pair_device(
 
 
 @router.get("/pairing/status/{token}", response_model=PairingStatusResponse)
+@router.get("/pairing/status/{token}", response_model=PairingStatusResponse)
 async def check_pairing_status(
     token: str,
-    current_user: User = Depends(get_current_parent),
     db: Session = Depends(get_db)
 ):
     """Check if a pairing token has been used."""
     from ..models import PairingToken, Device
-    import logging
-    logger = logging.getLogger("pairing_status")
     
-    logger.info(f"Checking pairing status for token: {token[:8]}... by user {current_user.id}")
+    print(f"DEBUG: Checking pairing status for token: {token}")
     
     pairing_token = db.query(PairingToken).filter(
-        PairingToken.token == token,
-        PairingToken.parent_id == current_user.id
+        PairingToken.token == token
     ).first()
     
     if not pairing_token:
-        logger.warning(f"Token not found: {token[:8]}...")
+        print(f"DEBUG: Token not found: {token}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Pairing token not found"
@@ -146,9 +143,9 @@ async def check_pairing_status(
     device = None
     if pairing_token.used and pairing_token.device_id:
         device = db.query(Device).filter(Device.id == pairing_token.device_id).first()
-        logger.info(f"Token used, device found: {device.name if device else 'None'}")
+        print(f"DEBUG: Token used, device found: {device.name if device else 'None'}")
     else:
-        logger.info(f"Token not used yet (used={pairing_token.used}, device_id={pairing_token.device_id})")
+        print(f"DEBUG: Token not used (used={pairing_token.used})")
         
     return {
         "used": pairing_token.used,
