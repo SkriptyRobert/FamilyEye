@@ -28,7 +28,7 @@ class Device(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     device_type = Column(String, nullable=False)  # 'windows', 'android'
-    mac_address = Column(String, unique=True, index=True, nullable=False)
+    mac_address = Column(String, index=True, nullable=False)  # Not unique - allows multiple 'auto-detected'
     device_id = Column(String, unique=True, index=True, nullable=False)  # Unique device identifier
     parent_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     child_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Null for multi-device mode
