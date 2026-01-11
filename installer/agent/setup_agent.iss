@@ -123,6 +123,10 @@ Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEy
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_1"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_2"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""FamilyEye_AllowLAN_3"""; Flags: runhidden
+; CRITICAL: Reset firewall policy to allow outbound (in case Internet was blocked)
+Filename: "netsh"; Parameters: "advfirewall set allprofiles firewallpolicy blockinbound,allowoutbound"; Flags: runhidden waituntilterminated
+; CRITICAL: Clean hosts file (remove any [PC-BLOCK] entries left by website blocking)
+Filename: "powershell"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$h='C:\Windows\System32\drivers\etc\hosts'; if(Test-Path $h){{$c=Get-Content $h | Where-Object {{$_ -notmatch '\[PC-BLOCK\]'}}; Set-Content $h $c -Force}}"""; Flags: runhidden waituntilterminated
 
 [Run]
 ; Registrovat a spustit službu
