@@ -117,6 +117,7 @@ def create_device_from_pairing(
         api_key=api_key
     )
     db.add(new_device)
+    db.flush()  # Generate ID for new device
     
     # Mark token as used
     pairing_token.used = True
