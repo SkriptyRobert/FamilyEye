@@ -78,10 +78,14 @@ def create_device_from_pairing(
         raise ValueError("Device already paired with this device_id")
     
     # Check if device with same MAC address already exists
-    # If it exists, we allow re-pairing (update existing device)
-    existing_device_by_mac = db.query(Device).filter(
-        Device.mac_address == mac_address
-    ).first()
+    # Skip this check if MAC is "auto-detected" (installer doesn't provide real MAC)
+    # This allows multiple PCs to be paired under one parent account
+    existing_device_by_mac = None
+    if mac_address and mac_address != "auto-detected":
+        existing_device_by_mac = db.query(Device).filter(
+            Device.mac_address == mac_address,
+            Device.parent_id == pairing_token.parent_id  # Scope to parent
+        ).first()
     
     if existing_device_by_mac:
         # Update existing device instead of creating new one
@@ -92,7 +96,6 @@ def create_device_from_pairing(
         # Generate new API key for security
         api_key = str(uuid.uuid4())
         existing_device_by_mac.api_key = api_key
-        existing_device_by_mac.parent_id = pairing_token.parent_id
         existing_device_by_mac.is_active = True
         
         # Mark token as used
