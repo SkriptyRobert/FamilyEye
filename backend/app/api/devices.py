@@ -447,3 +447,57 @@ async def request_screenshot(
     db.commit()
     
     return {"status": "success", "message": "Screenshot requested from device"}
+
+
+@router.post("/{device_id}/unlock-settings", status_code=status.HTTP_200_OK)
+async def unlock_settings(
+    device_id: int,
+    duration_minutes: int = 5,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """
+    Temporarily minimize agent protection to allow settings changes.
+    Creates an 'unlock_settings' rule for 5 minutes.
+    """
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    # 1. Clean up old unlock rules
+    from ..models import Rule
+    db.query(Rule).filter(
+        Rule.device_id == device.id,
+        Rule.rule_type == "unlock_settings"
+    ).delete()
+    
+    # 2. Create new time-bounded rule
+    from datetime import datetime, timedelta, timezone
+    
+    # Calculate times
+    now_utc = datetime.now(timezone.utc)
+    offset_seconds = device.timezone_offset or 0
+    device_now = now_utc + timedelta(seconds=offset_seconds)
+    
+    unlock_rule = Rule(
+        device_id=device.id,
+        rule_type="unlock_settings",
+        enabled=True,
+        # We use schedule times to signal validity window to the agent
+        schedule_start_time=device_now.strftime("%H:%M"),
+        schedule_end_time=(device_now + timedelta(minutes=duration_minutes)).strftime("%H:%M") 
+    )
+    db.add(unlock_rule)
+    db.commit()
+    
+    return {
+        "status": "success", 
+        "message": f"Agent protection disabled for {duration_minutes} minutes"
+    }

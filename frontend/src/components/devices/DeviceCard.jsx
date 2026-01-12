@@ -8,7 +8,8 @@ import {
     Globe,
     XCircle,
     EyeOff,
-    Check
+    Check,
+    Settings
 } from 'lucide-react'
 import DynamicIcon from '../DynamicIcon'
 import { LimitChip } from '../limits'
@@ -402,20 +403,44 @@ const DeviceCard = memo(({
 
                     {/* Extended actions */}
                     <div className="detail-section actions-section">
-                        <button
-                            className={`action-btn-full unlock ${actionPending[`${device.id}-unlock`] ? 'pending' : ''}`}
-                            onClick={() => onDeviceAction(device.id, 'unlock')}
-                            disabled={actionPending[`${device.id}-unlock`] || !device.is_online}
-                        >
-                            <Unlock size={14} style={{ marginRight: '6px' }} /> Odemknout zařízení
-                        </button>
-                        <button
-                            className={`action-btn-full resume ${actionPending[`${device.id}-resume-internet`] ? 'pending' : ''}`}
-                            onClick={() => onDeviceAction(device.id, 'resume-internet')}
-                            disabled={actionPending[`${device.id}-resume-internet`] || !device.is_online}
-                        >
-                            <Globe size={14} style={{ marginRight: '6px' }} /> Obnovit internet
-                        </button>
+                        {typeInfo.id === 'android' ? (
+                            // Android Specific Actions
+                            <>
+                                <button
+                                    className={`action-btn-full unlock ${actionPending[`${device.id}-unlock-settings`] ? 'pending' : ''}`}
+                                    onClick={() => onDeviceAction(device.id, 'unlock-settings')}
+                                    disabled={actionPending[`${device.id}-unlock-settings`] || !device.is_online}
+                                >
+                                    <Settings size={14} style={{ marginRight: '6px' }} /> Povolit nastavení (5 min)
+                                </button>
+                                <button
+                                    className={`action-btn-full lock ${actionPending[`${device.id}-lock`] ? 'pending' : ''}`}
+                                    onClick={() => onDeviceAction(device.id, 'lock')}
+                                    disabled={actionPending[`${device.id}-lock`] || !device.is_online}
+                                >
+                                    <Unlock size={14} style={{ marginRight: '6px' }} /> Zamknout obrazovku
+                                </button>
+                                {console.log("ANTIGRAVITY_DEBUG - DeviceCard Rendered")}
+                            </>
+                        ) : (
+                            // Windows/Default Actions
+                            <>
+                                <button
+                                    className={`action-btn-full unlock ${actionPending[`${device.id}-unlock`] ? 'pending' : ''}`}
+                                    onClick={() => onDeviceAction(device.id, 'unlock')}
+                                    disabled={actionPending[`${device.id}-unlock`] || !device.is_online}
+                                >
+                                    <Unlock size={14} style={{ marginRight: '6px' }} /> Odemknout zařízení
+                                </button>
+                                <button
+                                    className={`action-btn-full resume ${actionPending[`${device.id}-resume-internet`] ? 'pending' : ''}`}
+                                    onClick={() => onDeviceAction(device.id, 'resume-internet')}
+                                    disabled={actionPending[`${device.id}-resume-internet`] || !device.is_online}
+                                >
+                                    <Globe size={14} style={{ marginRight: '6px' }} /> Obnovit internet
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

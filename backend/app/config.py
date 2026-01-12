@@ -34,7 +34,8 @@ class Settings:
     
     # Backend URL - use actual IP for network access
     _local_ip = get_local_ip()
-    BACKEND_URL: str = os.getenv("BACKEND_URL", f"http://{_local_ip}:{PORT}")
+    _protocol = "https" if os.path.exists(os.path.join(_base_dir, "certs", "server.crt")) else "http"
+    BACKEND_URL: str = os.getenv("BACKEND_URL", f"{_protocol}://{_local_ip}:{PORT}")
     
     # CORS - allow all for standalone/local network mode
     CORS_ORIGINS: list = [

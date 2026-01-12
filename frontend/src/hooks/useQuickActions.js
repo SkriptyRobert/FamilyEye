@@ -55,6 +55,10 @@ export function useQuickActions(onSuccess = null) {
                     endpoint = `/api/devices/${deviceId}/request-screenshot`
                     successMessage = 'Příkaz odeslán. Snímek se objeví vpravo →'
                     break
+                case 'unlock-settings':
+                    endpoint = `/api/devices/${deviceId}/unlock-settings`
+                    successMessage = 'Nastavení povoleno na 5 minut'
+                    break
                 default:
                     return
             }

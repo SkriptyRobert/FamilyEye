@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FamilyEye</string>
+    <string name="accessibility_service_description">FamilyEye používá tuto službu k monitorování a blokování aplikací podle pravidel nastavených rodiči.</string>
+    <string name="device_admin_description">FamilyEye potřebuje oprávnění správce zařízení pro správu času obrazovky a blokování aplikací.</string>
+    
+    <!-- Pairing -->
+    <string name="pairing_title">Spárovat zařízení</string>
+    <string name="pairing_scan_qr">Naskenujte QR kód z rodičovského dashboardu</string>
+    <string name="pairing_success">Zařízení bylo úspěšně spárováno!</string>
+    <string name="pairing_error">Chyba při párování. Zkuste to znovu.</string>
+    
+    <!-- Permissions -->
+    <string name="permission_usage_stats_title">Přístup k využití</string>
+    <string name="permission_usage_stats_desc">Povolte přístup k statistikám využití aplikací</string>
+    <string name="permission_overlay_title">Zobrazení přes jiné aplikace</string>
+    <string name="permission_overlay_desc">Povolte zobrazování upozornění o blokování</string>
+    <string name="permission_accessibility_title">Služba přístupnosti</string>
+    <string name="permission_accessibility_desc">Povolte detekci spuštěných aplikací</string>
+    
+    <!-- Service -->
+    <string name="service_notification_title">FamilyEye je aktivní</string>
+    <string name="service_notification_text">Monitorování využití obrazovky</string>
+    
+    <!-- Blocking -->
+    <string name="block_app_title">Aplikace je blokována</string>
+    <string name="block_app_message">Dosáhli jste denního limitu pro tuto aplikaci.</string>
+    <string name="block_device_title">Zařízení je uzamčeno</string>
+    <string name="block_device_message">Kontaktujte rodiče pro odemčení.</string>
+    
+    <!-- Notifications -->
+    <string name="notification_limit_warning_title">Upozornění na limit</string>
+    <string name="notification_limit_warning_text">Zbývá %d%% času pro %s</string>
+    <string name="notification_limit_reached_title">Limit dosažen</string>
+    <string name="notification_limit_reached_text">Čas pro %s vypršel</string>
+</resources>

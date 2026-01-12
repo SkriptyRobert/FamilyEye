@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow self-signed certificates for local development -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Specific configuration for local backend -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">192.168.0.145</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+            <!-- Trust user-installed certificates for self-signed backend -->
+            <certificates src="@raw/backend_cert" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

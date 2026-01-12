@@ -491,19 +491,19 @@ export const getDeviceTypeInfo = (deviceType) => {
     const type = (deviceType || '').toLowerCase()
 
     if (type.includes('phone') || type.includes('android') || type.includes('ios') || type.includes('mobile')) {
-        return { iconName: 'smartphone', label: 'Telefon' }
+        return { iconName: 'smartphone', label: 'Telefon', id: 'android' }
     }
 
     if (type.includes('tablet') || type.includes('ipad')) {
-        return { iconName: 'smartphone', label: 'Tablet' }
+        return { iconName: 'smartphone', label: 'Tablet', id: 'android' }
     }
 
     if (type.includes('laptop') || type.includes('notebook')) {
-        return { iconName: 'monitor', label: 'Notebook' }
+        return { iconName: 'monitor', label: 'Notebook', id: 'windows' }
     }
 
     // Default to desktop/PC
-    return { iconName: 'monitor', label: 'Počítač' }
+    return { iconName: 'monitor', label: 'Počítač', id: 'windows' }
 }
 
 /**
