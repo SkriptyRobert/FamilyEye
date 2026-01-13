@@ -26,7 +26,8 @@ import javax.inject.Singleton
 class Reporter @Inject constructor(
     private val api: FamilyEyeApi,
     private val usageLogDao: UsageLogDao,
-    private val configRepository: AgentConfigRepository
+    private val configRepository: AgentConfigRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     private val reporterScope = CoroutineScope(Dispatchers.IO)
     private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
@@ -38,7 +39,13 @@ class Reporter @Inject constructor(
             while (isActive) {
                 try {
                     if (configRepository.isPaired.first()) {
-                        syncLogs()
+                        val isDataSaver = configRepository.dataSaverEnabled.first()
+                        
+                        if (isDataSaver && !isWifiConnected()) {
+                            Timber.d("Data Saver active & NO Wi-Fi - skipping sync")
+                        } else {
+                            syncLogs()
+                        }
                     }
                 } catch (e: Exception) {
                     Timber.e(e, "Error in Reporter")
@@ -92,5 +99,12 @@ class Reporter @Inject constructor(
         } catch (e: Exception) {
              Timber.e(e, "Network error during sync")
         }
+    }
+
+    private fun isWifiConnected(): Boolean {
+        val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
     }
 }

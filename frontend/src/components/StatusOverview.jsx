@@ -26,7 +26,7 @@ const StatusOverview = () => {
         error,
         lastFetch,
         refetch
-    } = useDevices({ pollingInterval: 30000 })
+    } = useDevices({ pollingInterval: 10000 })
 
     // 2. Setup actions hook
     const {

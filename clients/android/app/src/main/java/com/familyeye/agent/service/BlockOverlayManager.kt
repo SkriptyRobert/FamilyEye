@@ -20,11 +20,16 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.familyeye.agent.ui.screens.BlockOverlayScreen
 // import dagger.hilt.android.EntryPointAccessors // Unused
 import timber.log.Timber
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Manages the full-screen overlay when an app is blocked.
  */
-class BlockOverlayManager(private val context: Context) : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+@Singleton
+class BlockOverlayManager @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
+) : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var overlayView: ComposeView? = null

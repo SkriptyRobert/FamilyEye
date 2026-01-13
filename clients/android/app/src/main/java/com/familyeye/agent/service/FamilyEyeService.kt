@@ -21,9 +21,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.isActive
 import javax.inject.Inject
 
 /**
@@ -41,6 +44,12 @@ class FamilyEyeService : Service() {
 
     @Inject
     lateinit var reporter: Reporter
+
+    @Inject
+    lateinit var ruleEnforcer: RuleEnforcer
+
+    @Inject
+    lateinit var api: com.familyeye.agent.data.api.FamilyEyeApi
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
@@ -101,10 +110,49 @@ class FamilyEyeService : Service() {
                     Timber.i("Device is paired, starting monitoring loops...")
                     usageTracker.start()
                     reporter.start()
+                    startRuleFetching()
                 } else {
                     Timber.i("Device not paired, waiting for pairing...")
                 }
             }
+        }
+    }
+
+    private fun startRuleFetching() {
+        serviceScope.launch {
+            while (isActive) {
+                try {
+                    fetchRules()
+                } catch (e: Exception) {
+                    Timber.e(e, "Error fetching rules")
+                }
+                delay(30_000) // Fetch every 30 seconds
+            }
+        }
+    }
+
+    private suspend fun fetchRules() {
+        try {
+            val deviceId = configRepository.deviceId.firstOrNull() ?: return
+            val apiKey = configRepository.apiKey.firstOrNull() ?: return
+            
+            // Use injected 'api' instead of ApiClient
+            val response = api.getRules(
+                com.familyeye.agent.data.api.dto.AgentAuthRequest(deviceId, apiKey)
+            )
+            
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Timber.i("Rules fetched: ${body.rules.size} rules. Daily usage: ${body.dailyUsageSeconds}s")
+                    ruleEnforcer.updateRules(body.rules)
+                    // TODO: Update daily usage state if we track it locally for limits?
+                }
+            } else {
+                Timber.w("Failed to fetch rules: ${response.code()}")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Exception in fetchRules")
         }
     }
 

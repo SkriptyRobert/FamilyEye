@@ -2,6 +2,7 @@ package com.familyeye.agent.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,6 +24,22 @@ class MainViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    val dataSaverEnabled: StateFlow<Boolean> = configRepository.dataSaverEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+    
+    // Config repository reference for setter
+    private val repository = configRepository
+
+    fun setDataSaver(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.setDataSaverEnabled(enabled)
+        }
+    }
 
     fun hasUsageStatsPermission(): Boolean {
         val appOps = context.getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager

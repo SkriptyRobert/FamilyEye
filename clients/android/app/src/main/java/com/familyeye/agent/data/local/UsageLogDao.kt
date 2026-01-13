@@ -25,6 +25,9 @@ interface UsageLogDao {
     
     @Query("SELECT appName, SUM(durationSeconds) as total FROM usage_logs WHERE timestamp >= :startOfDayTimestamp GROUP BY appName")
     fun getAppUsageToday(startOfDayTimestamp: Long): Flow<List<AppUsageStats>>
+
+    @Query("SELECT SUM(durationSeconds) FROM usage_logs WHERE packageName = :packageName AND timestamp >= :startOfDayTimestamp")
+    suspend fun getUsageDurationForPackage(packageName: String, startOfDayTimestamp: Long): Int?
 }
 
 data class AppUsageStats(

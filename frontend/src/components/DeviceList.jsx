@@ -15,7 +15,14 @@ const DeviceList = ({ onSelectDevice }) => {
     fetchDevices()
     const handleDevicePaired = () => fetchDevices()
     window.addEventListener('device-paired', handleDevicePaired)
-    return () => window.removeEventListener('device-paired', handleDevicePaired)
+
+    // Poll for updates
+    const intervalId = setInterval(fetchDevices, 10000)
+
+    return () => {
+      window.removeEventListener('device-paired', handleDevicePaired)
+      clearInterval(intervalId)
+    }
   }, [])
 
   const fetchDevices = async () => {

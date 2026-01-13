@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -88,6 +89,38 @@ fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
                             context.startActivity(intent)
                         }
                     )
+                }
+            }
+            
+            // Settings Card
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Nastavení", 
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    
+                    val dataSaverEnabled = viewModel.dataSaverEnabled.collectAsState().value
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Šetřič dat", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Synchronizovat pouze přes Wi-Fi", 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = dataSaverEnabled,
+                            onCheckedChange = { viewModel.setDataSaver(it) }
+                        )
+                    }
                 }
             }
             

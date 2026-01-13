@@ -16,6 +16,7 @@ class AgentConfigRepositoryImpl @Inject constructor(
     private object Keys {
         val DEVICE_ID = stringPreferencesKey("device_id")
         val API_KEY = stringPreferencesKey("api_key")
+        val DATA_SAVER_ENABLED = stringPreferencesKey("data_saver_enabled")
     }
 
     override val deviceId: Flow<String?> = dataStore.data.map { prefs ->
@@ -30,6 +31,11 @@ class AgentConfigRepositoryImpl @Inject constructor(
         prefs[Keys.DEVICE_ID] != null && prefs[Keys.API_KEY] != null
     }
 
+    override val dataSaverEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        // Default to FALSE (Data Saver OFF) as per user request
+        prefs[Keys.DATA_SAVER_ENABLED]?.toBoolean() ?: false
+    }
+
     override suspend fun savePairingData(deviceId: String, apiKey: String) {
         dataStore.edit { prefs ->
             prefs[Keys.DEVICE_ID] = deviceId
@@ -41,6 +47,12 @@ class AgentConfigRepositoryImpl @Inject constructor(
         dataStore.edit { prefs ->
             prefs.remove(Keys.DEVICE_ID)
             prefs.remove(Keys.API_KEY)
+        }
+    }
+    
+    override suspend fun setDataSaverEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[Keys.DATA_SAVER_ENABLED] = enabled.toString()
         }
     }
     

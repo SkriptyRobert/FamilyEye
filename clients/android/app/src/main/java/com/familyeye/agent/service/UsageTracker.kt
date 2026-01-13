@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.firstOrNull
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,7 +20,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 class UsageTracker @Inject constructor(
     @ApplicationContext private val context: Context,
     private val usageLogDao: UsageLogDao,
-    private val configRepository: AgentConfigRepository
+    private val configRepository: AgentConfigRepository,
+    private val ruleEnforcer: RuleEnforcer,
+    private val blockOverlayManager: BlockOverlayManager
 ) {
     private val trackerScope = CoroutineScope(Dispatchers.IO)
     private var lastCheckTime = System.currentTimeMillis()
@@ -89,6 +92,36 @@ class UsageTracker @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
         )
+
+        // Enforce Time Limit immediately
+        val totalUsage = getTotalUsageToday()
+        // 1. Global Daily Limit
+        if (ruleEnforcer.isDailyLimitExceeded(totalUsage)) {
+             triggerOverlay(packageName)
+             return
+        }
+        
+        // 2. Global Schedule
+        if (ruleEnforcer.isScheduleBlocked()) {
+             triggerOverlay(packageName)
+             return
+        }
+        
+        // 3. App Time Limit
+        if (ruleEnforcer.isAppTimeLimitExceeded(packageName, getUsageToday(packageName))) {
+            triggerOverlay(packageName)
+        }
+    }
+
+    private suspend fun triggerOverlay(packageName: String) {
+        Timber.w("Core Limit exceeded for $packageName! Showing overlay.")
+        try {
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                blockOverlayManager.show(packageName)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to trigger overlay from tracker")
+        }
     }
 
     private fun getAppName(packageName: String): String {
@@ -99,5 +132,27 @@ class UsageTracker @Inject constructor(
         } catch (e: Exception) {
             packageName.split(".").last()
         }
+    }
+
+    suspend fun getUsageToday(packageName: String): Int {
+        val startOfDay = getStartOfDay()
+        return usageLogDao.getUsageDurationForPackage(packageName, startOfDay) ?: 0
+    }
+
+    suspend fun getTotalUsageToday(): Int {
+        val startOfDay = getStartOfDay()
+        // Dao returns Flow, we need single value. But Dao also likely supports suspend fun if we change it?
+        // UsageLogDao.getTotalUsageToday returns Flow<Int?>.
+        // We can capture the first value.
+        return usageLogDao.getTotalUsageToday(startOfDay).firstOrNull() ?: 0
+    }
+
+    private fun getStartOfDay(): Long {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        return calendar.timeInMillis
     }
 }

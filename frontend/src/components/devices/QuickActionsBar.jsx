@@ -1,5 +1,5 @@
 import React from 'react'
-import { Lock, WifiOff, Monitor, ExternalLink } from 'lucide-react'
+import { Lock, Unlock, WifiOff, Monitor, ExternalLink } from 'lucide-react'
 import './QuickActionsBar.css'
 
 /**
@@ -37,13 +37,23 @@ const QuickActionsBar = ({
             ) : (
                 <>
                     <div className="action-group">
-                        <button
-                            className={`action-btn lock ${isPending('lock') ? 'pending' : ''}`}
-                            onClick={() => onDeviceAction(device.id, 'lock')}
-                            disabled={isPending('lock')}
-                        >
-                            <Lock size={16} /> Zamknout
-                        </button>
+                        {device.has_lock_rule ? (
+                            <button
+                                className={`action-btn unlock ${isPending('unlock') ? 'pending' : ''}`}
+                                onClick={() => onDeviceAction(device.id, 'unlock')}
+                                disabled={isPending('unlock')}
+                            >
+                                <Unlock size={16} /> Odemknout
+                            </button>
+                        ) : (
+                            <button
+                                className={`action-btn lock ${isPending('lock') ? 'pending' : ''}`}
+                                onClick={() => onDeviceAction(device.id, 'lock')}
+                                disabled={isPending('lock')}
+                            >
+                                <Lock size={16} /> Zamknout
+                            </button>
+                        )}
 
                         <button
                             className={`action-btn internet ${isPending('pause-internet') ? 'pending' : ''}`}
