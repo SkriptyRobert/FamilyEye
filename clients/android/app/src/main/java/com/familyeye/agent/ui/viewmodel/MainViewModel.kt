@@ -33,6 +33,7 @@ class MainViewModel @Inject constructor(
         )
     
     // Config repository reference for setter
+    // Config repository reference for setter
     private val repository = configRepository
 
     fun setDataSaver(enabled: Boolean) {
@@ -41,7 +42,36 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun hasUsageStatsPermission(): Boolean {
+    data class PermissionState(
+        val hasUsage: Boolean = false,
+        val hasOverlay: Boolean = false,
+        val hasAccessibility: Boolean = false,
+        val hasDeviceAdmin: Boolean = false,
+        val hasBatteryOpt: Boolean = false
+    )
+
+    private val _permissions = kotlinx.coroutines.flow.MutableStateFlow(PermissionState())
+    val permissions = _permissions.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = PermissionState()
+    )
+
+    init {
+        refreshPermissions()
+    }
+
+    fun refreshPermissions() {
+        _permissions.value = PermissionState(
+            hasUsage = hasUsageStatsPermission(),
+            hasOverlay = hasOverlayPermission(),
+            hasAccessibility = hasAccessibilityPermission(),
+            hasDeviceAdmin = hasDeviceAdminPermission(),
+            hasBatteryOpt = hasBatteryOptimizationException()
+        )
+    }
+
+    private fun hasUsageStatsPermission(): Boolean {
         val appOps = context.getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             appOps.unsafeCheckOpNoThrow(
@@ -59,11 +89,11 @@ class MainViewModel @Inject constructor(
         return mode == android.app.AppOpsManager.MODE_ALLOWED
     }
 
-    fun hasOverlayPermission(): Boolean {
+    private fun hasOverlayPermission(): Boolean {
         return android.provider.Settings.canDrawOverlays(context)
     }
 
-    fun hasAccessibilityPermission(): Boolean {
+    private fun hasAccessibilityPermission(): Boolean {
         val componentName = android.content.ComponentName(context, com.familyeye.agent.service.AppDetectorService::class.java)
         val enabledServicesSetting = android.provider.Settings.Secure.getString(
             context.contentResolver,
@@ -83,7 +113,21 @@ class MainViewModel @Inject constructor(
         return false
     }
 
-    fun hasDeviceAdminPermission(): Boolean {
+    fun unpair() {
+        viewModelScope.launch {
+            repository.clearPairingData()
+        }
+    }
+
+    private fun hasBatteryOptimizationException(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        }
+        return true // Not applicable on older versions (or different handling)
+    }
+
+    private fun hasDeviceAdminPermission(): Boolean {
         val devicePolicyManager = context.getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
         val componentName = android.content.ComponentName(context, com.familyeye.agent.receiver.FamilyEyeDeviceAdmin::class.java)
         return devicePolicyManager.isAdminActive(componentName)

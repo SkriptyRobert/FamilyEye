@@ -20,8 +20,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.familyeye.agent.receiver.BootReceiver
 import com.familyeye.agent.service.FamilyEyeService
+import com.familyeye.agent.ui.screens.AdminLoginScreen
+import com.familyeye.agent.ui.screens.ChildDashboardScreen
 import com.familyeye.agent.ui.screens.PairingScreen
-import com.familyeye.agent.ui.screens.StatusScreen
+import com.familyeye.agent.ui.screens.SettingsScreen
 import com.familyeye.agent.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -83,11 +85,26 @@ class MainActivity : ComponentActivity() {
         val isPaired by viewModel.isPaired.collectAsState()
 
         // Navigation logic based on pairing state
-        // Navigation logic based on pairing state
         LaunchedEffect(isPaired) {
             if (isPaired == true) {
-                navController.navigate("status") {
-                    popUpTo(0) { inclusive = true } // Clear entire back stack
+                // Determine start destination based on whether we are already there to avoid loop?
+                // For now, just reset to dashboard if paired
+                // Important: Only navigate if we are NOT already in a paired flow?
+                // Simple logic: If paired, go to dashboard. If not, go to pairing.
+                // But we don't want to force Dashboard if user is in Settings.
+                // However, initial state null -> true should trigger this.
+                
+                // Better approach: Use a "startDestination" calculation or just specific transitions.
+                // But keeping it simple like previous implementation:
+                
+                // If we are on pairing screen, move to dashboard
+                // If isPaired becomes false, move to pairing screen
+                
+                val currentRoute = navController.currentDestination?.route
+                if (currentRoute == "pairing") {
+                    navController.navigate("dashboard") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             } else if (isPaired == false) {
                  navController.navigate("pairing") {
@@ -98,17 +115,45 @@ class MainActivity : ComponentActivity() {
 
         NavHost(
             navController = navController,
-            startDestination = "pairing" // Default start, will redirect if active
+            startDestination = "pairing" // We will be redirected by LaunchedEffect if valid
         ) {
             composable("pairing") {
                 PairingScreen(
                     onPairingSuccess = {
-                        // Navigation handled by LaunchedEffect observing DB state
+                         // Navigation handled by LaunchedEffect
                     }
                 )
             }
-            composable("status") {
-                StatusScreen()
+            
+            composable("dashboard") {
+                ChildDashboardScreen(
+                    onAdminClick = {
+                        navController.navigate("admin_login")
+                    }
+                )
+            }
+            
+            composable("admin_login") {
+                AdminLoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate("settings") {
+                            popUpTo("dashboard") 
+                        }
+                    },
+                    onBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            
+            composable("settings") {
+                SettingsScreen(
+                    onLogout = {
+                        navController.navigate("dashboard") {
+                            popUpTo("dashboard") { inclusive = true }
+                        }
+                    }
+                )
             }
         }
     }

@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import javax.inject.Inject
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
 
 /**
  * Core Foreground Service for FamilyEye Agent.
@@ -50,6 +52,9 @@ class FamilyEyeService : Service() {
 
     @Inject
     lateinit var api: com.familyeye.agent.data.api.FamilyEyeApi
+
+    @Inject
+    lateinit var webSocketClient: com.familyeye.agent.data.api.WebSocketClient
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
@@ -100,6 +105,7 @@ class FamilyEyeService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("FamilyEyeService destroyed")
+        webSocketClient.stop()
         serviceScope.cancel()
     }
 
@@ -110,11 +116,83 @@ class FamilyEyeService : Service() {
                     Timber.i("Device is paired, starting monitoring loops...")
                     usageTracker.start()
                     reporter.start()
+                    webSocketClient.start()
                     startRuleFetching()
+                    startCommandListening()
                 } else {
                     Timber.i("Device not paired, waiting for pairing...")
+                    webSocketClient.stop()
                 }
             }
+        }
+    }
+
+    private fun startCommandListening() {
+        serviceScope.launch {
+             webSocketClient.commands.collect { command ->
+                 Timber.i("Received WebSocket Command: ${command.command}")
+                 when (command.command) {
+                     "LOCK_NOW", "UNLOCK_NOW", "REFRESH_RULES" -> {
+                         Timber.i("Immediate Rule Refresh Requested")
+                         fetchRules()
+                     }
+                     "SCREENSHOT_NOW" -> {
+                         Timber.i("Screenshot Requested")
+                         captureAndUploadScreenshot()
+                     }
+                 }
+             }
+        }
+    }
+
+    private fun captureAndUploadScreenshot() {
+        val detector = AppDetectorService.instance
+        if (detector == null) {
+            Timber.e("AppDetectorService is not running, cannot take screenshot")
+            return
+        }
+
+        detector.requestScreenshot { bitmap ->
+            if (bitmap != null) {
+                serviceScope.launch(Dispatchers.IO) {
+                    try {
+                         val file = saveBitmapToFile(bitmap)
+                         uploadScreenshot(file)
+                         file.delete() // Clean up
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to upload screenshot")
+                    }
+                }
+            } else {
+                Timber.e("Screenshot capture returned null")
+            }
+        }
+    }
+
+    private fun saveBitmapToFile(bitmap: android.graphics.Bitmap): java.io.File {
+        val file = java.io.File(cacheDir, "screenshot_${System.currentTimeMillis()}.jpg")
+        val stream = java.io.FileOutputStream(file)
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, stream)
+        stream.close()
+        return file
+    }
+
+
+
+// ... inside class ...
+
+    private suspend fun uploadScreenshot(file: java.io.File) {
+        val deviceId = configRepository.deviceId.firstOrNull() ?: return
+        val apiKey = configRepository.apiKey.firstOrNull() ?: return
+
+        val requestFile = file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        val body = okhttp3.MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+        val response = api.uploadScreenshot(deviceId, apiKey, body)
+        if (response.isSuccessful) {
+            Timber.i("Screenshot uploaded successfully: ${response.body()?.url}")
+        } else {
+            Timber.e("Screenshot upload failed: ${response.code()}")
         }
     }
 

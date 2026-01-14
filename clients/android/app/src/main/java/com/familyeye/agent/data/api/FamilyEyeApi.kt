@@ -64,4 +64,21 @@ interface FamilyEyeApi {
     // suspend fun checkStatus(
     //     @Body request: AgentAuthRequest
     // ): Response<AgentStatusResponse>
+    
+    // ==================== File Uploads ====================
+
+    @androidx.annotation.Keep
+    data class UploadResponse(
+        val status: String,
+        val url: String,
+        val filename: String
+    )
+
+    @Multipart
+    @POST("api/files/upload/screenshot")
+    suspend fun uploadScreenshot(
+        @Query("device_id") deviceId: String,
+        @Query("api_key") apiKey: String,
+        @Part file: okhttp3.MultipartBody.Part
+    ): Response<UploadResponse>
 }

@@ -3,15 +3,20 @@ package com.familyeye.agent.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,23 +27,52 @@ import com.familyeye.agent.ui.viewmodel.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    viewModel: MainViewModel = hiltViewModel(),
+    onLogout: () -> Unit
+) {
     val context = LocalContext.current
-    val hasUsage = viewModel.hasUsageStatsPermission()
-    val hasOverlay = viewModel.hasOverlayPermission()
-    val hasAccessibility = viewModel.hasAccessibilityPermission()
-    val hasDeviceAdmin = viewModel.hasDeviceAdminPermission()
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    
+    // Refresh permissions when coming back to the app (ON_RESUME)
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val permissions by viewModel.permissions.collectAsState()
+    
+    val hasUsage = permissions.hasUsage
+    val hasOverlay = permissions.hasOverlay
+    val hasAccessibility = permissions.hasAccessibility
+    val hasDeviceAdmin = permissions.hasDeviceAdmin
+    val hasBatteryOpt = permissions.hasBatteryOpt
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text("FamilyEye Agent") })
+            CenterAlignedTopAppBar(
+                title = { Text("Nastavení") },
+                actions = {
+                    TextButton(onClick = onLogout) {
+                        Text("Zpět")
+                    }
+                }
+            )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -60,6 +94,18 @@ fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
                                 putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Potřebné pro prevenci odinstalace aplikace dítětem.")
                             }
                             context.startActivity(intent)
+                        }
+                    )
+                    PermissionItem(
+                        label = "Ignorovat optimalizaci baterie",
+                        isGranted = hasBatteryOpt,
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            }
                         }
                     )
                     PermissionItem(
@@ -96,7 +142,7 @@ fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Nastavení", 
+                        text = "Data", 
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -123,11 +169,26 @@ fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Unpair Button
+            OutlinedButton(
+                onClick = { viewModel.unpair() },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Outlined.ExitToApp, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Odpárovat zařízení")
+            }
             
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Verze 1.0.0",
+                text = "Verze 1.0.1",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -136,7 +197,7 @@ fun StatusScreen(viewModel: MainViewModel = hiltViewModel()) {
 }
 
 @Composable
-fun PermissionItem(label: String, isGranted: Boolean, onClick: () -> Unit) {
+private fun PermissionItem(label: String, isGranted: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -153,7 +214,7 @@ fun PermissionItem(label: String, isGranted: Boolean, onClick: () -> Unit) {
                 tint = MaterialTheme.colorScheme.primary
             )
         } else {
-             Icon(
+            Icon(
                 imageVector = Icons.Filled.Warning,
                 contentDescription = "Vyžadováno",
                 tint = MaterialTheme.colorScheme.error

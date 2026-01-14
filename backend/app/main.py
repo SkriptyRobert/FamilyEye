@@ -98,7 +98,7 @@ async def get_server_info():
 
 
 # Import routers
-from .api import auth, devices, rules, reports, websocket, trust
+from .api import auth, devices, rules, reports, websocket, trust, files
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
@@ -107,8 +107,14 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(devices.router, prefix="/api/devices", tags=["devices"])
 app.include_router(rules.router, prefix="/api/rules", tags=["rules"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
-app.include_router(websocket.router, prefix="/api", tags=["websocket"])
+app.include_router(websocket.router, tags=["websocket"]) # No prefix, so it routes to /ws/...
 app.include_router(trust.router, prefix="/api/trust", tags=["trust"])
+app.include_router(files.router, prefix="/api/files", tags=["files"])
+
+# Serve Uploads (Screenshots)
+uploads_path = os.path.join(os.getcwd(), "uploads")
+os.makedirs(uploads_path, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=uploads_path), name="uploads")
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist")

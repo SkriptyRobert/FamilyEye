@@ -23,6 +23,9 @@ class AppDetectorService : AccessibilityService() {
     companion object {
         @Volatile
         var currentPackage: String? = null
+        
+        @Volatile
+        var instance: AppDetectorService? = null
     }
 
     @Inject
@@ -39,14 +42,53 @@ class AppDetectorService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         Timber.d("AppDetectorService created")
+        instance = this
+    }
+    
+    fun requestScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // API 30+: Use takeScreenshot with integer ID.
+            // DO NOT access 'this.display' or 'windowManager.defaultDisplay' from Service context on Android 11+
+            // as it throws UnsupportedOperationException.
+            
+            takeScreenshot(
+                android.view.Display.DEFAULT_DISPLAY,
+                this.mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                        val bitmap = try {
+                            val colorSpace = screenshot.colorSpace
+                            val hardwareBuffer = screenshot.hardwareBuffer
+                            android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace)
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to wrap hardware buffer")
+                            null
+                        }
+                        callback(bitmap)
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        Timber.e("Screenshot failed with error code: $errorCode")
+                        callback(null)
+                    }
+                }
+            )
+        } else {
+            Timber.w("Screenshot not supported on this Android version (<30)")
+            callback(null)
+        }
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        val info = AccessibilityServiceInfo().apply {
+        // Use existing info from XML to preserve capabilities (like canTakeScreenshot)
+        val info = serviceInfo ?: AccessibilityServiceInfo()
+        info.apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+            // Append flags, don't overwrite if we want to keep XML flags (though here we define them explicitly)
+            flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 100
         }
         serviceInfo = info
@@ -65,23 +107,8 @@ class AppDetectorService : AccessibilityService() {
             if (packageName == this.packageName) return 
 
             // 1. SELF-PROTECTION: Block Device Admin Deactivation
-            // Check if "Unlock Settings" is active (admin bypass)
-            /* DISABLED FOR DEV/TESTING as per user request
-            val isUnlocked = try {
-                 ::ruleEnforcer.isInitialized && ruleEnforcer.isUnlockSettingsActive()
-            } catch (e: Exception) {
-                false
-            }
+            // (Disabled for now as per user request/testing)
 
-            if (!isUnlocked && 
-                packageName == "com.android.settings" && 
-                className.contains("DeviceAdminAdd")) {
-                
-                Timber.w("BLOCKED attempt to deactivate Device Admin!")
-                performGlobalAction(GLOBAL_ACTION_HOME)
-                return
-            }
-            */
 
             // 2. APP BLOCKING ENFORCEMENT
             try {
