@@ -137,6 +137,37 @@ export const formatTimestamp = (timestamp, format = 'full') => {
 }
 
 /**
+ * Format timestamp to time only (HH:MM)
+ * @param {number|string|Date} timestamp - Timestamp
+ * @returns {string} - "14:30"
+ */
+export const formatTime = (timestamp) => {
+    if (!timestamp) return ''
+
+    // Check if it's seconds (UNIX timestamp as number)
+    let date
+    if (typeof timestamp === 'number') {
+        // Assume seconds if recent, milliseconds if huge? 
+        // Python usually sends seconds. JS uses ms.
+        // If < 10000000000 (10 digits), it's likely seconds (valid until year 2286)
+        if (timestamp < 10000000000) {
+            date = new Date(timestamp * 1000)
+        } else {
+            date = new Date(timestamp)
+        }
+    } else {
+        date = parseTimestamp(timestamp)
+    }
+
+    if (!date || isNaN(date.getTime())) return ''
+
+    return date.toLocaleTimeString('cs-CZ', {
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+}
+
+/**
  * Get device state in human-friendly format
  * @param {object} device - Device object
  * @param {object} summary - Device summary data

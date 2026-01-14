@@ -226,7 +226,8 @@ async def get_device_summary(
         "date_selected": today_str,
         "insights": insights,
         "running_processes": running_processes,
-        "running_processes_updated": running_processes_updated.isoformat() if running_processes_updated else None
+        "running_processes_updated": running_processes_updated.isoformat() if running_processes_updated else None,
+        "activity_timeline": _get_activity_timeline(db, device_id, today_start_utc, today_end_utc)
     }
 
 
@@ -511,3 +512,55 @@ def _calculate_smart_insights(db: Session, device_id: int, start_utc: datetime, 
     except Exception as e:
         logger.error(f"Error calculating Smart Insights: {str(e)}")
         return None
+
+
+def _get_activity_timeline(db: Session, device_id: int, start_utc: datetime, end_utc: datetime):
+    """Get granular activity segments for timeline visualization."""
+    from dateutil import parser
+    
+    # Fetch raw logs
+    logs = db.query(UsageLog.app_name, UsageLog.timestamp, UsageLog.duration).filter(
+        UsageLog.device_id == device_id,
+        UsageLog.timestamp >= start_utc,
+        UsageLog.timestamp < end_utc,
+        UsageLog.duration > 0
+    ).order_by(UsageLog.timestamp.asc()).all()
+    
+    timeline = []
+    
+    # Simple merging of adjacent logs for same app to reduce noise
+    current_segment = None
+    
+    for log in logs:
+        # Retroactive filtering
+        if not app_filter.is_trackable(log.app_name):
+            continue
+            
+        ts_obj = log.timestamp if hasattr(log.timestamp, 'timestamp') else parser.parse(log.timestamp)
+        start_ts = ts_obj.timestamp()
+        end_ts = start_ts + log.duration
+        
+        friendly_name = app_filter.get_friendly_name(log.app_name)
+        
+        if current_segment and \
+           current_segment['app_name'] == friendly_name and \
+           abs(start_ts - current_segment['end_ts']) < 5: # Merge if gap < 5s
+            
+            current_segment['end_ts'] = max(current_segment['end_ts'], end_ts)
+            current_segment['duration'] = current_segment['end_ts'] - current_segment['start_ts']
+        else:
+            if current_segment:
+                timeline.append(current_segment)
+            
+            current_segment = {
+                "app_name": friendly_name,
+                "start_ts": start_ts,
+                "end_ts": end_ts,
+                "duration": end_ts - start_ts,
+                "icon_type": app_filter.get_icon_type(log.app_name)
+            }
+            
+    if current_segment:
+        timeline.append(current_segment)
+        
+    return timeline

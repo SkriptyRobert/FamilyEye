@@ -48,10 +48,10 @@ class BlockOverlayManager @Inject constructor(
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }
 
-    fun show(appName: String) {
+    fun show(appName: String, blockType: com.familyeye.agent.ui.screens.BlockType = com.familyeye.agent.ui.screens.BlockType.GENERIC, scheduleInfo: String? = null) {
         if (overlayView != null) return
 
-        Timber.i("Showing block overlay for $appName")
+        Timber.i("Showing block overlay for $appName ($blockType) Info: $scheduleInfo")
         
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -60,17 +60,18 @@ class BlockOverlayManager @Inject constructor(
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY 
             else 
                 WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, // Draw over status bar
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
+            // Ensure we catch all touches
         }
 
         overlayView = ComposeView(context).apply {
             setContent {
-                BlockOverlayScreen(appName = appName) {
+                BlockOverlayScreen(appName = appName, blockType = blockType, scheduleInfo = scheduleInfo) {
                     hide()
                 }
             }

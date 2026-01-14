@@ -75,48 +75,93 @@ class RuleEnforcer @Inject constructor(
 
     fun isDailyLimitExceeded(totalUsageSeconds: Int): Boolean {
         return rules.value.any { rule ->
-            rule.enabled && 
-            rule.ruleType == "daily_limit" && 
-            rule.timeLimit != null &&
-            (rule.timeLimit * 60) <= totalUsageSeconds
+             val isLimitRule = rule.enabled && rule.ruleType == "daily_limit" && rule.timeLimit != null
+             if (isLimitRule) {
+                 val limitSeconds = rule.timeLimit!! * 60
+                 val exceeded = limitSeconds <= totalUsageSeconds
+                 if (exceeded) {
+                     timber.log.Timber.w("Daily Limit EXCEEDED: Used $totalUsageSeconds s >= Limit $limitSeconds s")
+                 } else {
+                     // Verbose log only occasionally to avoid spam? Or just rely on V logs elsewhere.
+                     // timber.log.Timber.v("Daily Limit Check: Used $totalUsageSeconds s < Limit $limitSeconds s")
+                 }
+                 exceeded
+             } else {
+                 false
+             }
         }
     }
     
-    fun isScheduleBlocked(): Boolean {
+    fun isDeviceScheduleBlocked(): Boolean {
+        // Device Schedule: ruleType="schedule" AND appName is NULL or Empty
+        return rules.value.any { rule ->
+            if (!rule.enabled || rule.ruleType != "schedule") return@any false
+            if (!rule.appName.isNullOrEmpty()) return@any false // Skip App Schedules
+            
+            isRuleActiveNow(rule)
+        }
+    }
+
+    fun isAppScheduleBlocked(packageName: String): Boolean {
+        val appLabel = getAppName(packageName)
+        
+        // App Schedule: ruleType="schedule" AND appName matches packageName/label
         return rules.value.any { rule ->
             if (!rule.enabled || rule.ruleType != "schedule") return@any false
             
-            // Check Days (0=Mon, 6=Sun or similar? Server sends 0-6).
-            // Java Calendar: 1=Sun, 2=Mon ... 7=Sat.
-            // Need to match server format. Assuming Server 0=Mon, 6=Sun.
-            val now = java.util.Calendar.getInstance()
-            // Calendar.DAY_OF_WEEK: Sun=1, Mon=2 ... Sat=7
-            // Convert to 0=Mon ... 6=Sun
-            val dayOfWeek = (now.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+            val ruleName = rule.appName ?: return@any false
+            val isMatch = ruleName.equals(packageName, ignoreCase = true) || 
+                          packageName.contains(ruleName, ignoreCase = true) ||
+                          ruleName.equals(appLabel, ignoreCase = true)
+                          
+            if (!isMatch) return@any false
             
-            val days = rule.scheduleDays
-            if (!days.isNullOrEmpty()) {
-                val allowedDays = days.split(",").mapNotNull { it.trim().toIntOrNull() }
-                if (!allowedDays.contains(dayOfWeek)) {
-                    // If today is NOT in schedule_days, does it mean BLOCKED or ALLOWED?
-                    // Typically 'schedule' rule defines "Blocked Times".
-                    // Or "Allowed Times"?
-                    // FamilyEye "schedule" usually means "Allowed Time Window" or "Downtime"?
-                    // Backend: "schedule" rule usually defines "DOWNTIME" (Hours you CANNOT use).
-                    // OR "Available" (valid hours).
-                    // In Windows agent: Enforcer checks if "Current Time" is INSIDE "Schedule".
-                    // If inside schedule -> Blocked?
-                    // Let's assume schedule defines BLOCKED intervals.
-                    // If today is in list, check time.
-                    return@any false // If today is not in 'blocked list', then not blocked.
-                }
-            }
-
-            val start = rule.scheduleStartTime ?: return@any false
-            val end = rule.scheduleEndTime ?: return@any false
-            
-            isCurrentTimeInRange(start, end)
+            isRuleActiveNow(rule)
         }
+    }
+
+    fun getActiveAppScheduleRule(packageName: String): RuleDTO? {
+        val appLabel = getAppName(packageName)
+        return rules.value.find { rule ->
+             if (!rule.enabled || rule.ruleType != "schedule") return@find false
+            
+             val ruleName = rule.appName ?: return@find false
+             val isMatch = ruleName.equals(packageName, ignoreCase = true) || 
+                           packageName.contains(ruleName, ignoreCase = true) ||
+                           ruleName.equals(appLabel, ignoreCase = true)
+                          
+             if (!isMatch) return@find false
+            
+             isRuleActiveNow(rule)
+        }
+    }
+
+    fun getActiveDeviceScheduleRule(): RuleDTO? {
+         return rules.value.find { rule ->
+            if (!rule.enabled || rule.ruleType != "schedule") return@find false
+            if (!rule.appName.isNullOrEmpty()) return@find false
+            
+            isRuleActiveNow(rule)
+        }
+    }
+
+    private fun isRuleActiveNow(rule: RuleDTO): Boolean {
+        // Check Days
+        val now = java.util.Calendar.getInstance()
+        val dayOfWeek = (now.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7 // 0=Mon, 6=Sun
+        
+        val days = rule.scheduleDays
+        if (!days.isNullOrEmpty()) {
+            val allowedDays = days.split(",").mapNotNull { it.trim().toIntOrNull() }
+            if (!allowedDays.contains(dayOfWeek)) {
+                return false 
+            }
+        }
+
+        val start = rule.scheduleStartTime ?: return false
+        val end = rule.scheduleEndTime ?: return false
+        
+        return isCurrentTimeInRange(start, end)
     }
     
     fun isAppTimeLimitExceeded(packageName: String, usageSeconds: Int): Boolean {

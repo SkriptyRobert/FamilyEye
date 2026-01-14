@@ -38,19 +38,33 @@ class Reporter @Inject constructor(
         reporterScope.launch {
             while (isActive) {
                 try {
-                    if (configRepository.isPaired.first()) {
-                        val isDataSaver = configRepository.dataSaverEnabled.first()
-                        
-                        if (isDataSaver && !isWifiConnected()) {
-                            Timber.d("Data Saver active & NO Wi-Fi - skipping sync")
-                        } else {
-                            syncLogs()
-                        }
-                    }
+                    doSync()
                 } catch (e: Exception) {
                     Timber.e(e, "Error in Reporter")
                 }
                 delay(30000) // Sync every 30 seconds
+            }
+        }
+    }
+
+    fun forceSync() {
+        reporterScope.launch {
+             try {
+                doSync()
+             } catch (e: Exception) {
+                Timber.e(e, "Error in Force Sync")
+             }
+        }
+    }
+
+    private suspend fun doSync() {
+        if (configRepository.isPaired.first()) {
+            val isDataSaver = configRepository.dataSaverEnabled.first()
+            
+            if (isDataSaver && !isWifiConnected()) {
+                Timber.d("Data Saver active & NO Wi-Fi - skipping sync")
+            } else {
+                syncLogs()
             }
         }
     }

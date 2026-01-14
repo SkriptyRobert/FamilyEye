@@ -22,7 +22,8 @@ class UsageTracker @Inject constructor(
     private val usageLogDao: UsageLogDao,
     private val configRepository: AgentConfigRepository,
     private val ruleEnforcer: RuleEnforcer,
-    private val blockOverlayManager: BlockOverlayManager
+    private val blockOverlayManager: BlockOverlayManager,
+    private val reporter: Reporter
 ) {
     private val trackerScope = CoroutineScope(Dispatchers.IO)
     private var lastCheckTime = System.currentTimeMillis()
@@ -97,27 +98,41 @@ class UsageTracker @Inject constructor(
         val totalUsage = getTotalUsageToday()
         // 1. Global Daily Limit
         if (ruleEnforcer.isDailyLimitExceeded(totalUsage)) {
-             triggerOverlay(packageName)
+             reporter.forceSync() // Force immediate sync on block!
+             triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_LIMIT)
              return
         }
         
-        // 2. Global Schedule
-        if (ruleEnforcer.isScheduleBlocked()) {
-             triggerOverlay(packageName)
+        // 2. Device Lock
+        if (ruleEnforcer.isDeviceLocked()) {
+             triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_LOCK)
+             return
+        }
+
+        // 3. Global Schedule
+        if (ruleEnforcer.isDeviceScheduleBlocked()) {
+             triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_SCHEDULE)
              return
         }
         
-        // 3. App Time Limit
+        // 4. App Schedule
+        if (ruleEnforcer.isAppScheduleBlocked(packageName)) {
+             triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_SCHEDULE)
+             return
+        }
+        
+        // 5. App Time Limit
         if (ruleEnforcer.isAppTimeLimitExceeded(packageName, getUsageToday(packageName))) {
-            triggerOverlay(packageName)
+            reporter.forceSync() // Force immediate sync on block!
+            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_LIMIT)
         }
     }
 
-    private suspend fun triggerOverlay(packageName: String) {
+    private suspend fun triggerOverlay(packageName: String, blockType: com.familyeye.agent.ui.screens.BlockType = com.familyeye.agent.ui.screens.BlockType.GENERIC) {
         Timber.w("Core Limit exceeded for $packageName! Showing overlay.")
         try {
             kotlinx.coroutines.withContext(Dispatchers.Main) {
-                blockOverlayManager.show(packageName)
+                blockOverlayManager.show(packageName, blockType)
             }
         } catch (e: Exception) {
             Timber.e(e, "Failed to trigger overlay from tracker")

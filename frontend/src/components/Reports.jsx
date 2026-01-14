@@ -17,6 +17,7 @@ import SmartInsights from './SmartInsights'
 const ActivityHeatmap = lazy(() => import('./charts/ActivityHeatmap'))
 const WeeklyBarChart = lazy(() => import('./charts/WeeklyBarChart'))
 const AppDetailsModal = lazy(() => import('./charts/AppDetailsModal'))
+const ActivityTimeline = lazy(() => import('./charts/ActivityTimeline'))
 
 // Loading placeholder
 const ChartLoading = () => (
@@ -299,44 +300,66 @@ const Reports = ({ deviceId }) => {
             </Suspense>
           </div>
 
-          {/* Running Processes Panel - Always Visible */}
-          <div className="process-monitor-panel">
-            <div className="monitor-header">
-              <div className="monitor-title">
-                <span className={`pulse-dot ${(summary.running_processes?.length > 0) ? 'active' : 'inactive'}`}></span>
-                <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní aplikace</h4>
-                <span className="process-count">{summary.running_processes?.length || 0}</span>
+          {/* Running Processes Panel - Windows ONLY */}
+          {devices.find(d => d.id === selectedDeviceId)?.device_type === 'windows' && (
+            <div className="process-monitor-panel">
+              {/* ... (existing process panel) ... */}
+              <div className="monitor-header">
+                <div className="monitor-title">
+                  <span className={`pulse-dot ${(summary.running_processes?.length > 0) ? 'active' : 'inactive'}`}></span>
+                  <h4><Monitor size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> Aktivní aplikace</h4>
+                  <span className="process-count">{summary.running_processes?.length || 0}</span>
+                </div>
+                <span className="monitor-timestamp">
+                  {summary.running_processes_updated
+                    ? formatRelativeTime(summary.running_processes_updated)
+                    : '...'}
+                </span>
               </div>
-              <span className="monitor-timestamp">
-                {summary.running_processes_updated
-                  ? formatRelativeTime(summary.running_processes_updated)
-                  : '...'}
-              </span>
-            </div>
 
-            <div className="process-table">
-              <div className="process-table-header">
-                <span className="col-name">APLIKACE</span>
-                <span className="col-status">STAV</span>
-              </div>
-              <div className="process-table-body">
-                {summary.running_processes && summary.running_processes.length > 0 ? (
-                  summary.running_processes.map((process, index) => (
-                    <div key={index} className="process-row">
-                      <span className="col-name">{process}</span>
-                      <span className="col-status running">⬤ BĚŽÍ</span>
+              <div className="process-table">
+                <div className="process-table-header">
+                  <span className="col-name">APLIKACE</span>
+                  <span className="col-status">STAV</span>
+                </div>
+                <div className="process-table-body">
+                  {summary.running_processes && summary.running_processes.length > 0 ? (
+                    summary.running_processes.map((process, index) => (
+                      <div key={index} className="process-row">
+                        <span className="col-name">{process}</span>
+                        <span className="col-status running">⬤ BĚŽÍ</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="process-row empty-state">
+                      <span className="col-name muted" style={{ padding: '12px', textAlign: 'center', width: '100%' }}>
+                        Žádné sledované procesy nebyly detekovány
+                      </span>
                     </div>
-                  ))
-                ) : (
-                  <div className="process-row empty-state">
-                    <span className="col-name muted" style={{ padding: '12px', textAlign: 'center', width: '100%' }}>
-                      Žádné sledované procesy nebyly detekovány
-                    </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Activity Timeline - Android ONLY */}
+          {devices.find(d => d.id === selectedDeviceId)?.device_type !== 'windows' && (
+            <div className="process-monitor-panel" style={{ gridColumn: '1 / -1', minHeight: 'auto', padding: '0' }}>
+              <div className="monitor-header">
+                <div className="monitor-title">
+                  <h4>⏱ Časová osa aktivity</h4>
+                </div>
+              </div>
+              <div style={{ padding: '16px' }}>
+                <Suspense fallback={<ChartLoading />}>
+                  <ActivityTimeline
+                    timeline={summary.activity_timeline}
+                    date={selectedDateFilter || new Date().toISOString()}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
 
           {/* Quick Stats Footer */}
