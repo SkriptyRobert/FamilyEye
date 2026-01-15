@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.cancel
 import javax.inject.Inject
+import com.familyeye.agent.data.api.dto.ShieldKeyword
 
 /**
  * Service to detect foreground app changes using Accessibility API.
@@ -36,6 +37,12 @@ class AppDetectorService : AccessibilityService() {
 
     @Inject
     lateinit var usageTracker: UsageTracker
+
+    @Inject
+    lateinit var reporter: Reporter
+
+    @Inject
+    lateinit var contentScanner: com.familyeye.agent.scanner.ContentScanner
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -79,12 +86,24 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
+    private val BROWSER_PACKAGES = setOf(
+        "com.android.chrome",
+        "com.google.android.apps.chrome",
+        "com.sec.android.app.sbrowser", // Samsung Internet
+        "org.mozilla.firefox",
+        "com.microsoft.emmx" // Edge
+    )
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         // Use existing info from XML to preserve capabilities (like canTakeScreenshot)
         val info = serviceInfo ?: AccessibilityServiceInfo()
         info.apply {
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            // Listen to Window State (App switching) AND Content Changes (Scrolling/Web loading)
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                         AccessibilityEvent.TYPE_VIEW_SCROLLED
+            
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             // Append flags, don't overwrite if we want to keep XML flags (though here we define them explicitly)
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
@@ -96,9 +115,11 @@ class AppDetectorService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString() ?: return
-            val className = event.className?.toString() ?: ""
+        val packageName = event?.packageName?.toString() ?: return
+        val className = event.className?.toString() ?: ""
+
+        // 1. Handle Window State Changes (App Switching) - Full Logic
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             
             // Update global state for UsageTracker
             currentPackage = packageName
@@ -106,6 +127,7 @@ class AppDetectorService : AccessibilityService() {
             // Skip our own app
             if (packageName == this.packageName) return 
 
+            // ... (Core Blocking Logic - Keep as is)
             // 1. SELF-PROTECTION: Block Device Admin Deactivation
             // (Disabled for now as per user request/testing)
 
@@ -186,6 +208,26 @@ class AppDetectorService : AccessibilityService() {
             }
             
             Timber.v("Window detected: $packageName / $className")
+            
+            // 3. SMART SHIELD (Trigger on Window Change)
+            if (::contentScanner.isInitialized) {
+                contentScanner.processScreen(rootInActiveWindow, packageName)
+            }
+        }
+        
+        // 2. Handle Content Changes / Scrolling (Only for Browsers to save battery)
+        else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || 
+                 event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            
+            if (BROWSER_PACKAGES.contains(packageName)) {
+                // Determine if we should scan based on ContentScanner's internal debounce
+                // We pass the root window to it. It will ignore if too soon.
+                if (::contentScanner.isInitialized) {
+                    // Note: rootInActiveWindow might be null during fast scrolls
+                    val root = try { rootInActiveWindow } catch (e: Exception) { null }
+                    contentScanner.processScreen(root, packageName)
+                }
+            }
         }
     }
 
@@ -231,6 +273,29 @@ class AppDetectorService : AccessibilityService() {
         Timber.w("BLOCKED: $packageName ($blockType)")
         performGlobalAction(GLOBAL_ACTION_HOME)
         blockOverlayManager.show(packageName, blockType, scheduleInfo)
+    }
+
+    fun handleSmartShieldDetection(keyword: ShieldKeyword, packageName: String, contextText: String) {
+        Timber.w("SMART SHIELD HIT: ${keyword.keyword} in $packageName")
+        
+        // Wait for UI to render (especially for web pages loading)
+        serviceScope.launch {
+            kotlinx.coroutines.delay(1000) 
+            
+            requestScreenshot { bitmap ->
+                if (bitmap != null) {
+                    // Upload alert via Reporter
+                    if (::reporter.isInitialized) {
+                        reporter.reportShieldAlert(keyword, packageName, contextText, bitmap)
+                    }
+                } else {
+                    // Report without screenshot
+                     if (::reporter.isInitialized) {
+                        reporter.reportShieldAlert(keyword, packageName, contextText, null)
+                    }
+                }
+            }
+        }
     }
 
     override fun onInterrupt() {

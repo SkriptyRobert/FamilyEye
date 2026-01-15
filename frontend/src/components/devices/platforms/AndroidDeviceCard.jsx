@@ -329,6 +329,7 @@ const AndroidDeviceCard = ({
                             <Settings size={14} style={{ marginRight: '6px' }} /> Povolit nastavení (5 min)
                         </button>
                     </div>
+
                 </div>
             )}
 

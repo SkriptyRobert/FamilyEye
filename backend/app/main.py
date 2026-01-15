@@ -98,7 +98,7 @@ async def get_server_info():
 
 
 # Import routers
-from .api import auth, devices, rules, reports, websocket, trust, files
+from .api import auth, devices, rules, reports, websocket, trust, files, shield
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
@@ -110,6 +110,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(websocket.router, tags=["websocket"]) # No prefix, so it routes to /ws/...
 app.include_router(trust.router, prefix="/api/trust", tags=["trust"])
 app.include_router(files.router, prefix="/api/files", tags=["files"])
+app.include_router(shield.router, prefix="/api", tags=["shield"]) # Note: Router has "/shield" prefix internaly
 
 # Serve Uploads (Screenshots)
 uploads_path = os.path.join(os.getcwd(), "uploads")

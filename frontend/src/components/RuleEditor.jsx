@@ -292,7 +292,9 @@ const RuleEditor = ({ deviceId }) => {
                   <option value="app_block">Blokovat aplikaci</option>
                   <option value="time_limit">Absolutní denní limit (pro aplikaci)</option>
                   <option value="daily_limit">Celkový denní limit zařízení</option>
-                  <option value="web_block">Blokovat web</option>
+                  {devices.find(d => d.id === selectedDeviceId)?.device_type !== 'android' && (
+                    <option value="web_block">Blokovat web</option>
+                  )}
                   <option value="schedule">Časový rozvrh (blokovat vše v čase)</option>
                 </select>
               </div>

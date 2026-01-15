@@ -48,6 +48,8 @@ class Device(Base):
     child = relationship("User", foreign_keys=[child_id], back_populates="child_devices")
     rules = relationship("Rule", back_populates="device", cascade="all, delete-orphan")
     usage_logs = relationship("UsageLog", back_populates="device", cascade="all, delete-orphan")
+    shield_keywords = relationship("ShieldKeyword", back_populates="device", cascade="all, delete-orphan")
+    shield_alerts = relationship("ShieldAlert", back_populates="device", cascade="all, delete-orphan")
     
     @property
     def is_online(self) -> bool:
@@ -155,4 +157,39 @@ class PairingToken(Base):
     # Relationships
     parent = relationship("User")
     device = relationship("Device")
+
+
+class ShieldKeyword(Base):
+    """Keywords for Smart Shield content scanner."""
+    __tablename__ = "shield_keywords"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    keyword = Column(String, nullable=False)
+    category = Column(String, default="custom") # custom, drugs, violence, etc.
+    severity = Column(String, default="medium") # low, medium, high
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    device = relationship("Device", back_populates="shield_keywords")
+
+
+class ShieldAlert(Base):
+    """Alerts triggered by Smart Shield."""
+    __tablename__ = "shield_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
+    keyword = Column(String, nullable=False) # The keyword that triggered it
+    app_name = Column(String, nullable=True) # App where it was seen
+    detected_text = Column(String, nullable=True) # Context (snippet)
+    screenshot_url = Column(String, nullable=True)
+    severity = Column(String, nullable=False)
+    is_read = Column(Boolean, default=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    device = relationship("Device", back_populates="shield_alerts")
+
 

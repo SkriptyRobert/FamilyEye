@@ -194,3 +194,44 @@ class CriticalEventRequest(BaseModel):
     limit_seconds: Optional[int] = None
     message: Optional[str] = None
     timestamp: Optional[datetime] = None
+
+# Shield Schemas
+class ShieldKeywordCreate(BaseModel):
+    device_id: int
+    keyword: str
+    category: str = "custom"
+    severity: str = "medium"
+
+class ShieldKeywordResponse(BaseModel):
+    id: int
+    device_id: int
+    keyword: str
+    category: str
+    severity: str
+    enabled: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ShieldAlertCreate(BaseModel):
+    device_id: str # String GUID
+    keyword: str
+    app_name: Optional[str]
+    detected_text: Optional[str]
+    screenshot_url: Optional[str]
+    severity: str
+
+class ShieldAlertResponse(BaseModel):
+    id: int
+    device_id: int
+    keyword: str
+    app_name: Optional[str]
+    detected_text: Optional[str]
+    screenshot_url: Optional[str]
+    severity: str
+    is_read: bool
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

@@ -1,0 +1,192 @@
+.smart-shield-container {
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    min-height: 400px;
+}
+
+.shield-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.shield-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.shield-title h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.shield-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-secondary);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Alerts */
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.alert-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.alert-card.severity-high {
+    border-left-color: #ef4444; /* Red */
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.alert-icon {
+    color: #ef4444;
+    margin-top: 4px;
+}
+
+.alert-details {
+    flex: 1;
+}
+
+.alert-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    display: flex;
+    gap: 12px;
+}
+
+.alert-app {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.alert-keyword {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+}
+
+.alert-context {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.view-screenshot-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.view-screenshot-btn:hover {
+    background: var(--bg-hover);
+}
+
+/* Settings */
+.settings-panel {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.add-keyword-card {
+    margin-bottom: 24px;
+    padding: 20px;
+}
+
+.keyword-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.keyword-form .input {
+    flex: 1;
+}
+
+.keyword-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.category-tag {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e5e7eb;
+    color: #374151;
+    margin-right: 12px;
+}
+
+.category-tag.danger { background: #fee2e2; color: #991b1b; }
+.category-tag.bullying { background: #fef3c7; color: #92400e; }
+
+.keyword-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    color: #ef4444;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.text-success { color: #10b981; }
+.text-primary { color: var(--primary-color); }

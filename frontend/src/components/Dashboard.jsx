@@ -6,6 +6,7 @@ import DevicePairing from './DevicePairing'
 import RuleEditor from './RuleEditor'
 import Reports from './Reports'
 import StatusOverview from './StatusOverview'
+import SmartShieldView from './SmartShieldView' // Import
 import NotificationDropdown from './NotificationDropdown'
 import './Dashboard.css'
 import {
@@ -18,7 +19,8 @@ import {
   Menu,
   Moon,
   Sun,
-  Eye
+  Eye,
+  ScrollText // For Rules
 } from 'lucide-react'
 
 const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
@@ -53,7 +55,8 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
   const navItems = [
     { id: 'overview', label: 'Přehled', icon: <LayoutDashboard size={20} /> },
     { id: 'devices', label: 'Zařízení', icon: <Smartphone size={20} /> },
-    { id: 'rules', label: 'Pravidla', icon: <Shield size={20} /> },
+    { id: 'smart-shield', label: 'Smart Shield', icon: <Shield size={20} /> }, // New
+    { id: 'rules', label: 'Pravidla', icon: <ScrollText size={20} /> }, // Changed icon
     { id: 'reports', label: 'Statistiky', icon: <BarChart3 size={20} /> },
     { id: 'pairing', label: 'Přidat', icon: <PlusCircle size={20} /> },
   ]
@@ -118,6 +121,7 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
           {activeTab === 'devices' && (
             <DeviceList onSelectDevice={setSelectedDevice} />
           )}
+          {activeTab === 'smart-shield' && <SmartShieldView />}
           {activeTab === 'pairing' && <DevicePairing />}
           {activeTab === 'rules' && (
             <RuleEditor deviceId={selectedDevice?.id} />

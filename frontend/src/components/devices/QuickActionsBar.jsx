@@ -55,13 +55,15 @@ const QuickActionsBar = ({
                             </button>
                         )}
 
-                        <button
-                            className={`action-btn internet ${isPending('pause-internet') ? 'pending' : ''}`}
-                            onClick={() => onDeviceAction(device.id, 'pause-internet')} // Default 1h
-                            disabled={isPending('pause-internet')}
-                        >
-                            <WifiOff size={16} /> Internet
-                        </button>
+                        {device.device_type !== 'android' && (
+                            <button
+                                className={`action-btn internet ${isPending('pause-internet') ? 'pending' : ''}`}
+                                onClick={() => onDeviceAction(device.id, 'pause-internet')} // Default 1h
+                                disabled={isPending('pause-internet')}
+                            >
+                                <WifiOff size={16} /> Internet
+                            </button>
+                        )}
 
                         <button
                             className={`action-btn screenshot ${isPending('screenshot') ? 'pending' : ''}`}

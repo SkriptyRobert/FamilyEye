@@ -65,6 +65,18 @@ interface FamilyEyeApi {
     //     @Body request: AgentAuthRequest
     // ): Response<AgentStatusResponse>
     
+    // ==================== Smart Shield ====================
+
+    @POST("api/shield/alert")
+    suspend fun reportShieldAlert(
+        @Body request: ShieldAlertRequest
+    ): Response<Unit>
+
+    @POST("api/shield/agent/keywords")
+    suspend fun getShieldKeywords(
+        @Body request: AgentAuthRequest
+    ): Response<List<ShieldKeyword>>
+
     // ==================== File Uploads ====================
 
     @androidx.annotation.Keep

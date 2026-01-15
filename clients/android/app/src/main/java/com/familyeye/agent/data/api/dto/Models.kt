@@ -85,3 +85,13 @@ data class CriticalEventRequest(
     @Json(name = "message") val message: String? = null,
     @Json(name = "timestamp") val timestamp: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class ShieldKeyword(
+    @Json(name = "id") val id: Int,
+    @Json(name = "device_id") val deviceId: Int,
+    @Json(name = "keyword") val keyword: String,
+    @Json(name = "category") val category: String,
+    @Json(name = "severity") val severity: String,
+    @Json(name = "enabled") val enabled: Boolean
+)
