@@ -73,22 +73,50 @@ def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    # Spam Prevention: Check for duplicate alert in last 60 seconds
+    # Spam Prevention: Adaptive Burst Logic
     from datetime import datetime, timedelta, timezone
     
-    # 1. Get recent alerts for this device
-    recent_threshold = datetime.utcnow() - timedelta(seconds=60)
+    # Use UTC for consistency
+    now_utc = datetime.now(timezone.utc)
     
-    existing_alert = db.query(ShieldAlert).filter(
+    # Fetch last 2 alerts for this specific detection pattern
+    recent_alerts = db.query(ShieldAlert).filter(
         ShieldAlert.device_id == device.id,
         ShieldAlert.keyword == alert_data.keyword,
-        ShieldAlert.app_name == alert_data.app_name,
-        ShieldAlert.timestamp >= recent_threshold
-    ).first()
+        ShieldAlert.app_name == alert_data.app_name
+    ).order_by(ShieldAlert.timestamp.desc()).limit(2).all()
     
-    if existing_alert:
-        # Duplicate validation - return success but don't save
-        return {"status": "alert_deduplicated"}
+    if recent_alerts:
+        last_alert = recent_alerts[0]
+        
+        # Ensure timezone awareness for comparison
+        last_ts = last_alert.timestamp
+        if last_ts.tzinfo is None:
+            last_ts = last_ts.replace(tzinfo=timezone.utc)
+        
+        time_since_last = (now_utc - last_ts).total_seconds()
+        
+        # 1. Absolute Spam Protection (always block sub-second duplicates)
+        if time_since_last < 5: 
+            return {"status": "alert_deduplicated_instant"}
+
+        # 2. Burst Logic
+        if len(recent_alerts) == 2:
+            penultimate_alert = recent_alerts[1]
+            penultimate_ts = penultimate_alert.timestamp
+            if penultimate_ts.tzinfo is None:
+                penultimate_ts = penultimate_ts.replace(tzinfo=timezone.utc)
+            
+            # Check gap between previous two alerts to determine mode
+            gap_prev = (last_ts - penultimate_ts).total_seconds()
+            
+            # If previous alerts were close (Burst Mode detected)
+            if gap_prev < 120: # Less than 2 minutes apart
+                # Enforce long cooldown (5 minutes)
+                if time_since_last < 300:
+                    return {"status": "alert_deduplicated_cooldown"}
+            
+            # Else: Normal mode, just allow (subject to 5s instant check)
 
     alert = ShieldAlert(
         device_id=device.id, # Use internal SQL ID for relationship
