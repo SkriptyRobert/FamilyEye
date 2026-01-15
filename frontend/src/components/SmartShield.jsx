@@ -371,7 +371,7 @@ const SmartShield = ({ device }) => {
                             <p className="keywords-subtitle">
                                 Slova jsou organizována podle kategorie.
                                 <br />
-                                <span className="keywords-info-highlight">Přidejte vlastní slova pomocí volby Rychlé přidání. Zvolte kategorii a přidejte monitorované slovo!</span>
+                                <span className="keywords-info-highlight">Vlastní slova přidejte pomocí volby Rychlé přidání. Vyberte kategorii a zadejte monitorované slovo.</span>
                             </p>
                         </div>
 
