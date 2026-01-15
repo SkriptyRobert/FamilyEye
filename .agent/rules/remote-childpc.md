@@ -11,9 +11,8 @@ USER:  DESKTOP-B7CMT7J\Admin
 PASS: student
 
 ----
-familyeye frontend login:
+familyeye frontend: https://192.168.0.145:8000 NEVER USE localhost:8000!!!!
 
-https://192.168.0.145:8000 
-
+Login:
 USER: rdpuser@gmail.com
 PASS: Student10

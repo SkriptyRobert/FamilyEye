@@ -61,8 +61,9 @@ const SmartShield = ({ device }) => {
     const [expandedCategories, setExpandedCategories] = useState(new Set())
 
     useEffect(() => {
+        // Always fetch keywords as they are needed for filtering categories in alerts tab
+        fetchKeywords()
         if (activeTab === 'alerts') fetchAlerts()
-        if (activeTab === 'settings') fetchKeywords()
     }, [activeTab, device.id])
 
     const fetchAlerts = async () => {
