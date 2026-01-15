@@ -972,11 +972,154 @@
     padding: 8px;
 }
 
-.device-select-arrow {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+
+/* Alert Management UI */
+.alerts-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    /* responsive */
+    gap: 16px;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.select-all-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
-    pointer-events: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.select-all-btn.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: #818cf8;
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.bulk-delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bulk-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* Alert Card Selection */
+.shield-alert-card {
+    position: relative;
+    /* ensure pointer events for click */
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shield-alert-card.selected {
+    box-shadow: 0 0 0 2px #6366f1;
+    /* Selection ring */
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.alert-select-indicator {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+}
+
+.select-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(30, 41, 59, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: white;
+}
+
+.shield-alert-card:hover .select-checkbox {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.select-checkbox.checked {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+/* Adjust card content padding/margin to account for checkbox */
+.shield-alert-card .alert-severity-stripe {
+    left: 50px;
+    /* shift stripe or just let it be? Using flex usually. */
+}
+
+/* Actually, alert card structure: flex row? No, it's severity-stripe (absolute?) then content.
+   Let's check card structure. .alert-card-content padding might need adjustment.
+*/
+.shield-alert-card .alert-card-content {
+    padding-left: 24px;
+    /* Default was likely less or handled by flex gap */
+}
+
+/* If checkbox is absolute at 16,16, content should move? 
+   No, let's make checkbox visible on hover OR always? User said "delete selected".
+   Usually checkboxes are on the left.
+   I'll add padding-left to content if needed.
+   Currently `alert-card-content` has padding?
+   Let's force padding-left to make space for checkbox.
+*/
+.alert-card-content {
+    padding-left: 48px !important;
+    /* Make space for checkbox */
+}
+
+/* Delete Button on Card */
+.alert-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0;
+    /* Hide by default */
+    margin-left: auto;
+    /* Push to right */
+}
+
+.shield-alert-card:hover .alert-delete-btn {
+    opacity: 1;
+}
+
+.alert-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
 }

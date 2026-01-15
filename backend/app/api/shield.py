@@ -73,6 +73,23 @@ def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
+    # Spam Prevention: Check for duplicate alert in last 60 seconds
+    from datetime import datetime, timedelta, timezone
+    
+    # 1. Get recent alerts for this device
+    recent_threshold = datetime.utcnow() - timedelta(seconds=60)
+    
+    existing_alert = db.query(ShieldAlert).filter(
+        ShieldAlert.device_id == device.id,
+        ShieldAlert.keyword == alert_data.keyword,
+        ShieldAlert.app_name == alert_data.app_name,
+        ShieldAlert.timestamp >= recent_threshold
+    ).first()
+    
+    if existing_alert:
+        # Duplicate validation - return success but don't save
+        return {"status": "alert_deduplicated"}
+
     alert = ShieldAlert(
         device_id=device.id, # Use internal SQL ID for relationship
         keyword=alert_data.keyword,
@@ -88,11 +105,68 @@ def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
 
 # --- Alert Viewing (Frontend) ---
 
-@router.get("/alerts/{device_id}", response_model=List[ShieldAlertResponse])
-def get_alerts(device_id: int, limit: int = 50, db: Session = Depends(get_db)):
-    """Get recent alerts for a device."""
     return db.query(ShieldAlert)\
         .filter(ShieldAlert.device_id == device_id)\
         .order_by(ShieldAlert.timestamp.desc())\
         .limit(limit)\
         .all()
+
+# --- Alert Management ---
+
+@router.delete("/alerts/{alert_id}")
+def delete_alert(alert_id: int, db: Session = Depends(get_db)):
+    """Delete an alert and its screenshot."""
+    alert = db.query(ShieldAlert).filter(ShieldAlert.id == alert_id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    # Delete screenshot if exists
+    if alert.screenshot_url and "/static/uploads/" in alert.screenshot_url:
+        try:
+            # Extract relative path from URL
+            # URL: .../static/uploads/screenshots/DEVICE/FILE
+            relative_path = alert.screenshot_url.split("/static/uploads/")[-1]
+            # Construct local path. Assuming CWD is backend root.
+            # Local: upgrades/../uploads/.. ?? 
+            # App runs in backend root. uploads is in backend/uploads.
+            import os
+            file_path = os.path.join("uploads", relative_path)
+            
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            print(f"Error deleting screenshot: {e}")
+
+    db.delete(alert)
+    db.commit()
+    return {"status": "deleted"}
+
+from pydantic import BaseModel
+
+class BatchDeleteSchema(BaseModel):
+    alert_ids: List[int]
+
+@router.post("/alerts/batch-delete")
+def batch_delete_alerts(payload: BatchDeleteSchema, db: Session = Depends(get_db)):
+    """Delete multiple alerts."""
+    alerts = db.query(ShieldAlert).filter(ShieldAlert.id.in_(payload.alert_ids)).all()
+    
+    count = 0
+    import os
+    
+    for alert in alerts:
+        # Delete screenshot
+        if alert.screenshot_url and "/static/uploads/" in alert.screenshot_url:
+            try:
+                relative_path = alert.screenshot_url.split("/static/uploads/")[-1]
+                file_path = os.path.join("uploads", relative_path)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception:
+                pass
+        
+        db.delete(alert)
+        count += 1
+        
+    db.commit()
+    return {"status": "deleted", "count": count}

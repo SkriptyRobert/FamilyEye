@@ -143,6 +143,64 @@ const SmartShield = ({ device }) => {
         })
     }
 
+    // --- Alert Management ---
+    const [selectedAlerts, setSelectedAlerts] = useState(new Set())
+
+    const toggleAlertSelection = (alertId) => {
+        setSelectedAlerts(prev => {
+            const next = new Set(prev)
+            if (next.has(alertId)) {
+                next.delete(alertId)
+            } else {
+                next.add(alertId)
+            }
+            return next
+        })
+    }
+
+    const selectAllAlerts = () => {
+        if (selectedAlerts.size === filteredAlerts.length) {
+            setSelectedAlerts(new Set())
+        } else {
+            setSelectedAlerts(new Set(filteredAlerts.map(a => a.id)))
+        }
+    }
+
+    const handleDeleteAlert = async (id, event) => {
+        event?.stopPropagation()
+        if (!confirm("Opravdu smazat tento alert?")) return
+
+        try {
+            await api.delete(`/api/shield/alerts/${id}`)
+            setAlerts(prev => prev.filter(a => a.id !== id))
+            setSelectedAlerts(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+            })
+        } catch (err) {
+            console.error(err)
+            alert("Chyba při mazání")
+        }
+    }
+
+    const handleBatchDelete = async () => {
+        if (selectedAlerts.size === 0) return
+        if (!confirm(`Opravdu smazat ${selectedAlerts.size} vybraných alertů?`)) return
+
+        try {
+            await api.post('/api/shield/alerts/batch-delete', {
+                alert_ids: Array.from(selectedAlerts)
+            })
+            // Optimistic update
+            setAlerts(prev => prev.filter(a => !selectedAlerts.has(a.id)))
+            setSelectedAlerts(new Set())
+        } catch (err) {
+            console.error(err)
+            alert("Chyba při hromadném mazání")
+        }
+    }
+
     // Group keywords by category
     const keywordsByCategory = useMemo(() => {
         const grouped = { bullying: [], drugs: [], violence: [], custom: [] }
@@ -174,7 +232,18 @@ const SmartShield = ({ device }) => {
         const shouldTruncate = detectedText.length > 150
 
         return (
-            <div key={alert.id} className={`shield-alert-card ${severity}`}>
+            <div
+                key={alert.id}
+                className={`shield-alert-card ${severity} ${selectedAlerts.has(alert.id) ? 'selected' : ''}`}
+                onClick={() => toggleAlertSelection(alert.id)}
+            >
+                {/* Selection Overlay/Checkbox */}
+                <div className="alert-select-indicator">
+                    <div className={`select-checkbox ${selectedAlerts.has(alert.id) ? 'checked' : ''}`}>
+                        {selectedAlerts.has(alert.id) && <Plus size={10} style={{ transform: 'rotate(45deg)' }} />}
+                    </div>
+                </div>
+
                 {/* Severity indicator stripe */}
                 <div className="alert-severity-stripe" style={{ background: SEVERITY_CONFIG[severity]?.color || '#f97316' }} />
 
@@ -194,6 +263,14 @@ const SmartShield = ({ device }) => {
                             </div>
                             <span className="alert-timestamp">{formatTimestamp(alert.timestamp)}</span>
                         </div>
+
+                        <button
+                            className="alert-delete-btn"
+                            onClick={(e) => handleDeleteAlert(alert.id, e)}
+                            title="Smazat záznam"
+                        >
+                            <Trash2 size={16} />
+                        </button>
                     </div>
 
                     <div className="alert-body">
@@ -326,28 +403,50 @@ const SmartShield = ({ device }) => {
                     </div>
                 ) : activeTab === 'alerts' ? (
                     <div className="alerts-section">
-                        {/* Filter chips */}
-                        <div className="filter-chips-row">
-                            <Filter size={16} className="filter-icon" />
-                            <button
-                                className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
-                                onClick={() => setFilterCategory('all')}
-                            >
-                                Vše
-                            </button>
-                            {Object.entries(CATEGORIES).map(([key, config]) => (
+                        {/* Bulk Actions & Filters */}
+                        <div className="alerts-controls-row">
+                            <div className="filter-chips-row">
+                                <Filter size={16} className="filter-icon" />
                                 <button
-                                    key={key}
-                                    className={`filter-chip ${filterCategory === key ? 'active' : ''}`}
-                                    onClick={() => setFilterCategory(key)}
-                                    style={{
-                                        '--chip-color': config.color,
-                                        '--chip-bg': config.bgColor
-                                    }}
+                                    className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
+                                    onClick={() => setFilterCategory('all')}
                                 >
-                                    {config.label}
+                                    Vše
                                 </button>
-                            ))}
+                                {Object.entries(CATEGORIES).map(([key, config]) => (
+                                    <button
+                                        key={key}
+                                        className={`filter-chip ${filterCategory === key ? 'active' : ''}`}
+                                        onClick={() => setFilterCategory(key)}
+                                        style={{
+                                            '--chip-color': config.color,
+                                            '--chip-bg': config.bgColor
+                                        }}
+                                    >
+                                        {config.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="bulk-actions">
+                                <button
+                                    className={`select-all-btn ${selectedAlerts.size === filteredAlerts.length && filteredAlerts.length > 0 ? 'active' : ''}`}
+                                    onClick={selectAllAlerts}
+                                    disabled={filteredAlerts.length === 0}
+                                >
+                                    {selectedAlerts.size === filteredAlerts.length && filteredAlerts.length > 0 ? 'Zrušit výběr' : 'Vybrat vše'}
+                                </button>
+
+                                {selectedAlerts.size > 0 && (
+                                    <button
+                                        className="bulk-delete-btn"
+                                        onClick={handleBatchDelete}
+                                    >
+                                        <Trash2 size={16} />
+                                        <span>Smazat ({selectedAlerts.size})</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="alerts-grid">
