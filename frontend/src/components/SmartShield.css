@@ -767,3 +767,200 @@
         min-width: auto;
     }
 }
+
+/* =============================================================================
+   View Header Styles (SmartShieldView)
+   ============================================================================= */
+
+.smart-shield-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.shield-view-header {
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* var(--border-color) equivalent */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+}
+
+.shield-view-title {
+    font-size: 24px;
+    /* text-2xl */
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.shield-icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shield-icon {
+    font-size: 30px;
+    /* text-3xl */
+    position: relative;
+    z-index: 10;
+    display: block;
+}
+
+.shield-icon-pulse {
+    position: absolute;
+    inset: 0;
+    background: rgba(59, 130, 246, 0.3);
+    /* blue-500/30 */
+    filter: blur(8px);
+    border-radius: 50%;
+    z-index: 0;
+    animation: shieldPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shieldPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+.shield-beta-badge {
+    font-size: 12px;
+    background: linear-gradient(to right, #6366f1, #a855f7);
+    /* indigo to purple */
+    color: white;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+    margin-left: 8px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.shield-info-wrapper {
+    position: relative;
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+    cursor: help;
+}
+
+.shield-info-icon {
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.shield-info-wrapper:hover .shield-info-icon {
+    color: #818cf8;
+    /* indigo-400 */
+}
+
+.shield-info-tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 100%;
+    margin-top: 8px;
+    width: 280px;
+    padding: 12px;
+    background: #1e293b;
+    /* slate-800 */
+    border: 1px solid #334155;
+    /* slate-700 */
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.shield-info-tooltip p {
+    margin: 0;
+    font-size: 12px;
+    color: #cbd5e1;
+    /* gray-300 */
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.shield-info-wrapper:hover .shield-info-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.shield-subtitle {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    /* gray-400 */
+}
+
+.shield-subtitle span {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* Device Selector */
+.device-selector-wrapper {
+    position: relative;
+    min-width: 200px;
+}
+
+.device-select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(30, 41, 59, 0.5);
+    /* bg-secondary mostly */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    padding: 10px 40px 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.device-select:focus {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+    border-color: #6366f1;
+}
+
+.device-select:hover {
+    background: rgba(30, 41, 59, 0.8);
+}
+
+.device-select option {
+    background: #1e293b;
+    color: white;
+    padding: 8px;
+}
+
+.device-select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+}
