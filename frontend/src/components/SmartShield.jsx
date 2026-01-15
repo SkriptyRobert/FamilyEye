@@ -368,7 +368,11 @@ const SmartShield = ({ device }) => {
                     <div className="keywords-section">
                         <div className="keywords-header">
                             <h3>Sledovaná klíčová slova</h3>
-                            <p className="keywords-subtitle">Slova jsou organizována podle kategorie pro lepší přehlednost</p>
+                            <p className="keywords-subtitle">
+                                Slova jsou organizována podle kategorie pro lepší přehlednost.
+                                <br />
+                                <span className="keywords-info-highlight">Rodiče mohou přidávat vlastní slova a kategorie pro detekci obsahu.</span>
+                            </p>
                         </div>
 
                         {/* Global Add Section - Prioritized */}
