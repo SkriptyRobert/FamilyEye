@@ -1,23 +1,64 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import api from '../services/api'
 import {
-    Shield, AlertTriangle, Eye, Settings, Plus, Trash2, Check, X
+    Shield, AlertTriangle, Eye, Plus, Trash2, X, Globe, Smartphone,
+    ChevronDown, ChevronRight, Users, Pill, Swords, Settings, Filter
 } from 'lucide-react'
-import DynamicIcon from './DynamicIcon'
 import { formatTimestamp } from '../utils/formatting'
-import ScreenshotModal from './modals/ScreenshotModal' // Reuse if possible or create new logic
 import './SmartShield.css'
 
+// Category configuration with colors and icons
+const CATEGORIES = {
+    bullying: {
+        label: 'Šikana',
+        icon: Users,
+        color: '#f97316', // Orange
+        bgColor: 'rgba(249, 115, 22, 0.1)',
+        borderColor: 'rgba(249, 115, 22, 0.3)'
+    },
+    drugs: {
+        label: 'Drogy',
+        icon: Pill,
+        color: '#ef4444',
+        bgColor: 'rgba(239, 68, 68, 0.1)',
+        borderColor: 'rgba(239, 68, 68, 0.3)'
+    },
+    violence: {
+        label: 'Násilí',
+        icon: Swords,
+        color: '#a855f7', // Purple
+        bgColor: 'rgba(168, 85, 247, 0.1)',
+        borderColor: 'rgba(168, 85, 247, 0.3)'
+    },
+    custom: {
+        label: 'Vlastní',
+        icon: Settings,
+        color: '#06b6d4', // Cyan
+        bgColor: 'rgba(6, 182, 212, 0.1)',
+        borderColor: 'rgba(6, 182, 212, 0.3)'
+    }
+}
+
+const SEVERITY_CONFIG = {
+    critical: { color: '#ef4444', label: 'Kritické' },
+    high: { color: '#f97316', label: 'Vysoké' },
+    medium: { color: '#eab308', label: 'Střední' },
+    low: { color: '#22c55e', label: 'Nízké' }
+}
+
 const SmartShield = ({ device }) => {
-    const [activeTab, setActiveTab] = useState('alerts') // alerts | settings
+    const [activeTab, setActiveTab] = useState('alerts')
     const [alerts, setAlerts] = useState([])
     const [keywords, setKeywords] = useState([])
     const [loading, setLoading] = useState(true)
     const [viewingScreenshot, setViewingScreenshot] = useState(null)
+    const [expandedAlerts, setExpandedAlerts] = useState(new Set())
+    const [filterCategory, setFilterCategory] = useState('all')
 
-    // New Keyword Form
+    // Keyword form states
     const [newKeyword, setNewKeyword] = useState('')
-    const [newCategory, setNewCategory] = useState('custom')
+    const [newKeywordCategory, setNewKeywordCategory] = useState('custom') // Renamed from newCategory
+    const [expandedCategories, setExpandedCategories] = useState(new Set())
 
     useEffect(() => {
         if (activeTab === 'alerts') fetchAlerts()
@@ -48,16 +89,17 @@ const SmartShield = ({ device }) => {
         }
     }
 
-    const handleAddKeyword = async (e) => {
+    const handleAddKeyword = async (e, categoryOverride = null) => {
         e.preventDefault()
+        const category = categoryOverride || newKeywordCategory // Use newKeywordCategory
         if (!newKeyword.trim()) return
 
         try {
             await api.post('/api/shield/keywords', {
                 device_id: device.id,
                 keyword: newKeyword.trim(),
-                category: newCategory,
-                severity: 'high' // Default to high for custom
+                category: category,
+                severity: 'high'
             })
             setNewKeyword('')
             fetchKeywords()
@@ -76,25 +118,200 @@ const SmartShield = ({ device }) => {
         }
     }
 
+    const toggleAlertExpand = (alertId) => {
+        setExpandedAlerts(prev => {
+            const next = new Set(prev)
+            if (next.has(alertId)) {
+                next.delete(alertId)
+            } else {
+                next.add(alertId)
+            }
+            return next
+        })
+    }
+
+    const toggleCategoryExpand = (category) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev)
+            if (next.has(category)) {
+                next.delete(category)
+            } else {
+                next.add(category)
+            }
+            return next
+        })
+    }
+
+    // Group keywords by category
+    const keywordsByCategory = useMemo(() => {
+        const grouped = { bullying: [], drugs: [], violence: [], custom: [] }
+        keywords.forEach(kw => {
+            const cat = kw.category || 'custom'
+            if (grouped[cat]) {
+                grouped[cat].push(kw)
+            } else {
+                grouped.custom.push(kw)
+            }
+        })
+        return grouped
+    }, [keywords])
+
+    // Filter alerts by category
+    const filteredAlerts = useMemo(() => {
+        if (filterCategory === 'all') return alerts
+        // Match alerts by their associated keyword's category if available
+        return alerts.filter(alert => {
+            const matchingKeyword = keywords.find(k => k.keyword.toLowerCase() === alert.keyword?.toLowerCase())
+            return matchingKeyword?.category === filterCategory
+        })
+    }, [alerts, filterCategory, keywords])
+
+    const renderAlertCard = (alert) => {
+        const severity = alert.severity || 'high'
+        const isExpanded = expandedAlerts.has(alert.id)
+        const detectedText = alert.detected_text || ''
+        const shouldTruncate = detectedText.length > 150
+
+        return (
+            <div key={alert.id} className={`shield-alert-card ${severity}`}>
+                {/* Severity indicator stripe */}
+                <div className="alert-severity-stripe" style={{ background: SEVERITY_CONFIG[severity]?.color || '#f97316' }} />
+
+                <div className="alert-card-content">
+                    <div className="alert-card-header">
+                        <div className="alert-icon-box" style={{
+                            background: `${SEVERITY_CONFIG[severity]?.color}20`,
+                            color: SEVERITY_CONFIG[severity]?.color
+                        }}>
+                            <AlertTriangle size={22} />
+                        </div>
+
+                        <div className="alert-meta">
+                            <div className="alert-app-info">
+                                {alert.app_name?.includes('chrome') ? <Globe size={14} /> : <Smartphone size={14} />}
+                                <span>{alert.app_name?.split('.').pop() || 'Aplikace'}</span>
+                            </div>
+                            <span className="alert-timestamp">{formatTimestamp(alert.timestamp)}</span>
+                        </div>
+                    </div>
+
+                    <div className="alert-body">
+                        <div className="alert-keyword-row">
+                            <span className="alert-label">Detekováno:</span>
+                            <span className="alert-keyword-badge">"{alert.keyword}"</span>
+                        </div>
+
+                        {detectedText && (
+                            <div className="alert-detected-text-container">
+                                <p className={`alert-detected-text ${!isExpanded && shouldTruncate ? 'truncated' : ''}`}>
+                                    "{isExpanded || !shouldTruncate ? detectedText : detectedText.slice(0, 150) + '...'}"
+                                </p>
+                                {shouldTruncate && (
+                                    <button
+                                        className="expand-text-btn"
+                                        onClick={() => toggleAlertExpand(alert.id)}
+                                    >
+                                        {isExpanded ? 'Skrýt' : 'Zobrazit vše'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {alert.screenshot_url && (
+                        <button
+                            className="shield-proof-btn"
+                            onClick={() => setViewingScreenshot(alert.screenshot_url)}
+                        >
+                            <Eye size={16} />
+                            <span>Zobrazit důkaz</span>
+                        </button>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    const renderCategorySection = (categoryKey) => {
+        const config = CATEGORIES[categoryKey]
+        const CategoryIcon = config.icon
+        const categoryKeywords = keywordsByCategory[categoryKey] || []
+        const isExpanded = expandedCategories.has(categoryKey)
+
+        return (
+            <div key={categoryKey} className="category-section" style={{ '--category-color': config.color }}>
+                <button
+                    className="category-header"
+                    onClick={() => toggleCategoryExpand(categoryKey)}
+                    style={{ borderColor: config.borderColor }}
+                >
+                    <div className="category-header-left">
+                        <div className="category-icon-box" style={{ background: config.bgColor, color: config.color }}>
+                            <CategoryIcon size={18} />
+                        </div>
+                        <span className="category-label">{config.label}</span>
+                        <span className="category-count" style={{ background: config.bgColor, color: config.color }}>
+                            {categoryKeywords.length}
+                        </span>
+                    </div>
+                    <div className={`category-chevron ${isExpanded ? 'expanded' : ''}`}>
+                        <ChevronRight size={18} />
+                    </div>
+                </button>
+
+                {isExpanded && (
+                    <div className="category-content" style={{ borderColor: config.borderColor }}>
+                        {categoryKeywords.length === 0 ? (
+                            <div className="category-empty">
+                                <CategoryIcon size={24} style={{ color: config.color, opacity: 0.5 }} />
+                                <p>Žádná sledovaná slova v této kategorii</p>
+                            </div>
+                        ) : (
+                            <div className="keyword-chips-grid">
+                                {categoryKeywords.map(kw => (
+                                    <div
+                                        key={kw.id}
+                                        className="keyword-chip-modern"
+                                        style={{
+                                            background: config.bgColor,
+                                            borderColor: config.borderColor
+                                        }}
+                                    >
+                                        <span className="chip-text">{kw.keyword}</span>
+                                        <button
+                                            className="chip-delete"
+                                            onClick={() => handleDeleteKeyword(kw.id)}
+                                            style={{ color: config.color }}
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        )
+    }
+
     return (
         <div className="smart-shield-container">
-            {/* Header */}
+            {/* Tab Navigation */}
             <div className="shield-header">
-                <div className="shield-title">
-                    <Shield size={24} className="text-primary" />
-                    <h2>Smart Shield (Beta)</h2>
-                </div>
                 <div className="shield-tabs">
                     <button
-                        className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
+                        className={`shield-tab ${activeTab === 'alerts' ? 'active' : ''}`}
                         onClick={() => setActiveTab('alerts')}
                     >
+                        <AlertTriangle size={16} />
                         Alerty
                     </button>
                     <button
-                        className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                        className={`shield-tab ${activeTab === 'settings' ? 'active' : ''}`}
                         onClick={() => setActiveTab('settings')}
                     >
+                        <Settings size={16} />
                         Nastavení slov
                     </button>
                 </div>
@@ -102,95 +319,99 @@ const SmartShield = ({ device }) => {
 
             <div className="shield-content">
                 {loading ? (
-                    <div className="loading">Načítání...</div>
+                    <div className="shield-loading">
+                        <div className="loading-spinner" />
+                        <span>Načítání...</span>
+                    </div>
                 ) : activeTab === 'alerts' ? (
-                    <div className="alerts-list">
-                        {alerts.length === 0 ? (
-                            <div className="empty-state">
-                                <Check size={48} className="text-success" />
-                                <p>Žádné bezpečnostní incidenty. Vše vypadá v pořádku.</p>
-                            </div>
-                        ) : (
-                            alerts.map(alert => (
-                                <div key={alert.id} className={`alert-card severity-${alert.severity}`}>
-                                    <div className="alert-icon">
-                                        <AlertTriangle size={24} />
+                    <div className="alerts-section">
+                        {/* Filter chips */}
+                        <div className="filter-chips-row">
+                            <Filter size={16} className="filter-icon" />
+                            <button
+                                className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
+                                onClick={() => setFilterCategory('all')}
+                            >
+                                Vše
+                            </button>
+                            {Object.entries(CATEGORIES).map(([key, config]) => (
+                                <button
+                                    key={key}
+                                    className={`filter-chip ${filterCategory === key ? 'active' : ''}`}
+                                    onClick={() => setFilterCategory(key)}
+                                    style={{
+                                        '--chip-color': config.color,
+                                        '--chip-bg': config.bgColor
+                                    }}
+                                >
+                                    {config.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="alerts-grid">
+                            {filteredAlerts.length === 0 ? (
+                                <div className="shield-empty-state">
+                                    <div className="empty-icon-container">
+                                        <Shield size={64} />
                                     </div>
-                                    <div className="alert-details">
-                                        <div className="alert-meta">
-                                            <span className="alert-app">{alert.app_name}</span>
-                                            <span className="alert-time">{formatTimestamp(alert.timestamp)}</span>
-                                        </div>
-                                        <h4 className="alert-keyword">
-                                            Detekováno: <strong>"{alert.keyword}"</strong>
-                                        </h4>
-                                        {alert.detected_text && (
-                                            <p className="alert-context">"...{alert.detected_text}..."</p>
-                                        )}
-                                    </div>
-                                    {alert.screenshot_url && (
-                                        <button
-                                            className="view-screenshot-btn"
-                                            onClick={() => setViewingScreenshot(alert.screenshot_url)}
-                                        >
-                                            <Eye size={16} /> Důkaz
-                                        </button>
-                                    )}
+                                    <h3>Vše v pořádku</h3>
+                                    <p>Žádné bezpečnostní incidenty za posledních 24 hodin.</p>
                                 </div>
-                            ))
-                        )}
+                            ) : (
+                                filteredAlerts.map(alert => renderAlertCard(alert))
+                            )}
+                        </div>
                     </div>
                 ) : (
-                    <div className="settings-panel">
-                        <div className="add-keyword-card premium-card">
-                            <h3>Přidat sledované slovo</h3>
-                            <form onSubmit={handleAddKeyword} className="keyword-form">
+                    <div className="keywords-section">
+                        <div className="keywords-header">
+                            <h3>Sledovaná klíčová slova</h3>
+                            <p className="keywords-subtitle">Slova jsou organizována podle kategorie pro lepší přehlednost</p>
+                        </div>
+
+                        {/* Global Add Section - Prioritized */}
+                        <div className="global-add-section">
+                            <h4>Rychlé přidání</h4>
+                            <form className="global-add-form" onSubmit={(e) => handleAddKeyword(e, newKeywordCategory)}>
                                 <input
                                     type="text"
-                                    placeholder="Např. drogy, sebevražda..."
                                     value={newKeyword}
-                                    onChange={e => setNewKeyword(e.target.value)}
-                                    className="input"
+                                    onChange={(e) => setNewKeyword(e.target.value)}
+                                    placeholder="Např. drogy, sebevražda..."
+                                    className="global-add-input"
                                 />
                                 <select
-                                    value={newCategory}
-                                    onChange={e => setNewCategory(e.target.value)}
-                                    className="input category-select"
+                                    value={newKeywordCategory}
+                                    onChange={(e) => setNewKeywordCategory(e.target.value)}
+                                    className="global-add-select"
                                 >
-                                    <option value="custom">Vlastní</option>
-                                    <option value="drugs">Drogy</option>
-                                    <option value="violence">Násilí</option>
-                                    <option value="bullying">Šikana</option>
+                                    {Object.entries(CATEGORIES).map(([key, config]) => (
+                                        <option key={key} value={key}>{config.label}</option>
+                                    ))}
                                 </select>
-                                <button type="submit" className="button button-primary">Přidat</button>
+                                <button type="submit" className="global-add-btn">
+                                    <Plus size={18} />
+                                    Přidat
+                                </button>
                             </form>
                         </div>
 
-                        <div className="keywords-list">
-                            <h3>Aktivní slova</h3>
-                            {keywords.map(kw => (
-                                <div key={kw.id} className="keyword-item">
-                                    <span className={`category-tag ${kw.category}`}>{kw.category}</span>
-                                    <span className="keyword-text">{kw.keyword}</span>
-                                    <button
-                                        className="delete-btn"
-                                        onClick={() => handleDeleteKeyword(kw.id)}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            ))}
+                        <div className="categories-grid">
+                            {Object.keys(CATEGORIES).map(key => renderCategorySection(key))}
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Simplified Screenshot Modal for reuse */}
+            {/* Screenshot Modal */}
             {viewingScreenshot && (
-                <div className="modal-overlay" onClick={() => setViewingScreenshot(null)}>
-                    <div className="modal-content relative" onClick={e => e.stopPropagation()}>
-                        <button className="close-btn" onClick={() => setViewingScreenshot(null)}><X /></button>
-                        <img src={viewingScreenshot} alt="Evidence" style={{ maxWidth: '100%', maxHeight: '80vh' }} />
+                <div className="shield-modal-overlay" onClick={() => setViewingScreenshot(null)}>
+                    <div className="shield-modal-content" onClick={e => e.stopPropagation()}>
+                        <button className="shield-modal-close" onClick={() => setViewingScreenshot(null)}>
+                            <X size={20} />
+                        </button>
+                        <img src={viewingScreenshot} alt="Evidence" />
                     </div>
                 </div>
             )}

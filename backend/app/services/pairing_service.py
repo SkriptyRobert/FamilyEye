@@ -127,7 +127,34 @@ def create_device_from_pairing(
     pairing_token.device_id = new_device.id
     
     db.commit()
+    db.commit()
     db.refresh(new_device)
+
+    # Auto-seed default keywords
+    try:
+        from ..models import ShieldKeyword
+        import json
+        import os
+        
+        # Path to default_keywords.json (root of backend)
+        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "default_keywords.json")
+        
+        if os.path.exists(json_path):
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                
+            for item in data.get("keywords", []):
+                kw = ShieldKeyword(
+                    device_id=new_device.id,
+                    keyword=item["keyword"],
+                    category=item["category"],
+                    severity=item["severity"],
+                    enabled=True
+                )
+                db.add(kw)
+            db.commit()
+    except Exception as e:
+        print(f"Failed to seed default keywords: {e}")
     
     return new_device
 

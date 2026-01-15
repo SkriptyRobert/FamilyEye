@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import SmartShield from './SmartShield'
-import { Smartphone, AlertTriangle } from 'lucide-react'
+import { ChevronDown, Smartphone, AlertTriangle, Info } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
 
 const SmartShieldView = () => {
@@ -52,30 +52,38 @@ const SmartShieldView = () => {
             {/* Header / Selector */}
             <div className="view-header p-6 border-b border-[var(--border-color)] flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        🛡️ Smart Shield <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">Beta</span>
+                    <h1 className="text-2xl font-bold flex items-center gap-3">
+                        <div className="relative">
+                            <span className="text-3xl relative z-10 block">🛡️</span>
+                            <div className="absolute inset-0 bg-blue-500/30 blur-lg rounded-full animate-pulse z-0"></div>
+                        </div>
+                        Smart Shield
+                        <span className="text-xs bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-3 py-1 rounded-full font-semibold shadow-lg shadow-indigo-500/20">Beta</span>
+                        <div className="group relative ml-2">
+                            <Info size={16} className="text-gray-500 cursor-help hover:text-indigo-400 transition-colors" />
+                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 p-3 bg-slate-800 border border-slate-700 rounded-lg shadow-xl text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                <p className="italic">
+                                    Využívá pokročilý heuristický algoritmus a NLP modely pro detekci kontextuálního nebezpečí v reálném čase.
+                                </p>
+                            </div>
+                        </div>
                     </h1>
-                    <p className="text-gray-500 mt-1">Pokročilá detekce obsahu a prevence</p>
+                    <p className="text-gray-400 mt-2 text-sm">Pokročilá detekce obsahu a prevence • <span className="italic opacity-70">Chraňte své dítě před nevhodným obsahem</span></p>
                 </div>
 
-                <div className="device-selector flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-600">Zařízení:</span>
-                    <div className="relative">
-                        <select
-                            value={selectedDeviceId || ''}
-                            onChange={(e) => setSelectedDeviceId(parseInt(e.target.value))}
-                            className="appearance-none bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] font-medium min-w-[200px]"
-                        >
-                            {devices.map(device => (
-                                <option key={device.id} value={device.id}>
-                                    {device.name}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
+                <div className="device-selector-wrapper relative">
+                    <select
+                        value={selectedDeviceId || ''}
+                        onChange={(e) => setSelectedDeviceId(parseInt(e.target.value))}
+                        className="appearance-none bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-primary)] pl-4 pr-10 py-2.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 hover:bg-slate-800 transition-all cursor-pointer min-w-[200px]"
+                    >
+                        {devices.map(device => (
+                            <option key={device.id} value={device.id}>
+                                {device.name}
+                            </option>
+                        ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 </div>
             </div>
 
