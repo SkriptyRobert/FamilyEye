@@ -69,7 +69,7 @@ const SmartShieldView = () => {
                             </div>
                         </div>
                     </h1>
-                    <p className="shield-subtitle">Pokročilá detekce obsahu a prevence • <span>Chraňte své dítě před nevhodným obsahem</span></p>
+                    <p className="shield-subtitle">Pokročilá detekce obsahu a prevence • <span>Chraňte své dítě před hrozbami dříve než nastanou</span></p>
                 </div>
 
                 <div className="device-selector-wrapper">

@@ -369,9 +369,9 @@ const SmartShield = ({ device }) => {
                         <div className="keywords-header">
                             <h3>Sledovaná klíčová slova</h3>
                             <p className="keywords-subtitle">
-                                Slova jsou organizována podle kategorie pro lepší přehlednost.
+                                Slova jsou organizována podle kategorie.
                                 <br />
-                                <span className="keywords-info-highlight">Rodiče mohou přidávat vlastní slova a kategorie pro detekci obsahu.</span>
+                                <span className="keywords-info-highlight">Přidejte vlastní slova pomocí volby Rychlé přidání. Zvolte kategorii a přidejte monitorované slovo!</span>
                             </p>
                         </div>
 
