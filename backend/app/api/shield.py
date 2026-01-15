@@ -105,6 +105,9 @@ def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
 
 # --- Alert Viewing (Frontend) ---
 
+@router.get("/alerts/{device_id}", response_model=List[ShieldAlertResponse])
+def get_alerts(device_id: int, limit: int = 50, db: Session = Depends(get_db)):
+    """Get recent alerts for a device."""
     return db.query(ShieldAlert)\
         .filter(ShieldAlert.device_id == device_id)\
         .order_by(ShieldAlert.timestamp.desc())\
