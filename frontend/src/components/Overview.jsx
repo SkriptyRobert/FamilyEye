@@ -54,6 +54,9 @@ const Overview = () => {
         case 'resume-internet':
           endpoint = `/api/devices/${deviceId}/resume-internet`
           break
+        case 'screenshot':
+          endpoint = `/api/devices/${deviceId}/screenshot`
+          break
         default:
           return
       }
@@ -161,6 +164,12 @@ const Overview = () => {
                         className="action-button resume"
                       >
                         Obnovit internet
+                      </button>
+                      <button
+                        onClick={() => handleInstantAction(device.id, 'screenshot')}
+                        className="action-button screenshot"
+                      >
+                        Snímek obrazovky
                       </button>
                     </div>
                   </div>

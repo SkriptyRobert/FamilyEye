@@ -71,7 +71,7 @@ const QuickActionsBar = ({
                             disabled={isPending('screenshot')}
                             title="Pořídit aktuální snímek obrazovky"
                         >
-                            <Monitor size={16} /> Vyfotit obrazovku
+                            <Monitor size={16} /> Snímek obrazovky
                         </button>
                     </div>
 
