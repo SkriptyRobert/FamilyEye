@@ -99,6 +99,7 @@ class Rule(Base):
     id = Column(Integer, primary_key=True, index=True)
     device_id = Column(Integer, ForeignKey("devices.id"), nullable=False)
     rule_type = Column(String, nullable=False)  # 'app_block', 'time_limit', 'daily_limit', 'website_block', 'schedule'
+    name = Column(String, nullable=True)  # Optional user-defined name
     app_name = Column(String, nullable=True)  # Null for daily limits
     website_url = Column(String, nullable=True)  # For website blocks
     time_limit = Column(Integer, nullable=True)  # Minutes per day

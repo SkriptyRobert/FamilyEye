@@ -73,6 +73,7 @@ class DeviceResponse(BaseModel):
 class RuleCreate(BaseModel):
     device_id: int
     rule_type: str
+    name: Optional[str] = None
     app_name: Optional[str] = None
     website_url: Optional[str] = None
     time_limit: Optional[int] = None
@@ -87,6 +88,7 @@ class RuleResponse(BaseModel):
     id: int
     device_id: int
     rule_type: str
+    name: Optional[str]
     app_name: Optional[str]
     website_url: Optional[str]
     time_limit: Optional[int]

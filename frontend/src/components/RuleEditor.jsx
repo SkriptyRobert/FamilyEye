@@ -3,7 +3,7 @@ import api from '../services/api'
 import {
   RefreshCw, X, XCircle, Clock, Calendar,
   Globe, Watch, BarChart3, EyeOff, Eye,
-  Shield, AlertTriangle, Smartphone, LinkIcon, Copy, CheckCircle, Monitor, Check
+  Shield, AlertTriangle, Smartphone, LinkIcon, Copy, CheckCircle, Monitor, Check, Edit2
 } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
 import DayPicker from './DayPicker'
@@ -24,7 +24,9 @@ const RuleEditor = ({ deviceId }) => {
   const [selectedDeviceId, setSelectedDeviceId] = useState(deviceId)
   const [rules, setRules] = useState([])
   const [loading, setLoading] = useState(true)
+
   const [showForm, setShowForm] = useState(false)
+  const [editingRuleId, setEditingRuleId] = useState(null) // ID of rule being edited
   const [frequentApps, setFrequentApps] = useState([]) // Dynamic frequent apps
   const [hiddenApps, setHiddenApps] = useState([]) // From localStorage
   const [selectedApps, setSelectedApps] = useState([]) // Multi-app selection
@@ -32,6 +34,7 @@ const RuleEditor = ({ deviceId }) => {
   const [scheduleTarget, setScheduleTarget] = useState('apps') // 'device' | 'apps' // Current input value
   const [formData, setFormData] = useState({
     rule_type: 'app_block',
+    name: '',
     app_name: '',
     website_url: '',
     time_limit: '',
@@ -179,18 +182,29 @@ const RuleEditor = ({ deviceId }) => {
         ? ''
         : selectedApps.join(',')
 
-      await api.post('/api/rules/', {
+      const payload = {
         ...formData,
         app_name: appNameValue,
         device_id: selectedDeviceId,
         time_limit: formData.time_limit ? parseInt(formData.time_limit) : null
-      })
+      }
+
+      if (editingRuleId) {
+        // Update existing rule
+        await api.put(`/api/rules/${editingRuleId}`, payload)
+      } else {
+        // Create new rule
+        await api.post('/api/rules/', payload)
+      }
+
       setShowForm(false)
+      setEditingRuleId(null) // Reset editing state
       setSelectedApps([]) // Reset app selection
       setAppInputValue('')
       setScheduleTarget('apps') // Reset schedule target
       setFormData({
         rule_type: 'app_block',
+        name: '',
         app_name: '',
         website_url: '',
         time_limit: '',
@@ -202,9 +216,54 @@ const RuleEditor = ({ deviceId }) => {
       })
       fetchRules()
     } catch (err) {
-      console.error('Error creating rule:', err)
-      alert('Chyba při vytváření pravidla')
+      console.error('Error saving rule:', err)
+      alert('Chyba při ukládání pravidla')
     }
+  }
+
+  const handleEdit = (rule) => {
+    setEditingRuleId(rule.id)
+
+    // Parse apps
+    let apps = []
+    if (rule.app_name) {
+      apps = rule.app_name.split(',').filter(a => a)
+    }
+
+    setSelectedApps(apps)
+
+    // Determind schedule target
+    if (rule.rule_type === 'schedule') {
+      if (!rule.app_name) {
+        setScheduleTarget('device')
+      } else {
+        setScheduleTarget('apps')
+      }
+    }
+
+    setFormData({
+      rule_type: rule.rule_type,
+      name: rule.name || '',
+      app_name: rule.app_name || '',
+      website_url: rule.website_url || '',
+      time_limit: rule.time_limit || '',
+      enabled: rule.enabled,
+      schedule_start_time: rule.schedule_start_time || '',
+      schedule_end_time: rule.schedule_end_time || '',
+      schedule_days: rule.schedule_days || '',
+      block_network: rule.block_network || false
+    })
+
+    setShowForm(true)
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const formatDays = (daysString) => {
+    if (!daysString) return 'Každý den' // Or no days?
+    // Map 0-6 to localized names
+    const dayMap = { '0': 'Po', '1': 'Út', '2': 'St', '3': 'Čt', '4': 'Pá', '5': 'So', '6': 'Ne' }
+    return daysString.split(',').map(d => dayMap[d.trim()] || d).join(', ')
   }
 
   const handleDelete = async (ruleId) => {
@@ -272,11 +331,14 @@ const RuleEditor = ({ deviceId }) => {
         <>
           <div style={{ marginBottom: '20px' }}>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                setShowForm(!showForm)
+                if (showForm) setEditingRuleId(null) // Reset on cancel
+              }}
               className={`button ${showForm ? 'button-secondary' : ''}`}
               style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}
             >
-              {showForm ? <><X size={16} style={{ marginRight: '8px' }} /> Zrušit přidávání</> : '+ Přidat nové pravidlo'}
+              {showForm ? <><X size={16} style={{ marginRight: '8px' }} /> Zrušit {editingRuleId ? 'úpravu' : 'přidávání'}</> : '+ Přidat nové pravidlo'}
             </button>
           </div>
 
@@ -297,6 +359,17 @@ const RuleEditor = ({ deviceId }) => {
                   )}
                   <option value="schedule">Časový rozvrh (blokovat vše v čase)</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label>Název pravidla (volitelné)</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="např. Škola, Víkend, Trénink"
+                  className="input"
+                />
               </div>
 
               {formData.rule_type !== 'daily_limit' && !(formData.rule_type === 'schedule' && scheduleTarget === 'device') && (
@@ -450,7 +523,9 @@ const RuleEditor = ({ deviceId }) => {
                 </label>
               )}
 
-              <button type="submit" className="button button-success" style={{ marginTop: '15px' }}>Uložit pravidlo</button>
+              <button type="submit" className="button button-success" style={{ marginTop: '15px' }}>
+                {editingRuleId ? 'Aktualizovat pravidlo' : 'Uložit pravidlo'}
+              </button>
             </form>
           )}
 
@@ -477,10 +552,27 @@ const RuleEditor = ({ deviceId }) => {
                   return (
                     <div key={rule.id} className="rule-card">
                       <div className="rule-card-header">
-                        <h4>{ruleTypeLabels[rule.rule_type] || rule.rule_type}</h4>
-                        <span className={`status-badge ${rule.enabled ? 'active' : 'inactive'}`}>
-                          {rule.enabled ? 'Aktivní' : 'Neaktivní'}
-                        </span>
+                        <h4>
+                          {rule.name ? (
+                            <span style={{ fontWeight: '800', marginRight: '6px' }}>{rule.name}</span>
+                          ) : null}
+                          <span style={{ fontWeight: 'normal', opacity: 0.8, fontSize: '0.9em' }}>
+                            ({ruleTypeLabels[rule.rule_type] || rule.rule_type})
+                          </span>
+                        </h4>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleEdit(rule)}
+                            className="icon-button"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+                            title="Upravit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <span className={`status-badge ${rule.enabled ? 'active' : 'inactive'}`}>
+                            {rule.enabled ? 'Aktivní' : 'Neaktivní'}
+                          </span>
+                        </div>
                       </div>
                       <div className="rule-card-body">
                         {rule.app_name && <p><strong>Aplikace:</strong> {rule.app_name}</p>}
@@ -489,7 +581,7 @@ const RuleEditor = ({ deviceId }) => {
                         {(rule.schedule_start_time && rule.schedule_end_time) && (
                           <p><strong>Rozvrh:</strong> {rule.schedule_start_time} - {rule.schedule_end_time}</p>
                         )}
-                        {rule.schedule_days && <p><strong>Dny:</strong> {rule.schedule_days}</p>}
+                        {rule.schedule_days && <p><strong>Dny:</strong> {formatDays(rule.schedule_days)}</p>}
                         {rule.block_network && <p className="network-blocked"><Globe size={14} style={{ marginRight: '4px' }} /> Síť blokována</p>}
                       </div>
                       <button
