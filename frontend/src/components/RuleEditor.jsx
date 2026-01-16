@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import {
-  RefreshCw, X, XCircle, Clock, Calendar,
-  Globe, Watch, BarChart3, EyeOff, Eye,
-  Shield, AlertTriangle, Smartphone, LinkIcon, Copy, CheckCircle, Monitor, Check, Edit2
+  RefreshCw, X, Globe, BarChart3, Monitor, Shield
 } from 'lucide-react'
-import DynamicIcon from './DynamicIcon'
 import DayPicker from './DayPicker'
+import { RuleCard, HiddenAppsSection } from './rules'
 import './RuleEditor.css'
 
 // Fallback suggested apps (shown when no data available)
@@ -19,6 +17,19 @@ const DEFAULT_SUGGESTED_APPS = [
   { name: 'Minecraft', keyword: 'Minecraft' }
 ]
 
+const INITIAL_FORM_DATA = {
+  rule_type: 'app_block',
+  name: '',
+  app_name: '',
+  website_url: '',
+  time_limit: '',
+  enabled: true,
+  schedule_start_time: '',
+  schedule_end_time: '',
+  schedule_days: '',
+  block_network: false
+}
+
 const RuleEditor = ({ deviceId }) => {
   const [devices, setDevices] = useState([])
   const [selectedDeviceId, setSelectedDeviceId] = useState(deviceId)
@@ -26,24 +37,13 @@ const RuleEditor = ({ deviceId }) => {
   const [loading, setLoading] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
-  const [editingRuleId, setEditingRuleId] = useState(null) // ID of rule being edited
-  const [frequentApps, setFrequentApps] = useState([]) // Dynamic frequent apps
-  const [hiddenApps, setHiddenApps] = useState([]) // From localStorage
-  const [selectedApps, setSelectedApps] = useState([]) // Multi-app selection
-  const [appInputValue, setAppInputValue] = useState('') // Current input value
-  const [scheduleTarget, setScheduleTarget] = useState('apps') // 'device' | 'apps' // Current input value
-  const [formData, setFormData] = useState({
-    rule_type: 'app_block',
-    name: '',
-    app_name: '',
-    website_url: '',
-    time_limit: '',
-    enabled: true,
-    schedule_start_time: '',
-    schedule_end_time: '',
-    schedule_days: '',
-    block_network: false
-  })
+  const [editingRuleId, setEditingRuleId] = useState(null)
+  const [frequentApps, setFrequentApps] = useState([])
+  const [hiddenApps, setHiddenApps] = useState([])
+  const [selectedApps, setSelectedApps] = useState([])
+  const [appInputValue, setAppInputValue] = useState('')
+  const [scheduleTarget, setScheduleTarget] = useState('apps')
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
 
   useEffect(() => {
     fetchDevices()
@@ -52,7 +52,7 @@ const RuleEditor = ({ deviceId }) => {
   useEffect(() => {
     if (selectedDeviceId) {
       fetchRules()
-      fetchFrequentApps() // Fetch actual most-used apps
+      fetchFrequentApps()
     }
     fetchHiddenApps()
   }, [selectedDeviceId])
@@ -104,7 +104,6 @@ const RuleEditor = ({ deviceId }) => {
     }
   }
 
-  // Fetch actual most-used apps for this device
   const fetchFrequentApps = async () => {
     if (!selectedDeviceId) return
 
@@ -112,11 +111,9 @@ const RuleEditor = ({ deviceId }) => {
       const response = await api.get(`/api/reports/device/${selectedDeviceId}/summary`)
       const topApps = response.data?.top_apps || []
 
-      // Filter and format apps - take top 8 most used
       const apps = topApps
         .filter(app => {
           const name = (app.app_name || '').toLowerCase()
-          // Skip obvious system apps
           const skipPatterns = ['service', 'host', 'helper', 'system', 'windows', 'svchost']
           return !skipPatterns.some(p => name.includes(p))
         })
@@ -130,15 +127,13 @@ const RuleEditor = ({ deviceId }) => {
       setFrequentApps(apps)
     } catch (err) {
       console.error('Error fetching frequent apps:', err)
-      setFrequentApps([]) // Will use defaults
+      setFrequentApps([])
     }
   }
 
-  // Get apps to display - combine dynamic + defaults (remove duplicates)
   const getSuggestedApps = () => {
     const allApps = [...frequentApps]
 
-    // Add defaults that aren't already in frequent apps
     DEFAULT_SUGGESTED_APPS.forEach(defaultApp => {
       const exists = allApps.some(
         app => app.keyword.toLowerCase() === defaultApp.keyword.toLowerCase()
@@ -148,7 +143,7 @@ const RuleEditor = ({ deviceId }) => {
       }
     })
 
-    return allApps.slice(0, 12) // Max 12 apps
+    return allApps.slice(0, 12)
   }
 
   const handleSubmit = async (e) => {
@@ -162,7 +157,6 @@ const RuleEditor = ({ deviceId }) => {
         return
       }
     }
-    // Schedule validation - only require apps if target is 'apps'
     if (formData.rule_type === 'schedule' && scheduleTarget === 'apps') {
       if (selectedApps.length === 0) {
         alert('Prosím vyberte alespoň jednu aplikaci')
@@ -177,7 +171,6 @@ const RuleEditor = ({ deviceId }) => {
     }
 
     try {
-      // For device schedule, send empty app_name
       const appNameValue = formData.rule_type === 'schedule' && scheduleTarget === 'device'
         ? ''
         : selectedApps.join(',')
@@ -190,30 +183,12 @@ const RuleEditor = ({ deviceId }) => {
       }
 
       if (editingRuleId) {
-        // Update existing rule
         await api.put(`/api/rules/${editingRuleId}`, payload)
       } else {
-        // Create new rule
         await api.post('/api/rules/', payload)
       }
 
-      setShowForm(false)
-      setEditingRuleId(null) // Reset editing state
-      setSelectedApps([]) // Reset app selection
-      setAppInputValue('')
-      setScheduleTarget('apps') // Reset schedule target
-      setFormData({
-        rule_type: 'app_block',
-        name: '',
-        app_name: '',
-        website_url: '',
-        time_limit: '',
-        enabled: true,
-        schedule_start_time: '',
-        schedule_end_time: '',
-        schedule_days: '',
-        block_network: false
-      })
+      resetForm()
       fetchRules()
     } catch (err) {
       console.error('Error saving rule:', err)
@@ -221,10 +196,18 @@ const RuleEditor = ({ deviceId }) => {
     }
   }
 
+  const resetForm = () => {
+    setShowForm(false)
+    setEditingRuleId(null)
+    setSelectedApps([])
+    setAppInputValue('')
+    setScheduleTarget('apps')
+    setFormData(INITIAL_FORM_DATA)
+  }
+
   const handleEdit = (rule) => {
     setEditingRuleId(rule.id)
 
-    // Parse apps
     let apps = []
     if (rule.app_name) {
       apps = rule.app_name.split(',').filter(a => a)
@@ -232,13 +215,8 @@ const RuleEditor = ({ deviceId }) => {
 
     setSelectedApps(apps)
 
-    // Determind schedule target
     if (rule.rule_type === 'schedule') {
-      if (!rule.app_name) {
-        setScheduleTarget('device')
-      } else {
-        setScheduleTarget('apps')
-      }
+      setScheduleTarget(!rule.app_name ? 'device' : 'apps')
     }
 
     setFormData({
@@ -255,19 +233,10 @@ const RuleEditor = ({ deviceId }) => {
     })
 
     setShowForm(true)
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const formatDays = (daysString) => {
-    if (!daysString) return 'Každý den' // Or no days?
-    // Map 0-6 to localized names
-    const dayMap = { '0': 'Po', '1': 'Út', '2': 'St', '3': 'Čt', '4': 'Pá', '5': 'So', '6': 'Ne' }
-    return daysString.split(',').map(d => dayMap[d.trim()] || d).join(', ')
-  }
-
   const handleDelete = async (ruleId) => {
-    // Odstraněno window.confirm pro plynulejší UX
     try {
       await api.delete(`/api/rules/${ruleId}`)
       await fetchRules()
@@ -276,7 +245,6 @@ const RuleEditor = ({ deviceId }) => {
     }
   }
 
-  // Add app to selection (from suggested or manual input)
   const handleAddApp = (appName) => {
     const trimmed = appName.trim().toLowerCase()
     if (trimmed && !selectedApps.includes(trimmed)) {
@@ -285,12 +253,10 @@ const RuleEditor = ({ deviceId }) => {
     setAppInputValue('')
   }
 
-  // Remove app from selection
   const handleRemoveApp = (appName) => {
     setSelectedApps(selectedApps.filter(a => a !== appName))
   }
 
-  // Handle Enter key in app input
   const handleAppInputKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -305,6 +271,8 @@ const RuleEditor = ({ deviceId }) => {
   if (loading && devices.length === 0) {
     return <div className="loading">Načítání...</div>
   }
+
+  const currentDevice = devices.find(d => d.id === selectedDeviceId)
 
   return (
     <div className="rule-editor">
@@ -323,7 +291,9 @@ const RuleEditor = ({ deviceId }) => {
               </option>
             ))}
           </select>
-          <button onClick={fetchRules} className="button" style={{ padding: '8px 12px' }} title="Obnovit pravidla"><RefreshCw size={16} /></button>
+          <button onClick={fetchRules} className="button" style={{ padding: '8px 12px' }} title="Obnovit pravidla">
+            <RefreshCw size={16} />
+          </button>
         </div>
       </div>
 
@@ -333,7 +303,7 @@ const RuleEditor = ({ deviceId }) => {
             <button
               onClick={() => {
                 setShowForm(!showForm)
-                if (showForm) setEditingRuleId(null) // Reset on cancel
+                if (showForm) setEditingRuleId(null)
               }}
               className={`button ${showForm ? 'button-secondary' : ''}`}
               style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}
@@ -354,7 +324,7 @@ const RuleEditor = ({ deviceId }) => {
                   <option value="app_block">Blokovat aplikaci</option>
                   <option value="time_limit">Absolutní denní limit (pro aplikaci)</option>
                   <option value="daily_limit">Celkový denní limit zařízení</option>
-                  {devices.find(d => d.id === selectedDeviceId)?.device_type !== 'android' && (
+                  {currentDevice?.device_type !== 'android' && (
                     <option value="web_block">Blokovat web</option>
                   )}
                   <option value="schedule">Časový rozvrh (blokovat vše v čase)</option>
@@ -401,7 +371,6 @@ const RuleEditor = ({ deviceId }) => {
                         </div>
                       )}
 
-                      {/* Input for adding apps */}
                       <input
                         type="text"
                         value={appInputValue}
@@ -453,7 +422,6 @@ const RuleEditor = ({ deviceId }) => {
 
               {formData.rule_type === 'schedule' && (
                 <div className="form-group">
-                  {/* Schedule Target Selector */}
                   <label>Rozvrh platí pro:</label>
                   <div className="schedule-target-selector">
                     <label className={`radio-option ${scheduleTarget === 'device' ? 'selected' : ''}`}>
@@ -480,7 +448,6 @@ const RuleEditor = ({ deviceId }) => {
                     </label>
                   </div>
 
-                  {/* Time inputs */}
                   <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                     <div style={{ flex: 1 }}>
                       <label>Od</label>
@@ -540,88 +507,22 @@ const RuleEditor = ({ deviceId }) => {
               <p className="empty">Žádná pravidla pro toto zařízení.</p>
             ) : (
               <div className="rules-grid">
-                {rules.map((rule) => {
-                  const ruleTypeLabels = {
-                    'app_block': 'Blokace aplikace',
-                    'time_limit': 'Časový limit',
-                    'daily_limit': 'Denní limit',
-                    'website_block': 'Blokace webu',
-                    'web_block': 'Blokace webu',
-                    'schedule': 'Časový rozvrh'
-                  }
-                  return (
-                    <div key={rule.id} className="rule-card">
-                      <div className="rule-card-header">
-                        <h4>
-                          {rule.name ? (
-                            <span style={{ fontWeight: '800', marginRight: '6px' }}>{rule.name}</span>
-                          ) : null}
-                          <span style={{ fontWeight: 'normal', opacity: 0.8, fontSize: '0.9em' }}>
-                            ({ruleTypeLabels[rule.rule_type] || rule.rule_type})
-                          </span>
-                        </h4>
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            onClick={() => handleEdit(rule)}
-                            className="icon-button"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
-                            title="Upravit"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <span className={`status-badge ${rule.enabled ? 'active' : 'inactive'}`}>
-                            {rule.enabled ? 'Aktivní' : 'Neaktivní'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="rule-card-body">
-                        {rule.app_name && <p><strong>Aplikace:</strong> {rule.app_name}</p>}
-                        {rule.website_url && <p><strong>Web:</strong> {rule.website_url}</p>}
-                        {rule.time_limit && <p><strong>Limit:</strong> {rule.time_limit} minut</p>}
-                        {(rule.schedule_start_time && rule.schedule_end_time) && (
-                          <p><strong>Rozvrh:</strong> {rule.schedule_start_time} - {rule.schedule_end_time}</p>
-                        )}
-                        {rule.schedule_days && <p><strong>Dny:</strong> {formatDays(rule.schedule_days)}</p>}
-                        {rule.block_network && <p className="network-blocked"><Globe size={14} style={{ marginRight: '4px' }} /> Síť blokována</p>}
-                      </div>
-                      <button
-                        onClick={() => handleDelete(rule.id)}
-                        className="delete-button"
-                      >
-                        Smazat
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Hidden Apps Management */}
-          <div className="hidden-apps-section">
-            <h3 className="section-title"><EyeOff size={20} style={{ marginRight: '8px' }} /> Skryté aplikace (z přehledu)</h3>
-            <p className="section-description">
-              Zde jsou aplikace, které jste ručně skryli z hlavního přehledu pomocí ikony oka.
-            </p>
-            {hiddenApps.length === 0 ? (
-              <p className="empty-small">Žádné aplikace nejsou skryté.</p>
-            ) : (
-              <div className="hidden-apps-list">
-                {hiddenApps.map((app, idx) => (
-                  <div key={idx} className="hidden-app-item">
-                    <span className="hidden-app-name">{app}</span>
-                    <button
-                      className="restore-button"
-                      onClick={() => handleRestoreApp(app)}
-                      title="Znovu zobrazit v přehledu"
-                    >
-                      <Eye size={14} style={{ marginRight: '4px' }} /> Zobrazit
-                    </button>
-                  </div>
+                {rules.map((rule) => (
+                  <RuleCard
+                    key={rule.id}
+                    rule={rule}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
                 ))}
               </div>
             )}
           </div>
+
+          <HiddenAppsSection
+            hiddenApps={hiddenApps}
+            onRestoreApp={handleRestoreApp}
+          />
         </>
       )}
     </div>

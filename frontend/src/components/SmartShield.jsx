@@ -1,50 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import api from '../services/api'
 import {
-    Shield, AlertTriangle, Eye, Plus, Trash2, X, Globe, Smartphone,
-    ChevronDown, ChevronRight, Users, Pill, Swords, Settings, Filter
+    Shield, AlertTriangle, Plus, Trash2, X,
+    Settings, Filter
 } from 'lucide-react'
-import { formatTimestamp } from '../utils/formatting'
+import { AlertCard, CategorySection, CATEGORIES } from './shield'
 import './SmartShield.css'
-
-// Category configuration with colors and icons
-const CATEGORIES = {
-    bullying: {
-        label: 'Šikana',
-        icon: Users,
-        color: '#f97316', // Orange
-        bgColor: 'rgba(249, 115, 22, 0.1)',
-        borderColor: 'rgba(249, 115, 22, 0.3)'
-    },
-    drugs: {
-        label: 'Drogy',
-        icon: Pill,
-        color: '#ef4444',
-        bgColor: 'rgba(239, 68, 68, 0.1)',
-        borderColor: 'rgba(239, 68, 68, 0.3)'
-    },
-    violence: {
-        label: 'Násilí',
-        icon: Swords,
-        color: '#a855f7', // Purple
-        bgColor: 'rgba(168, 85, 247, 0.1)',
-        borderColor: 'rgba(168, 85, 247, 0.3)'
-    },
-    custom: {
-        label: 'Vlastní',
-        icon: Settings,
-        color: '#06b6d4', // Cyan
-        bgColor: 'rgba(6, 182, 212, 0.1)',
-        borderColor: 'rgba(6, 182, 212, 0.3)'
-    }
-}
-
-const SEVERITY_CONFIG = {
-    critical: { color: '#ef4444', label: 'Kritické' },
-    high: { color: '#f97316', label: 'Vysoké' },
-    medium: { color: '#eab308', label: 'Střední' },
-    low: { color: '#22c55e', label: 'Nízké' }
-}
 
 const SmartShield = ({ device }) => {
     const [activeTab, setActiveTab] = useState('alerts')
@@ -57,11 +18,13 @@ const SmartShield = ({ device }) => {
 
     // Keyword form states
     const [newKeyword, setNewKeyword] = useState('')
-    const [newKeywordCategory, setNewKeywordCategory] = useState('custom') // Renamed from newCategory
+    const [newKeywordCategory, setNewKeywordCategory] = useState('custom')
     const [expandedCategories, setExpandedCategories] = useState(new Set())
 
+    // Alert selection state
+    const [selectedAlerts, setSelectedAlerts] = useState(new Set())
+
     useEffect(() => {
-        // Always fetch keywords as they are needed for filtering categories in alerts tab
         fetchKeywords()
         if (activeTab === 'alerts') fetchAlerts()
     }, [activeTab, device.id])
@@ -92,7 +55,7 @@ const SmartShield = ({ device }) => {
 
     const handleAddKeyword = async (e, categoryOverride = null) => {
         e.preventDefault()
-        const category = categoryOverride || newKeywordCategory // Use newKeywordCategory
+        const category = categoryOverride || newKeywordCategory
         if (!newKeyword.trim()) return
 
         try {
@@ -143,9 +106,6 @@ const SmartShield = ({ device }) => {
         })
     }
 
-    // --- Alert Management ---
-    const [selectedAlerts, setSelectedAlerts] = useState(new Set())
-
     const toggleAlertSelection = (alertId) => {
         setSelectedAlerts(prev => {
             const next = new Set(prev)
@@ -192,7 +152,6 @@ const SmartShield = ({ device }) => {
             await api.post('/api/shield/alerts/batch-delete', {
                 alert_ids: Array.from(selectedAlerts)
             })
-            // Optimistic update
             setAlerts(prev => prev.filter(a => !selectedAlerts.has(a.id)))
             setSelectedAlerts(new Set())
         } catch (err) {
@@ -218,160 +177,11 @@ const SmartShield = ({ device }) => {
     // Filter alerts by category
     const filteredAlerts = useMemo(() => {
         if (filterCategory === 'all') return alerts
-        // Match alerts by their associated keyword's category if available
         return alerts.filter(alert => {
             const matchingKeyword = keywords.find(k => k.keyword.toLowerCase() === alert.keyword?.toLowerCase())
             return matchingKeyword?.category === filterCategory
         })
     }, [alerts, filterCategory, keywords])
-
-    const renderAlertCard = (alert) => {
-        const severity = alert.severity || 'high'
-        const isExpanded = expandedAlerts.has(alert.id)
-        const detectedText = alert.detected_text || ''
-        const shouldTruncate = detectedText.length > 150
-
-        return (
-            <div
-                key={alert.id}
-                className={`shield-alert-card ${severity} ${selectedAlerts.has(alert.id) ? 'selected' : ''}`}
-                onClick={() => toggleAlertSelection(alert.id)}
-            >
-                {/* Selection Overlay/Checkbox */}
-                <div className="alert-select-indicator">
-                    <div className={`select-checkbox ${selectedAlerts.has(alert.id) ? 'checked' : ''}`}>
-                        {selectedAlerts.has(alert.id) && <Plus size={10} style={{ transform: 'rotate(45deg)' }} />}
-                    </div>
-                </div>
-
-                {/* Severity indicator stripe */}
-                <div className="alert-severity-stripe" style={{ background: SEVERITY_CONFIG[severity]?.color || '#f97316' }} />
-
-                <div className="alert-card-content">
-                    <div className="alert-card-header">
-                        <div className="alert-icon-box" style={{
-                            background: `${SEVERITY_CONFIG[severity]?.color}20`,
-                            color: SEVERITY_CONFIG[severity]?.color
-                        }}>
-                            <AlertTriangle size={22} />
-                        </div>
-
-                        <div className="alert-meta">
-                            <div className="alert-app-info">
-                                {alert.app_name?.includes('chrome') ? <Globe size={14} /> : <Smartphone size={14} />}
-                                <span>{alert.app_name?.split('.').pop() || 'Aplikace'}</span>
-                            </div>
-                            <span className="alert-timestamp">{formatTimestamp(alert.timestamp)}</span>
-                        </div>
-
-                        <button
-                            className="alert-delete-btn"
-                            onClick={(e) => handleDeleteAlert(alert.id, e)}
-                            title="Smazat záznam"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-
-                    <div className="alert-body">
-                        <div className="alert-keyword-row">
-                            <span className="alert-label">Detekováno:</span>
-                            <span className="alert-keyword-badge">"{alert.keyword}"</span>
-                        </div>
-
-                        {detectedText && (
-                            <div className="alert-detected-text-container">
-                                <p className={`alert-detected-text ${!isExpanded && shouldTruncate ? 'truncated' : ''}`}>
-                                    "{isExpanded || !shouldTruncate ? detectedText : detectedText.slice(0, 150) + '...'}"
-                                </p>
-                                {shouldTruncate && (
-                                    <button
-                                        className="expand-text-btn"
-                                        onClick={() => toggleAlertExpand(alert.id)}
-                                    >
-                                        {isExpanded ? 'Skrýt' : 'Zobrazit vše'}
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {alert.screenshot_url && (
-                        <button
-                            className="shield-proof-btn"
-                            onClick={() => setViewingScreenshot(alert.screenshot_url)}
-                        >
-                            <Eye size={16} />
-                            <span>Zobrazit důkaz</span>
-                        </button>
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    const renderCategorySection = (categoryKey) => {
-        const config = CATEGORIES[categoryKey]
-        const CategoryIcon = config.icon
-        const categoryKeywords = keywordsByCategory[categoryKey] || []
-        const isExpanded = expandedCategories.has(categoryKey)
-
-        return (
-            <div key={categoryKey} className="category-section" style={{ '--category-color': config.color }}>
-                <button
-                    className="category-header"
-                    onClick={() => toggleCategoryExpand(categoryKey)}
-                    style={{ borderColor: config.borderColor }}
-                >
-                    <div className="category-header-left">
-                        <div className="category-icon-box" style={{ background: config.bgColor, color: config.color }}>
-                            <CategoryIcon size={18} />
-                        </div>
-                        <span className="category-label">{config.label}</span>
-                        <span className="category-count" style={{ background: config.bgColor, color: config.color }}>
-                            {categoryKeywords.length}
-                        </span>
-                    </div>
-                    <div className={`category-chevron ${isExpanded ? 'expanded' : ''}`}>
-                        <ChevronRight size={18} />
-                    </div>
-                </button>
-
-                {isExpanded && (
-                    <div className="category-content" style={{ borderColor: config.borderColor }}>
-                        {categoryKeywords.length === 0 ? (
-                            <div className="category-empty">
-                                <CategoryIcon size={24} style={{ color: config.color, opacity: 0.5 }} />
-                                <p>Žádná sledovaná slova v této kategorii</p>
-                            </div>
-                        ) : (
-                            <div className="keyword-chips-grid">
-                                {categoryKeywords.map(kw => (
-                                    <div
-                                        key={kw.id}
-                                        className="keyword-chip-modern"
-                                        style={{
-                                            background: config.bgColor,
-                                            borderColor: config.borderColor
-                                        }}
-                                    >
-                                        <span className="chip-text">{kw.keyword}</span>
-                                        <button
-                                            className="chip-delete"
-                                            onClick={() => handleDeleteKeyword(kw.id)}
-                                            style={{ color: config.color }}
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        )
-    }
 
     return (
         <div className="smart-shield-container">
@@ -459,7 +269,18 @@ const SmartShield = ({ device }) => {
                                     <p>Žádné bezpečnostní incidenty za posledních 24 hodin.</p>
                                 </div>
                             ) : (
-                                filteredAlerts.map(alert => renderAlertCard(alert))
+                                filteredAlerts.map(alert => (
+                                    <AlertCard
+                                        key={alert.id}
+                                        alert={alert}
+                                        isSelected={selectedAlerts.has(alert.id)}
+                                        isExpanded={expandedAlerts.has(alert.id)}
+                                        onSelect={() => toggleAlertSelection(alert.id)}
+                                        onToggleExpand={toggleAlertExpand}
+                                        onDelete={handleDeleteAlert}
+                                        onViewScreenshot={setViewingScreenshot}
+                                    />
+                                ))
                             )}
                         </div>
                     </div>
@@ -474,7 +295,7 @@ const SmartShield = ({ device }) => {
                             </p>
                         </div>
 
-                        {/* Global Add Section - Prioritized */}
+                        {/* Global Add Section */}
                         <div className="global-add-section">
                             <h4>Rychlé přidání</h4>
                             <form className="global-add-form" onSubmit={(e) => handleAddKeyword(e, newKeywordCategory)}>
@@ -502,7 +323,16 @@ const SmartShield = ({ device }) => {
                         </div>
 
                         <div className="categories-grid">
-                            {Object.keys(CATEGORIES).map(key => renderCategorySection(key))}
+                            {Object.keys(CATEGORIES).map(key => (
+                                <CategorySection
+                                    key={key}
+                                    categoryKey={key}
+                                    keywords={keywordsByCategory[key] || []}
+                                    isExpanded={expandedCategories.has(key)}
+                                    onToggle={() => toggleCategoryExpand(key)}
+                                    onDeleteKeyword={handleDeleteKeyword}
+                                />
+                            ))}
                         </div>
                     </div>
                 )}
