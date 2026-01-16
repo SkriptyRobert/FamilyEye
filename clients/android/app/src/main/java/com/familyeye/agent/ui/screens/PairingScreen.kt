@@ -96,7 +96,7 @@ fun PairingScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text("Nastavení FamilyEye") })
+            // Removed as per request for cleaner UI
         }
     ) { padding ->
         Box(
@@ -144,26 +144,18 @@ fun PairingScreen(
                         ) {
                             // Branded Header
                             // Branded Header
+                            // Branded Header
                             androidx.compose.foundation.Image(
                                 painter = androidx.compose.ui.res.painterResource(id = com.familyeye.agent.R.drawable.ic_logo_header),
                                 contentDescription = "FamilyEye",
                                 modifier = Modifier
-                                    .height(64.dp)
-                                    .padding(bottom = 32.dp),
+                                    .fillMaxWidth()
+                                    .height(150.dp)
+                                    .padding(bottom = 16.dp),
                                 contentScale = androidx.compose.ui.layout.ContentScale.Fit
                             )
                             
-
-                            Text(
-                                text = "Připojení k serveru",
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Zadejte údaje z webové aplikace",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Spacer(modifier = Modifier.height(32.dp))
                             
                             Spacer(modifier = Modifier.height(32.dp))
                             

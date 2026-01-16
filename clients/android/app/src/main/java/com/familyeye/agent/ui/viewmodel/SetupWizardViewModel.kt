@@ -79,4 +79,12 @@ class SetupWizardViewModel @Inject constructor(
         val componentName = android.content.ComponentName(context, FamilyEyeDeviceAdmin::class.java)
         return devicePolicyManager.isAdminActive(componentName)
     }
+
+    fun checkBatteryOptimizationPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        }
+        return true
+    }
 }

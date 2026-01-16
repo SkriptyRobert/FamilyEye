@@ -568,6 +568,11 @@
     color: var(--color-success, #10b981);
 }
 
+.action-btn-full.reset-pin:hover:not(:disabled) {
+    border-color: var(--color-warning, #f59e0b);
+    color: var(--color-warning, #f59e0b);
+}
+
 .action-btn-full.resume:hover:not(:disabled) {
     border-color: var(--accent-color, #6366f1);
     color: var(--accent-color, #6366f1);

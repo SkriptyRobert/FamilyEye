@@ -56,6 +56,24 @@ const DeviceList = ({ onSelectDevice }) => {
     }
   }
 
+  const handleResetPin = async (deviceId) => {
+    const newPin = prompt("Zadejte nový 4-místný PIN pro toto zařízení:", "0000");
+    if (newPin === null) return; // Cancelled
+
+    if (!/^\d{4,6}$/.test(newPin)) {
+      alert("PIN musí obsahovat 4 až 6 číslic.");
+      return;
+    }
+
+    try {
+      await api.post(`/api/devices/${deviceId}/reset-pin`, { new_pin: newPin });
+      alert(`Příkaz pro reset PINu (na ${newPin}) byl odeslán.`);
+    } catch (err) {
+      setError('Chyba při resetování PINu');
+      console.error(err);
+    }
+  }
+
   if (loading) return <div className="loading">Načítání...</div>
   if (error) return <div className="error">{error}</div>
 
@@ -83,6 +101,8 @@ const DeviceList = ({ onSelectDevice }) => {
         <div className="devices-flex-container">
           {devices.map((device) => {
             const typeInfo = getDeviceTypeInfo(device.device_type)
+            const isAndroid = typeInfo.id === 'android';
+
             return (
               <div
                 key={device.id}
@@ -119,6 +139,21 @@ const DeviceList = ({ onSelectDevice }) => {
                   >
                     <Edit size={14} style={{ marginRight: '6px' }} /> Upravit
                   </button>
+
+                  {isAndroid && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleResetPin(device.id)
+                      }}
+                      className="card-btn edit"
+                      title="Resetovat PIN"
+                      style={{ color: 'var(--color-warning, #f59e0b)', borderColor: 'var(--color-warning, #f59e0b)' }}
+                    >
+                      <DynamicIcon name="unlock" size={14} style={{ marginRight: '6px' }} /> PIN
+                    </button>
+                  )}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

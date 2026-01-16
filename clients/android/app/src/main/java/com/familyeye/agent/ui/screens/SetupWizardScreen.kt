@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.receiver.FamilyEyeDeviceAdmin
 import com.familyeye.agent.ui.viewmodel.SetupWizardViewModel
+import com.familyeye.agent.ui.components.PermissionCard
 import timber.log.Timber
 
 enum class SetupStep {
@@ -49,14 +50,35 @@ fun SetupWizardScreen(
     var hasUsageStats by remember { mutableStateOf(false) }
     var hasOverlay by remember { mutableStateOf(false) }
     var hasDeviceAdmin by remember { mutableStateOf(false) }
+    var hasBatteryOpt by remember { mutableStateOf(false) }
 
     // Check permissions on composition
+    // Check permissions on composition and ON_RESUME
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    
+    val refreshPermissions = {
+        hasAccessibility = viewModel.checkAccessibilityPermission(context)
+        hasUsageStats = viewModel.checkUsageStatsPermission(context)
+        hasOverlay = viewModel.checkOverlayPermission(context)
+        hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
+        hasBatteryOpt = viewModel.checkBatteryOptimizationPermission(context)
+    }
+
     LaunchedEffect(currentStep) {
         if (currentStep == SetupStep.PERMISSIONS) {
-            hasAccessibility = viewModel.checkAccessibilityPermission(context)
-            hasUsageStats = viewModel.checkUsageStatsPermission(context)
-            hasOverlay = viewModel.checkOverlayPermission(context)
-            hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
+            refreshPermissions()
+        }
+    }
+    
+    DisposableEffect(lifecycleOwner, currentStep) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && currentStep == SetupStep.PERMISSIONS) {
+                refreshPermissions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -126,6 +148,7 @@ fun SetupWizardScreen(
                         hasUsageStats = hasUsageStats,
                         hasOverlay = hasOverlay,
                         hasDeviceAdmin = hasDeviceAdmin,
+                        hasBatteryOpt = hasBatteryOpt,
                         onRequestAccessibility = {
                             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                             context.startActivity(intent)
@@ -147,11 +170,20 @@ fun SetupWizardScreen(
                             }
                             context.startActivity(intent)
                         },
+                        onRequestBatteryOpt = {
+                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = android.net.Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            }
+                        },
                         onRefresh = {
                             hasAccessibility = viewModel.checkAccessibilityPermission(context)
                             hasUsageStats = viewModel.checkUsageStatsPermission(context)
                             hasOverlay = viewModel.checkOverlayPermission(context)
                             hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
+                            hasBatteryOpt = viewModel.checkBatteryOptimizationPermission(context)
                         },
                         onNext = { currentStep = SetupStep.PAIRING },
                         onBack = { currentStep = SetupStep.PIN_SETUP }
@@ -358,15 +390,17 @@ private fun PermissionsStep(
     hasUsageStats: Boolean,
     hasOverlay: Boolean,
     hasDeviceAdmin: Boolean,
+    hasBatteryOpt: Boolean,
     onRequestAccessibility: () -> Unit,
     onRequestUsageStats: () -> Unit,
     onRequestOverlay: () -> Unit,
     onRequestDeviceAdmin: () -> Unit,
+    onRequestBatteryOpt: () -> Unit,
     onRefresh: () -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
-    val allGranted = hasAccessibility && hasUsageStats && hasOverlay && hasDeviceAdmin
+    val allGranted = hasAccessibility && hasUsageStats && hasOverlay && hasDeviceAdmin && hasBatteryOpt
     
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -402,6 +436,15 @@ private fun PermissionsStep(
             description = "Pro monitorování aktivity a detekci obsahu",
             granted = hasAccessibility,
             onClick = onRequestAccessibility
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        PermissionCard(
+            title = "Ignorovat optimalizaci baterie",
+            description = "Pro zajištění běhu na pozadí",
+            granted = hasBatteryOpt,
+            onClick = onRequestBatteryOpt
         )
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -462,51 +505,7 @@ private fun PermissionsStep(
     }
 }
 
-@Composable
-private fun PermissionCard(
-    title: String,
-    description: String,
-    granted: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (granted) 
-                MaterialTheme.colorScheme.primaryContainer 
-            else 
-                MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    description, 
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            if (granted) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = "Uděleno",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                TextButton(onClick = onClick) {
-                    Text("Udělit")
-                }
-            }
-        }
-    }
-}
+
 
 @Composable
 private fun CompleteStep(onFinish: () -> Unit) {

@@ -24,6 +24,9 @@ const SmartShield = ({ device }) => {
     // Alert selection state
     const [selectedAlerts, setSelectedAlerts] = useState(new Set())
 
+    // Error state
+    const [error, setError] = useState(null)
+
     useEffect(() => {
         fetchKeywords()
         if (activeTab === 'alerts') fetchAlerts()
@@ -31,11 +34,13 @@ const SmartShield = ({ device }) => {
 
     const fetchAlerts = async () => {
         setLoading(true)
+        setError(null)
         try {
             const res = await api.get(`/api/shield/alerts/${device.id}`)
             setAlerts(res.data)
         } catch (err) {
             console.error("Failed to fetch alerts", err)
+            setError("Nepodařilo se načíst alerty.")
         } finally {
             setLoading(false)
         }
@@ -43,11 +48,13 @@ const SmartShield = ({ device }) => {
 
     const fetchKeywords = async () => {
         setLoading(true)
+        setError(null)
         try {
             const res = await api.get(`/api/shield/keywords/${device.id}`)
             setKeywords(res.data)
         } catch (err) {
             console.error("Failed to fetch keywords", err)
+            setError("Nepodařilo se načíst klíčová slova.")
         } finally {
             setLoading(false)
         }
@@ -210,6 +217,15 @@ const SmartShield = ({ device }) => {
                     <div className="shield-loading">
                         <div className="loading-spinner" />
                         <span>Načítání...</span>
+                    </div>
+                ) : error ? (
+                    <div className="shield-error">
+                        <AlertTriangle size={32} />
+                        <h3>Chyba načítání dat</h3>
+                        <p>{error}</p>
+                        <button onClick={() => { fetchKeywords(); fetchAlerts(); }} className="shield-proof-btn">
+                            Zkusit znovu
+                        </button>
                     </div>
                 ) : activeTab === 'alerts' ? (
                     <div className="alerts-section">

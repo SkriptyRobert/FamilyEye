@@ -25,8 +25,7 @@ import com.familyeye.agent.ui.screens.AdminLoginScreen
 import com.familyeye.agent.ui.screens.ChildDashboardScreen
 import com.familyeye.agent.ui.screens.PairingScreen
 import com.familyeye.agent.ui.screens.SettingsScreen
-import com.familyeye.agent.ui.screens.SetupPinScreen
-import com.familyeye.agent.ui.screens.SetupPermissionsScreen
+import com.familyeye.agent.ui.screens.SetupWizardScreen
 import com.familyeye.agent.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -54,11 +53,9 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         setContent {
-            MaterialTheme(
-                colorScheme = MaterialTheme.colorScheme.copy(
-                    // Custom colors from resources would be loaded here if we had a full theme setup
-                    // For now using default Material 3 dark scheme or system default
-                )
+        setContent {
+            com.familyeye.agent.ui.theme.FamilyEyeTheme (
+                darkTheme = true // Force dark theme for "Enterprise" feel
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -67,6 +64,7 @@ class MainActivity : ComponentActivity() {
                     FamilyEyeApp()
                 }
             }
+        }
         }
     }
 
@@ -88,50 +86,37 @@ class MainActivity : ComponentActivity() {
         val isPaired by viewModel.isPaired.collectAsState()
 
         // Navigation logic based on pairing state
-        // Only redirect to pairing if device is NOT paired
+        // Navigation logic based on pairing state
+        // Only redirect to setup wizard if device is NOT paired
         LaunchedEffect(isPaired) {
             if (isPaired == false) {
-                navController.navigate("pairing") {
+                navController.navigate("setup_wizard") {
                     popUpTo(0) { inclusive = true }
                 }
             }
-            // Note: We do NOT auto-redirect to dashboard after pairing!
-            // The pairing screen will navigate to setup_pin manually.
         }
 
         NavHost(
             navController = navController,
-            startDestination = "pairing" // Will be redirected by LaunchedEffect if already paired
+            startDestination = "setup_wizard" // Will be redirected by LaunchedEffect if already paired (to be improved)
         ) {
+            composable("setup_wizard") {
+                 SetupWizardScreen(
+                     onSetupComplete = {
+                         navController.navigate("dashboard") {
+                             popUpTo("setup_wizard") { inclusive = true }
+                         }
+                     }
+                 )
+            }
+            
+            // Keep standalone pairing route just in case, or for debugging
             composable("pairing") {
                 PairingScreen(
                     onPairingSuccess = {
-                        // After successful pairing, go to PIN setup (NOT dashboard!)
-                        navController.navigate("setup_pin") {
-                            popUpTo("pairing") { inclusive = true }
-                        }
-                    }
-                )
-            }
-            
-            composable("setup_pin") {
-                SetupPinScreen(
-                    onPinSet = {
-                        // After PIN is set, go to permissions
-                        navController.navigate("setup_permissions") {
-                            popUpTo("setup_pin") { inclusive = true }
-                        }
-                    }
-                )
-            }
-            
-            composable("setup_permissions") {
-                SetupPermissionsScreen(
-                    onPermissionsComplete = {
-                        // After permissions are granted, go to dashboard
-                        navController.navigate("dashboard") {
-                            popUpTo(0) { inclusive = true }
-                        }
+                        // In standalone mode, maybe go to dashboard? 
+                        // But we prefer setup_wizard flow.
+                        navController.navigate("dashboard")
                     }
                 )
             }

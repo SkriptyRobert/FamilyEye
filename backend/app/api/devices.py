@@ -5,7 +5,7 @@ from typing import List
 from datetime import datetime
 import uuid
 from ..database import get_db
-from ..models import Device, User, PairingToken
+from ..models import Device, User, PairingToken, UsageLog, Rule
 from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, PairingTokenResponse, PairingRequest, PairingResponse, PairingStatusResponse
 from ..api.auth import get_current_parent
 from ..services.pairing_service import (
@@ -260,13 +260,23 @@ async def delete_device(
     from ..services.cleanup_service import cleanup_device_data
     cleanup_device_data(db, device_id)
     
-    # Delete usage logs
+    # Delete related data manually just in case cascade fails or logic changes
+    
+    # 1. Unlink or delete PairingTokens associated with this device
+    from ..models import PairingToken
+    # Set device_id to None for tokens used to pair this device (keep history)
+    # OR delete them. Setting to None is safer to avoid FK error.
+    db.query(PairingToken).filter(PairingToken.device_id == device_id).update({PairingToken.device_id: None})
+    
+    # 2. Delete usage logs (redundant if cascade is on, but safe)
     db.query(UsageLog).filter(UsageLog.device_id == device_id).delete()
     
-    # Delete rules
+    # 3. Delete rules
     db.query(Rule).filter(Rule.device_id == device_id).delete()
     
-    # Delete device
+    # 4. Delete Shield Data (Keywords, Alerts are cascaded usually, but files handled by cleanup_device_data)
+    
+    # Finally Delete device
     db.delete(device)
     db.commit()
     
@@ -424,7 +434,43 @@ async def unlock_settings(
     db.add(unlock_rule)
     db.commit()
     
+@router.post("/{device_id}/reset-pin", status_code=status.HTTP_200_OK)
+async def reset_pin(
+    device_id: int,
+    request: dict, # Expects {"new_pin": "1234"}
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """
+    Remotely reset the PIN code for the Android application.
+    Sends a 'RESET_PIN' command to the agent.
+    """
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+        
+    new_pin = request.get("new_pin", "0000")
+    
+    # Validate PIN format (4-6 digits)
+    if not new_pin.isdigit() or len(new_pin) < 4 or len(new_pin) > 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PIN must be 4-6 digits"
+        )
+    
+    # Try Real-Time Push
+    from ..api.websocket import send_command_to_device
+    # Command format: RESET_PIN:1234
+    await send_command_to_device(device.device_id, f"RESET_PIN:{new_pin}")
+    
     return {
         "status": "success", 
-        "message": f"Agent protection disabled for {duration_minutes} minutes"
+        "message": f"PIN reset command sent to device. New PIN: {new_pin}"
     }

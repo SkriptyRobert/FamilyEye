@@ -328,6 +328,21 @@ const AndroidDeviceCard = ({
                         >
                             <Settings size={14} style={{ marginRight: '6px' }} /> Povolit nastavení (5 min)
                         </button>
+
+                        <button
+                            className={`action-btn-full reset-pin ${actionPending[`${device.id}-reset-pin`] ? 'pending' : ''}`}
+                            onClick={() => {
+                                const newPin = prompt("Zadejte nový 4-místný PIN pro toto zařízení:", "0000");
+                                if (newPin && /^\d{4,6}$/.test(newPin)) {
+                                    onDeviceAction(device.id, 'reset-pin', { new_pin: newPin });
+                                } else if (newPin !== null) {
+                                    alert("PIN musí obsahovat 4 až 6 číslic.");
+                                }
+                            }}
+                            disabled={actionPending[`${device.id}-reset-pin`] || !device.is_online}
+                        >
+                            <Unlock size={14} style={{ marginRight: '6px' }} /> Resetovat PIN
+                        </button>
                     </div>
 
                 </div>

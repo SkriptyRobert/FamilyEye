@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight, X, Users, Pill, Swords, Settings } from 'lucide-react'
 
 const CATEGORIES = {
     bullying: {
@@ -38,11 +38,14 @@ const CategorySection = ({
     const config = CATEGORIES[categoryKey]
     if (!config) return null
 
-    const CategoryIcon = require('lucide-react')[
-        categoryKey === 'bullying' ? 'Users' :
-            categoryKey === 'drugs' ? 'Pill' :
-                categoryKey === 'violence' ? 'Swords' : 'Settings'
-    ]
+    const iconMap = {
+        bullying: Users,
+        drugs: Pill,
+        violence: Swords,
+        custom: Settings
+    }
+
+    const CategoryIcon = iconMap[categoryKey] || Settings
 
     return (
         <div className="category-section" style={{ '--category-color': config.color }}>

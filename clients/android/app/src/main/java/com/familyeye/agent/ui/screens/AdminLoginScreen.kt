@@ -19,25 +19,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.familyeye.agent.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminLoginScreen(
+    viewModel: MainViewModel = hiltViewModel(),
     onLoginSuccess: () -> Unit,
     onBack: () -> Unit
 ) {
     var pin by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val correctPin = "0000" // Default PIN for MVP
+    val scope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+
 
     LaunchedEffect(pin) {
         if (pin.length == 4) {
-            if (pin == correctPin) {
+            isLoading = true
+            val isValid = viewModel.verifyPin(pin)
+            if (isValid) {
                 onLoginSuccess()
             } else {
                 Toast.makeText(context, "Nesprávný PIN", Toast.LENGTH_SHORT).show()
                 pin = ""
             }
+            isLoading = false
         }
     }
 
@@ -75,16 +84,20 @@ fun AdminLoginScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(4) { index ->
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (index < pin.length) MaterialTheme.colorScheme.primary 
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                        )
+                    if (isLoading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        repeat(4) { index ->
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (index < pin.length) MaterialTheme.colorScheme.primary 
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                            )
+                        }
                     }
                 }
             }

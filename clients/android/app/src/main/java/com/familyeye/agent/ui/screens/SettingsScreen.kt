@@ -23,7 +23,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.ui.viewmodel.MainViewModel
+import com.familyeye.agent.ui.components.PermissionItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,29 +198,4 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun PermissionItem(label: String, isGranted: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        if (isGranted) {
-            Icon(
-                imageVector = Icons.Outlined.CheckCircle,
-                contentDescription = "Povoleno",
-                tint = MaterialTheme.colorScheme.primary
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = "Vyžadováno",
-                tint = MaterialTheme.colorScheme.error
-            )
-        }
-    }
-}
+

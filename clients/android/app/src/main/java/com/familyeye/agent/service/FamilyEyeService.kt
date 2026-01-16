@@ -140,6 +140,13 @@ class FamilyEyeService : Service() {
                          Timber.i("Screenshot Requested")
                          captureAndUploadScreenshot()
                      }
+                     else -> {
+                         if (command.command.startsWith("RESET_PIN:")) {
+                             val newPin = command.command.substringAfter("RESET_PIN:")
+                             Timber.i("PIN Reset Command Received. New PIN: $newPin")
+                             configRepository.savePin(newPin)
+                         }
+                     }
                  }
              }
         }
