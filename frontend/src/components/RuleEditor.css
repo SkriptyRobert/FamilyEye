@@ -49,15 +49,17 @@
 
 .device-select {
   padding: 12px 16px;
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
   border-radius: 12px;
   font-size: 14px;
-  background: rgba(15, 23, 42, 0.5);
-  color: var(--text-primary);
+  background: #f1f5f9;
+  /* Light gray */
+  color: #1e293b;
+  /* Dark text */
   font-weight: 500;
   cursor: pointer;
   min-width: 200px;
-  transition: all 0.2s;
+  transition: border-color 0.2s;
 }
 
 .device-select:focus {
@@ -170,24 +172,28 @@
 
 .input {
   padding: 14px 16px;
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
   border-radius: 12px;
   font-size: 15px;
-  background: rgba(15, 23, 42, 0.5);
-  color: var(--text-primary);
-  transition: all 0.2s;
+  background: #f1f5f9;
+  /* Light gray background */
+  color: #1e293b;
+  /* Dark text */
+  transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
   box-sizing: border-box;
 }
 
 .input::placeholder {
-  color: var(--text-tertiary, rgba(148, 163, 184, 0.5));
+  color: #64748b;
+  /* Visible gray placeholder */
 }
 
 .input:focus {
   outline: none;
   border-color: var(--accent-color);
-  background: rgba(15, 23, 42, 0.7);
+  background: #e2e8f0;
+  /* Slightly darker on focus */
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
@@ -339,12 +345,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: all 0.2s;
-}
-
-.rule-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  /* NO hover animation - user request */
 }
 
 .rule-card-header {
