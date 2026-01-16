@@ -156,7 +156,7 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
           <button
             key={item.id}
             onClick={() => handleTabChange(item.id)}
-            className={`bottom - nav - item ${activeTab === item.id ? 'active' : ''} `}
+            className={`bottom-nav-item ${activeTab === item.id ? 'active' : ''}`}
           >
             <span className="bottom-nav-icon">{item.icon}</span>
             <span className="bottom-nav-label">{item.label}</span>
