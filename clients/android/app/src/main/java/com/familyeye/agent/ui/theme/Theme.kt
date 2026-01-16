@@ -17,7 +17,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = FamilyEyePurple,
+    primary = FamilyEyePurpleLight, // Use lighter purple for better contrast against dark bg
+    onPrimary = Color.Black,
     secondary = FamilyEyeTeal,
     tertiary = Pink80,
     background = FamilyEyeBackground,
@@ -28,44 +29,24 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = FamilyEyeOnSurfaceVariant
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = FamilyEyePurple,
-    secondary = FamilyEyeTeal,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+// We only define Dark scheme as the app is Enterprise-Dark branded
+// Light scheme is not used but kept for structure if needed later
 
 @Composable
 fun FamilyEyeTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true, // Force Dark Theme
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Force our brand colors by default
+    dynamicColor: Boolean = false, // Force brand colors
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = DarkColorScheme // Always use Dark Scheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = FamilyEyeBackground.toArgb() // Match background
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false // White text icons
         }
     }
 

@@ -11,11 +11,13 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // FamilyEye Brand Colors
+// FamilyEye Brand Colors
 val FamilyEyePurple = Color(0xFF6200EE)
 val FamilyEyePurpleDark = Color(0xFF3700B3)
+val FamilyEyePurpleLight = Color(0xFFBB86FC) // Lighter for text on dark background
 val FamilyEyeTeal = Color(0xFF03DAC5)
 val FamilyEyeBackground = Color(0xFF121212)
 val FamilyEyeSurface = Color(0xFF1E1E1E)
 val FamilyEyeSurfaceVariant = Color(0xFF2D2D2D)
-val FamilyEyeOnSurface = Color(0xFFE0E0E0)
-val FamilyEyeOnSurfaceVariant = Color(0xFFAAAAAA)
+val FamilyEyeOnSurface = Color(0xFFFFFFFF) // Pure White for max contrast
+val FamilyEyeOnSurfaceVariant = Color(0xFFEEEEEE) // Brighter Grey
