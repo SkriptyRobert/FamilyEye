@@ -1,17 +1,20 @@
 package com.familyeye.agent.ui.screens
 
+import android.net.Uri
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -25,6 +28,52 @@ import com.google.zxing.common.HybridBinarizer
 import timber.log.Timber
 import java.util.concurrent.Executors
 
+/**
+ * Data class for parsed QR code content.
+ * QR format: parental-control://pair?token=XXX&backend=https://IP:PORT
+ */
+data class QrPairingData(
+    val token: String,
+    val backendUrl: String
+)
+
+/**
+ * Parse QR code content to extract token and backend URL.
+ */
+fun parseQrCode(qrContent: String): QrPairingData? {
+    return try {
+        // Try URI format first: parental-control://pair?token=XXX&backend=https://IP:PORT
+        if (qrContent.startsWith("parental-control://") || qrContent.startsWith("familyeye://")) {
+            val uri = Uri.parse(qrContent)
+            val token = uri.getQueryParameter("token")
+            val backend = uri.getQueryParameter("backend")
+            
+            if (token != null && backend != null) {
+                return QrPairingData(token, backend)
+            }
+        }
+        
+        // Try JSON format: {"token":"XXX","backend":"https://IP:PORT"}
+        if (qrContent.contains("\"token\"") && qrContent.contains("\"backend\"")) {
+            // Simple regex extraction
+            val tokenMatch = Regex("\"token\"\\s*:\\s*\"([^\"]+)\"").find(qrContent)
+            val backendMatch = Regex("\"backend\"\\s*:\\s*\"([^\"]+)\"").find(qrContent)
+            
+            if (tokenMatch != null && backendMatch != null) {
+                return QrPairingData(
+                    tokenMatch.groupValues[1],
+                    backendMatch.groupValues[1]
+                )
+            }
+        }
+        
+        null
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to parse QR code")
+        null
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairingScreen(
@@ -34,6 +83,7 @@ fun PairingScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showManualInput by remember { mutableStateOf(true) }
     var manualToken by remember { mutableStateOf("") }
+    var manualBackendUrl by remember { mutableStateOf("") }
     
     // Auto-navigate on success
     LaunchedEffect(uiState) {
@@ -44,7 +94,7 @@ fun PairingScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(title = { Text("Párování zařízení") })
+            CenterAlignedTopAppBar(title = { Text("Nastavení FamilyEye") })
         }
     ) { padding ->
         Box(
@@ -60,12 +110,14 @@ fun PairingScreen(
                     ) {
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Párování...")
+                        Text("Připojování k serveru...")
                     }
                 }
                 is PairingUiState.Error -> {
                     Column(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -88,47 +140,94 @@ fun PairingScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = "Zadejte párovací token z webu:",
-                                style = MaterialTheme.typography.titleMedium
+                                text = "Připojení k serveru",
+                                style = MaterialTheme.typography.headlineSmall
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Zadejte adresu serveru a párovací token z webové aplikace",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            // Backend URL Input
+                            OutlinedTextField(
+                                value = manualBackendUrl,
+                                onValueChange = { manualBackendUrl = it },
+                                label = { Text("Adresa serveru") },
+                                placeholder = { Text("např. 192.168.0.100:8000") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                                supportingText = { 
+                                    Text("IP adresa nebo doména serveru FamilyEye") 
+                                }
+                            )
+                            
                             Spacer(modifier = Modifier.height(16.dp))
+                            
+                            // Token Input
                             OutlinedTextField(
                                 value = manualToken,
                                 onValueChange = { manualToken = it },
-                                label = { Text("Token") },
+                                label = { Text("Párovací token") },
+                                placeholder = { Text("Zkopírujte z webové aplikace") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true
                             )
+                            
                             Spacer(modifier = Modifier.height(24.dp))
+                            
                             Button(
                                 onClick = {
-                                    if (manualToken.isNotBlank()) {
+                                    if (manualToken.isNotBlank() && manualBackendUrl.isNotBlank()) {
                                         viewModel.pairDevice(
-                                            token = manualToken,
+                                            token = manualToken.trim(),
+                                            backendUrl = manualBackendUrl.trim(),
                                             deviceName = android.os.Build.MODEL,
                                             macAddress = "02:00:00:00:00:00"
                                         )
                                     }
                                 },
-                                enabled = manualToken.isNotBlank(),
+                                enabled = manualToken.isNotBlank() && manualBackendUrl.isNotBlank(),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Spárovat")
+                                Text("Spárovat zařízení")
                             }
+                            
                             Spacer(modifier = Modifier.height(16.dp))
+                            
                             TextButton(onClick = { showManualInput = false }) {
-                                Text("Použít skener QR kódu")
+                                Text("Skenovat QR kód")
                             }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Text(
+                                text = "QR kód obsahuje adresu serveru i token automaticky",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     } else {
                         // Camera View
                         QRCameraScanner(
-                            onQrCodeScanned = { token ->
-                                viewModel.pairDevice(
-                                    token = token,
-                                    deviceName = android.os.Build.MODEL,
-                                    macAddress = "02:00:00:00:00:00"
-                                )
+                            onQrCodeScanned = { qrContent ->
+                                val parsed = parseQrCode(qrContent)
+                                if (parsed != null) {
+                                    viewModel.pairDevice(
+                                        token = parsed.token,
+                                        backendUrl = parsed.backendUrl,
+                                        deviceName = android.os.Build.MODEL,
+                                        macAddress = "02:00:00:00:00:00"
+                                    )
+                                } else {
+                                    // Fallback: treat as token only, ask for URL
+                                    manualToken = qrContent
+                                    showManualInput = true
+                                }
                             }
                         )
                         
@@ -148,15 +247,21 @@ fun PairingScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Naskenujte QR kód z webu",
+                                text = "Naskenujte QR kód z webové aplikace",
                                 color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "QR kód obsahuje adresu serveru a párovací token",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(
                                 onClick = { showManualInput = true },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Zadat kód ručně")
+                                Text("Zadat ručně")
                             }
                         }
                     }

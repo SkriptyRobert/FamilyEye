@@ -132,4 +132,14 @@ class MainViewModel @Inject constructor(
         val componentName = android.content.ComponentName(context, com.familyeye.agent.receiver.FamilyEyeDeviceAdmin::class.java)
         return devicePolicyManager.isAdminActive(componentName)
     }
+
+    // PIN Protection
+    suspend fun verifyPin(pin: String): Boolean {
+        return repository.verifyPin(pin)
+    }
+
+    suspend fun hasPin(): Boolean {
+        return repository.hasPin()
+    }
 }
+

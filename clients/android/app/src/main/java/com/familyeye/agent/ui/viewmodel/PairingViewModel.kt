@@ -23,13 +23,17 @@ class PairingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<PairingUiState>(PairingUiState.Idle)
     val uiState: StateFlow<PairingUiState> = _uiState.asStateFlow()
 
-    fun pairDevice(token: String, deviceName: String, macAddress: String) {
+    fun pairDevice(token: String, backendUrl: String, deviceName: String, macAddress: String) {
         viewModelScope.launch {
             _uiState.value = PairingUiState.Loading
 
             try {
-                // Generate a persistent UUID for this device installation if needed
-                // For now, we rely on the server validation or use a random one
+                // Save backend URL first - this enables the dynamic URL interceptor
+                val normalizedUrl = normalizeUrl(backendUrl)
+                configRepository.saveBackendUrl(normalizedUrl)
+                Timber.d("Saved backend URL: $normalizedUrl")
+
+                // Generate a persistent UUID for this device installation
                 val deviceId = UUID.randomUUID().toString()
 
                 val request = PairingRequest(
@@ -46,20 +50,30 @@ class PairingViewModel @Inject constructor(
                 if (response.isSuccessful && response.body() != null) {
                     val body = response.body()!!
                     configRepository.savePairingData(
-                         deviceId = body.deviceId, // Server might return same or normalized ID
+                         deviceId = body.deviceId,
                          apiKey = body.apiKey
                     )
                     _uiState.value = PairingUiState.Success
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                     Timber.e("Pairing failed: $errorMsg")
-                    _uiState.value = PairingUiState.Error("Failed to pair: ${response.code()}")
+                    _uiState.value = PairingUiState.Error("Chyba párování: ${response.code()}")
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Pairing exception")
-                _uiState.value = PairingUiState.Error(e.message ?: "Connection error")
+                _uiState.value = PairingUiState.Error(e.message ?: "Chyba připojení")
             }
         }
+    }
+
+    private fun normalizeUrl(url: String): String {
+        var normalized = url.trim()
+        // Ensure https:// prefix
+        if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+            normalized = "https://$normalized"
+        }
+        // Remove trailing slash
+        return normalized.trimEnd('/')
     }
 
     fun resetState() {
