@@ -30,21 +30,41 @@ async def create_rule(
             detail="Device not found"
         )
     
-    # Check for existing rule of the same type for this app/website
+    # Logic to distinguish between updating existing rule vs creating new
+    # 1. App/Web rules: Usually overwrite to prevent duplicates (per user request)
+    # 2. Device Schedules: Allow multiple (per user request)
+    # 3. Device Limits/Lock: Singleton (overwrite)
+    
+    should_check_existing = False
     existing_rule_query = db.query(Rule).filter(
         Rule.device_id == rule_data.device_id,
         Rule.rule_type == rule_data.rule_type
     )
     
     if rule_data.app_name:
+        # specific app rule - overwrite to avoid 10 limits for same app
         existing_rule_query = existing_rule_query.filter(Rule.app_name == rule_data.app_name)
+        should_check_existing = True
     elif rule_data.website_url:
         existing_rule_query = existing_rule_query.filter(Rule.website_url == rule_data.website_url)
-    elif rule_data.rule_type in ["daily_limit", "lock_device"]:
-        # Singleton rules per device
-        pass
+        should_check_existing = True
+    else:
+        # Device-wide rule
+        # Critical fix: Ensure we don't accidentally match App rules by enforcing None
+        existing_rule_query = existing_rule_query.filter(
+            Rule.app_name.is_(None), 
+            Rule.website_url.is_(None)
+        )
         
-    existing_rule = existing_rule_query.first()
+        if rule_data.rule_type in ["daily_limit", "lock_device"]:
+            should_check_existing = True
+        elif rule_data.rule_type == "schedule":
+            # Allow multiple schedules for device
+            should_check_existing = False
+        else:
+            should_check_existing = True
+            
+    existing_rule = existing_rule_query.first() if should_check_existing else None
     
     if existing_rule:
         # Update existing rule
