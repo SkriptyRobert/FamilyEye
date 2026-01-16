@@ -64,7 +64,7 @@ const GlobalStats = memo(({ devices = [], summaries = {} }) => {
                 </span>
                 <div className="stat-content">
                     <span className="stat-value">{onlineDevices} / {devices.length}</span>
-                    <span className="stat-label">Web Online</span>
+                    <span className="stat-label">Online</span>
                 </div>
             </div>
         </div>
