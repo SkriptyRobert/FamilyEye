@@ -185,24 +185,28 @@ private fun WelcomeStep(onNext: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            Icons.Default.Shield,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
+        // Hero Image
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = com.familyeye.agent.R.drawable.img_onboarding),
+            contentDescription = "FamilyEye Shield",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
+                .padding(bottom = 24.dp),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
-        
         Text(
-            text = "FamilyEye",
-            style = MaterialTheme.typography.headlineLarge
+            text = "Vítejte v FamilyEye",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Chráníme vaše děti v digitálním světě",
+            text = "Pokročilá ochrana pro digitální bezpečí vašich dětí",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,17 +215,22 @@ private fun WelcomeStep(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Card(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Průvodce nastavením vám pomůže:",
-                    style = MaterialTheme.typography.titleMedium
+                    text = "Průvodce nastavením:",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                SetupListItem("Nastavit rodičovský PIN")
-                SetupListItem("Udělit potřebná oprávnění")
-                SetupListItem("Připojit se k vašemu účtu")
+                Spacer(modifier = Modifier.height(12.dp))
+                SetupListItem("Vytvoření rodičovského PINu")
+                SetupListItem("Udělení ochranných oprávnění")
+                SetupListItem("Aktivace monitoringu")
             }
         }
         
@@ -229,9 +238,12 @@ private fun WelcomeStep(onNext: () -> Unit) {
         
         Button(
             onClick = onNext,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
         ) {
-            Text("Začít nastavení")
+            Text("Začít nastavení", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

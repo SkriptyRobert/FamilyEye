@@ -7,6 +7,8 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -131,26 +133,39 @@ fun PairingScreen(
                     }
                 }
                 else -> {
-                    if (showManualInput) {
+                        if (showManualInput) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .padding(24.dp)
+                                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
+                            // Branded Header
+                            // Branded Header
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(id = com.familyeye.agent.R.drawable.ic_logo_header),
+                                contentDescription = "FamilyEye",
+                                modifier = Modifier
+                                    .height(64.dp)
+                                    .padding(bottom = 32.dp),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            )
+                            
+
                             Text(
                                 text = "Připojení k serveru",
-                                style = MaterialTheme.typography.headlineSmall
+                                style = MaterialTheme.typography.titleLarge
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Zadejte adresu serveru a párovací token z webové aplikace",
+                                text = "Zadejte údaje z webové aplikace",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(32.dp))
                             
                             // Backend URL Input
                             OutlinedTextField(
@@ -161,6 +176,10 @@ fun PairingScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                ),
                                 supportingText = { 
                                     Text("IP adresa nebo doména serveru FamilyEye") 
                                 }
@@ -175,10 +194,14 @@ fun PairingScreen(
                                 label = { Text("Párovací token") },
                                 placeholder = { Text("Zkopírujte z webové aplikace") },
                                 modifier = Modifier.fillMaxWidth(),
-                                singleLine = true
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                )
                             )
                             
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(32.dp))
                             
                             Button(
                                 onClick = {
@@ -192,24 +215,16 @@ fun PairingScreen(
                                     }
                                 },
                                 enabled = manualToken.isNotBlank() && manualBackendUrl.isNotBlank(),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().height(50.dp)
                             ) {
-                                Text("Spárovat zařízení")
+                                Text("Spárovat zařízení", style = MaterialTheme.typography.titleMedium)
                             }
                             
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
                             
                             TextButton(onClick = { showManualInput = false }) {
                                 Text("Skenovat QR kód")
                             }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Text(
-                                text = "QR kód obsahuje adresu serveru i token automaticky",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     } else {
                         // Camera View
