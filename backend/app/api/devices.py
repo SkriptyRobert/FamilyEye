@@ -256,8 +256,9 @@ async def delete_device(
             detail="Device not found"
         )
     
-    # Delete all related data
-    from ..models import UsageLog, Rule
+    # Delete all related data (files + specialized cleanup)
+    from ..services.cleanup_service import cleanup_device_data
+    cleanup_device_data(db, device_id)
     
     # Delete usage logs
     db.query(UsageLog).filter(UsageLog.device_id == device_id).delete()

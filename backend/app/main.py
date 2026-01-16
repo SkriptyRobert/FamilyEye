@@ -66,6 +66,39 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"SSL initialization skipped: {e}")
 
+    # Start automated cleanup task
+    import asyncio
+    asyncio.create_task(run_daily_cleanup())
+
+
+async def run_daily_cleanup():
+    """Run daily cleanup task in background."""
+    while True:
+        try:
+            # Wait for initial startup (e.g. 1 minute)
+            await asyncio.sleep(60) 
+            
+            logger.info("Running automated daily cleanup...")
+            from .database import SessionLocal
+            from .services.cleanup_service import cleanup_old_data
+            
+            db = SessionLocal()
+            try:
+                cleanup_old_data(db, retention_days_logs=90, retention_days_screenshots=30)
+            finally:
+                db.close()
+            
+            # Sleep for 24 hours
+            logger.info("Cleanup finished. Next run in 24 hours.")
+            await asyncio.sleep(24 * 3600)
+            
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"Error in daily cleanup task: {e}")
+            await asyncio.sleep(3600) # Retry in 1 hour
+
+
 
 @app.get("/api/health")
 async def health_check():
