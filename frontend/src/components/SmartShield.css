@@ -957,7 +957,7 @@
     /* bg-secondary mostly */
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
-    padding: 10px 40px 10px 16px;
+    padding: 10px 16px;
     border-radius: 12px;
     font-size: 14px;
     font-weight: 500;

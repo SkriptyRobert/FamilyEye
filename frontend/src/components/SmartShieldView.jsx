@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import SmartShield from './SmartShield'
 import './SmartShield.css'
-import { ChevronDown, Smartphone, AlertTriangle, Info } from 'lucide-react'
+import { Smartphone, AlertTriangle, Info } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
 
 const SmartShieldView = () => {
@@ -87,7 +87,6 @@ const SmartShieldView = () => {
                             </option>
                         ))}
                     </select>
-                    <ChevronDown size={16} className="device-select-arrow" />
                 </div>
             </div>
 
