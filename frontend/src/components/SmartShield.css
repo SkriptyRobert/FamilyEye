@@ -346,6 +346,15 @@
     }
 }
 
+.shield-description-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    max-width: 600px;
+    line-height: 1.4;
+    opacity: 0.9;
+}
+
 .shield-empty-state h3 {
     font-size: 20px;
     font-weight: 700;

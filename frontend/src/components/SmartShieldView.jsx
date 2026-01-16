@@ -70,6 +70,9 @@ const SmartShieldView = () => {
                         </div>
                     </h1>
                     <p className="shield-subtitle">Pokročilá detekce obsahu a prevence • <span>Chraňte své dítě před hrozbami dříve než nastanou</span></p>
+                    <p className="shield-description-text">
+                        Nástroj monitoruje aktivitu při procházení webu, kliknutí na odkazy a detekuje klíčová slova v komunikačních aplikacích.
+                    </p>
                 </div>
 
                 <div className="device-selector-wrapper">
