@@ -25,6 +25,8 @@ import com.familyeye.agent.ui.screens.AdminLoginScreen
 import com.familyeye.agent.ui.screens.ChildDashboardScreen
 import com.familyeye.agent.ui.screens.PairingScreen
 import com.familyeye.agent.ui.screens.SettingsScreen
+import com.familyeye.agent.ui.screens.SetupPinScreen
+import com.familyeye.agent.ui.screens.SetupPermissionsScreen
 import com.familyeye.agent.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -86,42 +88,50 @@ class MainActivity : ComponentActivity() {
         val isPaired by viewModel.isPaired.collectAsState()
 
         // Navigation logic based on pairing state
+        // Only redirect to pairing if device is NOT paired
         LaunchedEffect(isPaired) {
-            if (isPaired == true) {
-                // Determine start destination based on whether we are already there to avoid loop?
-                // For now, just reset to dashboard if paired
-                // Important: Only navigate if we are NOT already in a paired flow?
-                // Simple logic: If paired, go to dashboard. If not, go to pairing.
-                // But we don't want to force Dashboard if user is in Settings.
-                // However, initial state null -> true should trigger this.
-                
-                // Better approach: Use a "startDestination" calculation or just specific transitions.
-                // But keeping it simple like previous implementation:
-                
-                // If we are on pairing screen, move to dashboard
-                // If isPaired becomes false, move to pairing screen
-                
-                val currentRoute = navController.currentDestination?.route
-                if (currentRoute == "pairing") {
-                    navController.navigate("dashboard") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-            } else if (isPaired == false) {
-                 navController.navigate("pairing") {
-                    popUpTo(0) { inclusive = true } // Clear entire back stack
+            if (isPaired == false) {
+                navController.navigate("pairing") {
+                    popUpTo(0) { inclusive = true }
                 }
             }
+            // Note: We do NOT auto-redirect to dashboard after pairing!
+            // The pairing screen will navigate to setup_pin manually.
         }
 
         NavHost(
             navController = navController,
-            startDestination = "pairing" // We will be redirected by LaunchedEffect if valid
+            startDestination = "pairing" // Will be redirected by LaunchedEffect if already paired
         ) {
             composable("pairing") {
                 PairingScreen(
                     onPairingSuccess = {
-                         // Navigation handled by LaunchedEffect
+                        // After successful pairing, go to PIN setup (NOT dashboard!)
+                        navController.navigate("setup_pin") {
+                            popUpTo("pairing") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            composable("setup_pin") {
+                SetupPinScreen(
+                    onPinSet = {
+                        // After PIN is set, go to permissions
+                        navController.navigate("setup_permissions") {
+                            popUpTo("setup_pin") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            composable("setup_permissions") {
+                SetupPermissionsScreen(
+                    onPermissionsComplete = {
+                        // After permissions are granted, go to dashboard
+                        navController.navigate("dashboard") {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 )
             }
