@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import {
-  RefreshCw, X, Globe, BarChart3, Monitor, Shield
+  RefreshCw, X, Globe, BarChart3, Monitor, Shield, Plus
 } from 'lucide-react'
 import DayPicker from './DayPicker'
 import { RuleCard, HiddenAppsSection } from './rules'
@@ -275,10 +275,14 @@ const RuleEditor = ({ deviceId }) => {
   const currentDevice = devices.find(d => d.id === selectedDeviceId)
 
   return (
-    <div className="rule-editor">
+    <div className="rule-editor premium-card">
       <div className="rule-editor-header">
-        <h2>Správa pravidel</h2>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="header-title-group">
+          <h2>Správa pravidel</h2>
+          <span className="rules-count-badge">{rules.length}</span>
+        </div>
+
+        <div className="header-actions">
           <select
             value={selectedDeviceId || ''}
             onChange={(e) => setSelectedDeviceId(parseInt(e.target.value))}
@@ -291,27 +295,33 @@ const RuleEditor = ({ deviceId }) => {
               </option>
             ))}
           </select>
-          <button onClick={fetchRules} className="button" style={{ padding: '8px 12px' }} title="Obnovit pravidla">
-            <RefreshCw size={16} />
-          </button>
-        </div>
-      </div>
 
-      {selectedDeviceId && (
-        <>
-          <div style={{ marginBottom: '20px' }}>
+          <div className="action-buttons-group">
+            <button
+              onClick={fetchRules}
+              className="refresh-btn-icon"
+              disabled={loading}
+              title="Obnovit pravidla"
+            >
+              <RefreshCw size={18} className={loading ? 'spinning' : ''} />
+            </button>
+
             <button
               onClick={() => {
                 setShowForm(!showForm)
                 if (showForm) setEditingRuleId(null)
               }}
-              className={`button ${showForm ? 'button-secondary' : ''}`}
-              style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}
+              className={`add-rule-btn ${showForm ? 'active' : ''}`}
             >
-              {showForm ? <><X size={16} style={{ marginRight: '8px' }} /> Zrušit {editingRuleId ? 'úpravu' : 'přidávání'}</> : '+ Přidat nové pravidlo'}
+              {showForm ? <X size={18} /> : <Plus size={18} />}
+              <span>{showForm ? 'Zrušit' : 'Nové pravidlo'}</span>
             </button>
           </div>
+        </div>
+      </div>
 
+      {selectedDeviceId && (
+        <>
           {showForm && (
             <form onSubmit={handleSubmit} className="rule-form premium-card">
               <div className="form-group">
@@ -504,7 +514,13 @@ const RuleEditor = ({ deviceId }) => {
             {loading ? (
               <div className="loading-small">Načítání pravidel...</div>
             ) : rules.length === 0 ? (
-              <p className="empty">Žádná pravidla pro toto zařízení.</p>
+              <div className="rules-empty-state">
+                <div className="empty-state-icon">
+                  <Shield size={48} />
+                </div>
+                <h3>Žádná aktivní pravidla</h3>
+                <p>Pro toto zařízení zatím nebyla nastavena žádná omezení. Klikněte na tlačítko "Nové pravidlo" pro začátek.</p>
+              </div>
             ) : (
               <div className="rules-grid">
                 {rules.map((rule) => (
