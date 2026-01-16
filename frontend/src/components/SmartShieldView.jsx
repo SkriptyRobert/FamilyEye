@@ -64,7 +64,7 @@ const SmartShieldView = () => {
                             <Info size={16} className="shield-info-icon" />
                             <div className="shield-info-tooltip">
                                 <p>
-                                    Využívá pokročilý heuristický algoritmus a NLP modely pro detekci kontextuálního nebezpečí v reálném čase.
+                                    Využívá pokročilý heuristický algoritmus a kontextovou analýzu obsahu pro detekci nebezpečí v reálném čase.
                                 </p>
                             </div>
                         </div>
