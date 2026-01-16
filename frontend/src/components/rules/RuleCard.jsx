@@ -20,14 +20,16 @@ const RuleCard = ({ rule, onEdit, onDelete }) => {
     return (
         <div className="rule-card">
             <div className="rule-card-header">
-                <h4>
-                    {rule.name ? (
-                        <span style={{ fontWeight: '800', marginRight: '6px' }}>{rule.name}</span>
-                    ) : null}
-                    <span style={{ fontWeight: 'normal', opacity: 0.8, fontSize: '0.9em' }}>
-                        ({RULE_TYPE_LABELS[rule.rule_type] || rule.rule_type})
-                    </span>
-                </h4>
+                <div className="rule-card-title-group">
+                    <h4 className="rule-name">
+                        {rule.name || RULE_TYPE_LABELS[rule.rule_type] || rule.rule_type}
+                    </h4>
+                    {rule.name && (
+                        <span className="rule-type-subtitle">
+                            {RULE_TYPE_LABELS[rule.rule_type] || rule.rule_type}
+                        </span>
+                    )}
+                </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                         onClick={() => onEdit(rule)}

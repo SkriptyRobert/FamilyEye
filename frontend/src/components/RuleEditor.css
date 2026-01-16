@@ -379,6 +379,26 @@
   line-height: 1.4;
 }
 
+.rule-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rule-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rule-type-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .status-badge {
   font-size: 10px;
   padding: 4px 10px;
