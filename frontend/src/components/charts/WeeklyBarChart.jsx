@@ -134,15 +134,15 @@ const WeeklyBarChart = ({ deviceId, onDateSelect, selectedDate }) => {
             <div className="weekly-bar-chart">
                 <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barCategoryGap="15%">
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" horizontal={true} vertical={false} opacity={0.5} />
                         <XAxis
                             dataKey="day"
-                            tick={{ fontSize: 13, fill: 'rgba(255,255,255,0.9)', fontWeight: 700 }}
+                            tick={{ fontSize: 13, fill: 'var(--text-primary)', fontWeight: 700 }}
                             tickLine={false}
-                            axisLine={{ stroke: 'rgba(255,255,255,0.15)' }}
+                            axisLine={{ stroke: 'var(--border-color)' }}
                         />
                         <YAxis
-                            tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.5)' }}
+                            tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
                             tickLine={false}
                             axisLine={false}
                             unit="h"
