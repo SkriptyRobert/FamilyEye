@@ -9,6 +9,53 @@
     font-family: 'Inter', sans-serif;
 }
 
+/* SmartShieldView specific styles */
+.shield-loading-state {
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.shield-empty-devices {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--space-8);
+    text-align: center;
+}
+
+.shield-empty-devices .empty-device-icon {
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.shield-empty-devices h2 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+}
+
+.shield-empty-devices p {
+    color: var(--text-secondary);
+    max-width: 400px;
+}
+
+.shield-view-content {
+    flex: 1;
+    padding: var(--space-6);
+    overflow-y: auto;
+    background: var(--bg-primary);
+}
+
+.shield-select-device-prompt {
+    text-align: center;
+    padding: var(--space-12);
+    color: var(--text-secondary);
+}
+
 /* =============================================================================
    Header & Tabs
    ============================================================================= */

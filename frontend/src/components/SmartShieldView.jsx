@@ -33,14 +33,14 @@ const SmartShieldView = () => {
 
     const selectedDevice = devices.find(d => d.id === parseInt(selectedDeviceId))
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Načítání zařízení...</div>
+    if (loading) return <div className="shield-loading-state">Načítání zařízení...</div>
 
     if (devices.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                <Smartphone size={48} className="text-gray-300 mb-4" />
-                <h2 className="text-xl font-semibold mb-2">Žádná podporovaná zařízení</h2>
-                <p className="text-gray-500 max-w-md">
+            <div className="shield-empty-devices">
+                <Smartphone size={48} className="empty-device-icon" />
+                <h2>Žádná podporovaná zařízení</h2>
+                <p>
                     Smart Shield je momentálně dostupný pouze pro Android zařízení.
                     Prosím spárujte Android zařízení pro využití této funkce.
                 </p>
@@ -49,7 +49,7 @@ const SmartShieldView = () => {
     }
 
     return (
-        <div className="smart-shield-view h-full flex flex-col">
+        <div className="smart-shield-view">
             {/* Header / Selector */}
             <div className="shield-view-header">
                 <div>
@@ -91,11 +91,11 @@ const SmartShieldView = () => {
             </div>
 
             {/* Content */}
-            <div className="view-content flex-1 p-6 overflow-y-auto bg-[var(--bg-primary)]">
+            <div className="shield-view-content">
                 {selectedDevice ? (
                     <SmartShield device={selectedDevice} />
                 ) : (
-                    <div className="text-center p-12 text-gray-500">Vyberte zařízení</div>
+                    <div className="shield-select-device-prompt">Vyberte zařízení</div>
                 )}
             </div>
         </div>
