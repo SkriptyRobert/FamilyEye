@@ -1,8 +1,12 @@
 # FamilyEye 🛡️
 
-> **Complete parental control solution for families** - Monitor, protect, and guide your children's digital experience.
+> **Complete parental control solution for families**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
+[![Status: Open Source (Non-Commercial)](https://img.shields.io/badge/Status-Open%20Source%20(Non--Commercial)-orange)](README.md)
+
+**FamilyEye je open-source projekt pro osobní nekomerční použití.**
+Komunitní příspěvky (bug fixy, nové funkce) jsou vřele vítány! Podívejte se do [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -126,9 +130,12 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email security@familyeye.app (do not open public issues).
 
-## 📄 License
+## 📄 Licence (Non-Commercial)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Tento projekt je licencován pod **CC BY-NC-SA 4.0** (Uveďte autora-Neužívejte komerčně-Zachovejte licenci).
+Viz soubor [LICENSE](LICENSE) pro detaily.
+
+**Pro komerční použití (firmy, placené služby) nás kontaktujte pro udělení výjimky.**
 
 ---
 
