@@ -7,7 +7,7 @@
 
 #define MyAppName "FamilyEye Server"
 #define MyAppVersion "2.1.5"
-#define MyAppPublisher "BertSoftware"
+#define MyAppPublisher "FamilyEye"
 #define MyAppURL "https://github.com/SkriptyRobert/FamilyEye"
 
 [Setup]
@@ -52,20 +52,20 @@ VersionInfoVersion={#MyAppVersion}
 Name: "czech"; MessagesFile: "compiler:Languages\Czech.isl"
 
 [CustomMessages]
-czech.WelcomeLabel1=Vítejte v instalaci Parental Control
-czech.WelcomeLabel2=Tento průvodce vás provede instalací rodičovského kontrolního centra.%n%nZ tohoto počítače budete moci sledovat a řídit používání všech dětských zařízení.%n%nDoporučujeme zavřít ostatní aplikace před pokračováním.
+czech.WelcomeLabel1=Vítejte v instalaci systému FamilyEye Server
+czech.WelcomeLabel2=Tento průvodce vás provede instalací centrálního rodičovského serveru.%n%nZ tohoto počítače budete moci sledovat aktivitu a spravovat pravidla pro všechna dětská zařízení v síti.%n%nPřed pokračováním doporučujeme ukončit ostatní běžící aplikace.
 czech.ServerPort=Port serveru:
 czech.AdminEmail=Váš e-mail:
 czech.AdminPassword=Heslo (min. 8 znaků):
-czech.AdminPasswordConfirm=Zopakujte heslo:
+czech.AdminPasswordConfirm=Potvrzení hesla:
 czech.CreateAdmin=Vytvoření administrátorského účtu
-czech.CreateAdminDesc=Tento účet použijete pro přihlášení do dashboardu
+czech.CreateAdminDesc=Tento účet bude sloužit pro přihlášení k ovládacímu panelu
 czech.ServerConfig=Nastavení serveru
 czech.ServerConfigDesc=Konfigurace síťového přístupu
-czech.InstallComplete=Instalace dokončena!
-czech.InstallCompleteDesc=Server běží a je připraven k použití.
-czech.OpenDashboard=Otevřít dashboard v prohlížeči
-czech.StartService=Spustit server automaticky při startu Windows
+czech.InstallComplete=Instalace byla dokončena!
+czech.InstallCompleteDesc=Server FamilyEye je spuštěn a připraven k použití.
+czech.OpenDashboard=Otevřít ovládací panel v prohlížeči
+czech.StartService=Spouštět server automaticky při startu systému
 
 [Types]
 Name: "typical"; Description: "Typická instalace (doporučeno)"
@@ -126,8 +126,8 @@ begin
   ConfigPage := CreateInputQueryPage(wpSelectTasks,
     ExpandConstant('{cm:ServerConfig}'),
     ExpandConstant('{cm:ServerConfigDesc}'),
-    'Server bude dostupný na tomto portu z lokální sítě.' + #13#10 +
-    'Výchozí port 8000 je doporučený, změňte pouze pokud je obsazený.');
+    'Server bude dostupný na tomto portu v rámci vaší lokální sítě.' + #13#10 +
+    'Výchozí port 8000 je doporučený, měňte jej pouze pokud je již obsazen jinou službou.');
   ConfigPage.Add(ExpandConstant('{cm:ServerPort}'), False);
   ConfigPage.Values[0] := '8000';
   
@@ -135,8 +135,8 @@ begin
   AdminPage := CreateInputQueryPage(ConfigPage.ID,
     ExpandConstant('{cm:CreateAdmin}'),
     ExpandConstant('{cm:CreateAdminDesc}'),
-    'Tento účet použijete pro přihlášení do webového dashboardu.' + #13#10 +
-    'E-mail musí být platný, heslo musí mít alespoň 8 znaků.');
+    'Tento účet budete používat pro přihlášení k webovému ovládacímu panelu.' + #13#10 +
+    'Zadejte platnou e-mailovou adresu a bezpečné heslo o délce alespoň 8 znaků.');
   AdminPage.Add(ExpandConstant('{cm:AdminEmail}'), False);
   AdminPage.Add(ExpandConstant('{cm:AdminPassword}'), True);
   AdminPage.Add(ExpandConstant('{cm:AdminPasswordConfirm}'), True);
@@ -163,7 +163,7 @@ begin
     Port := StrToIntDef(ConfigPage.Values[0], 0);
     if (Port < 1024) or (Port > 65535) then
     begin
-      MsgBox('Port musí být číslo mezi 1024 a 65535.', mbError, MB_OK);
+      MsgBox('Port musí být celé číslo v rozmezí 1024 až 65535.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
@@ -177,7 +177,7 @@ begin
     // Validace e-mailu
     if (Pos('@', Email) < 2) or (Pos('.', Email) < Pos('@', Email) + 2) then
     begin
-      MsgBox('Zadejte platnou e-mailovou adresu.', mbError, MB_OK);
+      MsgBox('Zadejte prosím platnou e-mailovou adresu.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
@@ -185,7 +185,7 @@ begin
     // Validace hesla
     if Length(AdminPage.Values[1]) < 8 then
     begin
-      MsgBox('Heslo musí mít alespoň 8 znaků.', mbError, MB_OK);
+      MsgBox('Heslo musí obsahovat alespoň 8 znaků.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
@@ -193,7 +193,7 @@ begin
     // Potvrzení hesla
     if AdminPage.Values[1] <> AdminPage.Values[2] then
     begin
-      MsgBox('Hesla se neshodují.', mbError, MB_OK);
+      MsgBox('Zadaná hesla se neshodují.', mbError, MB_OK);
       Result := False;
       Exit;
     end;

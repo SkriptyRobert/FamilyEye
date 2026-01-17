@@ -2,7 +2,7 @@
 AppName=FamilyEye Agent
 AppVersion=2.2.0
 AppVerName=FamilyEye Agent 2.2.0
-AppPublisher=BertSoftware
+AppPublisher=FamilyEye
 AppPublisherURL=https://github.com/SkriptyRobert/FamilyEye
 AppSupportURL=https://github.com/SkriptyRobert/FamilyEye/issues
 AppUpdatesURL=https://github.com/SkriptyRobert/FamilyEye/releases
@@ -51,32 +51,32 @@ Name: "{commonappdata}\FamilyEye\Agent\Logs"; Permissions: users-modify admins-f
 Name: "czech"; MessagesFile: "compiler:Languages\Czech.isl"
 
 [CustomMessages]
-czech.WelcomeLabel1=Instalace FamilyEye
-czech.WelcomeLabel2=Tento průvodce nainstaluje agenta FamilyEye a pomůže vám nastavit bezpečný dětský účet.%n%nCo průvodce udělá:%n• Nainstaluje agenta FamilyEye%n• Spáruje počítač s rodičovským dashboardem%n• Vytvoří dětský účet bez administrátorských práv%n• Nastaví firewall pro ochranu
+czech.WelcomeLabel1=Instalace systému FamilyEye
+czech.WelcomeLabel2=Tento průvodce nainstaluje aplikaci FamilyEye Agent a pomůže vám nastavit zabezpečený dětský účet.%n%nPrůvodce provede následující kroky:%n• Nainstaluje agenta FamilyEye%n• Spáruje tento počítač s rodičovským ovládacím panelem (dashboard)%n• Vytvoří dětský účet bez administrátorských práv%n• Nastaví firewall pro maximální ochranu
 czech.ServerURL=Adresa serveru:
-czech.PairingToken=Párovací token:
+czech.PairingToken=Párovací kód (token):
 czech.DeviceName=Název tohoto zařízení:
 czech.ServerConfig=Připojení k serveru
-czech.ServerConfigDesc=Zadejte adresu rodičovského serveru
+czech.ServerConfigDesc=Zadejte adresu vašeho rodičovského serveru
 czech.PairingConfig=Párování zařízení
-czech.PairingConfigDesc=Zadejte párovací token z rodičovského dashboardu
+czech.PairingConfigDesc=Zadejte párovací kód z rodičovského ovládacího panelu
 czech.TestConnection=Testovat připojení
-czech.ConnectionOK=✓ Připojení OK
-czech.ConnectionFailed=✗ Server nedostupný
-czech.PairingOK=✓ Párování úspěšné!
+czech.ConnectionOK=✓ Připojení bylo úspěšné
+czech.ConnectionFailed=✗ Server je nedostupný
+czech.PairingOK=✓ Párování proběhlo úspěšně!
 czech.PairingFailed=✗ Párování selhalo
 czech.ChildAccountSetup=Nastavení dětského účtu
-czech.ChildAccountSetupDesc=Vytvořte bezpečný účet pro dítě bez administrátorských práv
+czech.ChildAccountSetupDesc=Vytvořte zabezpečený účet pro dítě bez administrátorských práv
 czech.CreateChildAccount=Vytvořit dětský účet (doporučeno)
 czech.ChildUsername=Uživatelské jméno:
 czech.ChildPassword=Heslo pro dítě:
 czech.ChildPasswordConfirm=Potvrzení hesla:
 czech.SecuritySetup=Zabezpečení systému
 czech.SecuritySetupDesc=Nastavení firewallu a ochranných pravidel
-czech.ConfigureFirewall=Nastavit firewall pravidla
+czech.ConfigureFirewall=Konfigurovat pravidla firewallu
 czech.BlockTaskManager=Zakázat Správce úloh pro dětský účet
 czech.BlockControlPanel=Omezit přístup k Ovládacím panelům
-czech.BlockRegistry=Zakázat přístup k registrům
+czech.BlockRegistry=Zakázat přístup k Editoru registru
 
 [Files]
 ; Main Executable (Service)
@@ -373,9 +373,9 @@ begin
     ExpandConstant('{cm:ServerConfig}'),
     ExpandConstant('{cm:ServerConfigDesc}'),
     'Adresa serveru propojí tento počítač s vaším rodičovským účtem.' + #13#10 +
-    'Díky tomu uvidíte aktivitu dítěte na dashboardu.' + #13#10#13#10 +
+    'Díky tomu uvidíte aktivitu dítěte v ovládacím panelu.' + #13#10#13#10 +
     'Kde ji najdu?' + #13#10 +
-    'Na dashboardu klikněte na "+ Přidat" a adresa se zobrazí.' + #13#10#13#10 +
+    'V rodičovském ovládacím panelu klikněte na tlačítko "+ Přidat" a adresa se zobrazí.' + #13#10#13#10 +
     'Příklad: https://192.168.0.100:8000');
   ServerPage.Add(ExpandConstant('{cm:ServerURL}'), False);
   ServerPage.Values[0] := 'https://';
@@ -402,12 +402,12 @@ begin
   PairingPage := CreateInputQueryPage(ServerPage.ID,
     ExpandConstant('{cm:PairingConfig}'),
     ExpandConstant('{cm:PairingConfigDesc}'),
-    'Token je jednorázový bezpečnostní kód platný 5 minut.' + #13#10 +
+    'Kód (token) je jednorázový bezpečnostní prvek platný 5 minut.' + #13#10 +
     'Zajišťuje, že pouze vy můžete přidat toto zařízení.' + #13#10#13#10 +
     'Jak ho získám?' + #13#10 +
-    '1. Na dashboardu klikněte "+ Přidat"' + #13#10 +
-    '2. Klikněte "Vygenerovat párovací kód"' + #13#10 +
-    '3. Zkopírujte kód a vložte ho sem');
+    '1. V rodičovském ovládacím panelu klikněte na "+ Přidat"' + #13#10 +
+    '2. Klikněte na "Vygenerovat párovací kód"' + #13#10 +
+    '3. Zkopírujte kód a vložte jej sem');
   PairingPage.Add(ExpandConstant('{cm:PairingToken}'), False);
   PairingPage.Add(ExpandConstant('{cm:DeviceName}'), False);
   PairingPage.Values[0] := '';
@@ -417,11 +417,11 @@ begin
   ChildAccountPage := CreateInputQueryPage(PairingPage.ID,
     ExpandConstant('{cm:ChildAccountSetup}'),
     ExpandConstant('{cm:ChildAccountSetupDesc}'),
-    'DOPORUCENI: Vytvorte diteti vlastni ucet bez admin prav.' + #13#10 +
-    'Dite pak nebude moci odinstalovat ochranu ani menit nastaveni.' + #13#10#13#10 +
-    'Pokud detsky ucet jiz existuje (napr. "Honzik"), zadejte jeho jmeno' + #13#10 +
-    'a pole hesla nechte PRAZDNA - pouzijeme stavajici ucet.' + #13#10#13#10 +
-    'POZOR: Administratorsky ucet jako detsky NELZE pouzit!');
+    'DOPORUČENÍ: Vytvořte dítěti vlastní účet bez administrátorských práv.' + #13#10 +
+    'Dítě pak nebude moci odinstalovat ochranu ani měnit systémová nastavení.' + #13#10#13#10 +
+    'Pokud dětský účet již existuje (např. "Honzík"), zadejte jeho jméno' + #13#10 +
+    'a pole hesla nechte PRÁZDNÁ – použije se stávající účet.' + #13#10#13#10 +
+    'POZOR: Administrátorský účet nelze použít pro sledované dítě!');
   ChildAccountPage.Add(ExpandConstant('{cm:ChildUsername}'), False);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPassword}'), True);
   ChildAccountPage.Add(ExpandConstant('{cm:ChildPasswordConfirm}'), True);
@@ -444,15 +444,15 @@ begin
   SecurityPage := CreateInputOptionPage(ParentAccountPage.ID,
     ExpandConstant('{cm:SecuritySetup}'),
     ExpandConstant('{cm:SecuritySetupDesc}'),
-    'Tato nastavení chrání před obejitím rodičovské kontroly.' + #13#10 +
-    'Doporučujeme nechat vše zapnuté.' + #13#10#13#10 +
-    'TIP: Pro maximální ochranu zapněte v BIOSu "Secure Boot"' + #13#10 +
-    'a heslo na BIOS – zabrání bootování z USB.',
+    'Tato nastavení chrání před neoprávněným ukončením nebo obejitím kontroly.' + #13#10 +
+    'Doporučujeme ponechat všechny volby aktivní.' + #13#10#13#10 +
+    'TIP: Pro maximální úroveň ochrany zapněte v BIOSu funkci "Secure Boot"' + #13#10 +
+    'a nastavte heslo pro vstup do BIOSu – zabráníte tak spuštění systému z USB.',
     False, False);
-  SecurityPage.Add('Firewall – povolí jen nutnou komunikaci agenta');
-  SecurityPage.Add('Zakázat Správce úloh – dítě nemůže ukončit agenta');
-  SecurityPage.Add('Omezit Ovládací panely – zabrání změnám nastavení');
-  SecurityPage.Add('Zakázat Registry – zabrání pokročilým úpravám');
+  SecurityPage.Add('Firewall – povolí pouze nezbytnou komunikaci agenta');
+  SecurityPage.Add('Zakázat Správce úloh – zabrání dítěti ukončit agenta');
+  SecurityPage.Add('Omezit Ovládací panely – zabrání změnám v nastavení systému');
+  SecurityPage.Add('Zakázat Registry – zabrání pokročilým úpravám systému');
   SecurityPage.Values[0] := True;  // Firewall
   SecurityPage.Values[1] := True;  // Task Manager
   SecurityPage.Values[2] := True;  // Control Panel
@@ -501,14 +501,14 @@ begin
       if ChildUser <> '' then
       begin
         if MsgBox('Chcete smazat vytvořený dětský účet "' + ChildUser + '"?' + #13#10 + 
-                  'Pokud zvolíte Ano, účet a všechna jeho data budou smazána.', mbConfirmation, MB_YESNO) = IDYES then
+                  'Pokud zvolíte Ano, účet a všechna jeho data budou nenávratně odstraněna.', mbConfirmation, MB_YESNO) = IDYES then
         begin
-          if MsgBox('OPRAVDU SMAZAT? ⚠️' + #13#10#13#10 + 
-                    'Všechna data uživatele "' + ChildUser + '" budou nenávratně ztracena!' + #13#10 +
-                    'Tuto akci nelze vzít zpět.', mbCriticalError, MB_YESNO) = IDYES then
+          if MsgBox('POTVRZENÍ SMAZÁNÍ ⚠️' + #13#10#13#10 + 
+                    'Všechna uživatelská data účtu "' + ChildUser + '" budou ztracena!' + #13#10 +
+                    'Tuto akci nelze vzít zpět. Opravdu pokračovat?', mbCriticalError, MB_YESNO) = IDYES then
           begin
             Exec('net', 'user "' + ChildUser + '" /delete', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-            MsgBox('Dětský účet byl odstraněn.', mbInformation, MB_OK);
+            MsgBox('Dětský účet byl úspěšně odstraněn.', mbInformation, MB_OK);
           end;
         end;
       end;
@@ -630,7 +630,7 @@ begin
         
         if ApiKey = '' then
         begin
-          MsgBox('Chyba: Server nevrátil api_key v odpovědi.', mbError, MB_OK);
+          MsgBox('Chyba: Server nevrátil v odpovědi klíč API (api_key).', mbError, MB_OK);
           Exit;
         end;
         
@@ -668,7 +668,7 @@ begin
     except
       // Exception - only show error on last attempt
       if i = 3 then
-        MsgBox('Nepodařilo se připojit k serveru. Zkontrolujte připojení.', mbError, MB_OK);
+        MsgBox('Nepodařilo se navázat spojení se serverem. Zkontrolujte prosím síťové připojení.', mbError, MB_OK);
     end;
   end;
   
@@ -735,16 +735,16 @@ begin
     if DoPairing then
     begin
       PairingSuccess := True;
-      MsgBox('Párování úspěšné! Zařízení je nyní připojeno k rodičovskému dashboardu.', mbInformation, MB_OK);
+      MsgBox('Párování proběhlo úspěšně! Zařízení je nyní propojeno s rodičovským ovládacím panelem.', mbInformation, MB_OK);
     end
     else
     begin
       WizardForm.NextButton.Enabled := True;
       WizardForm.BackButton.Enabled := True;
-      MsgBox('Párování selhalo. Zkontrolujte:' + #13#10 +
-             '• Je server spuštěný a dostupný?' + #13#10 +
-             '• Je párovací token správný a platný?' + #13#10 +
-             '• Máte připojení k síti?', mbError, MB_OK);
+      MsgBox('Párování se nezdařilo. Zkontrolujte prosím následují body:' + #13#10 +
+             '• Je server spuštěn a dostupný v síti?' + #13#10 +
+             '• Je zadán správný a dosud platný párovací kód?' + #13#10 +
+             '• Má toto zařízení přístup k internetu/síti?', mbError, MB_OK);
       Result := False;
       Exit;
     end;
@@ -764,10 +764,10 @@ begin
       // NEW: Check if user is trying to use an admin account
       if IsUserAdmin(ChildUsername) then
       begin
-        MsgBox('CHYBA: Ucet "' + ChildUsername + '" je administrator!' + #13#10#13#10 +
-               'Detsky ucet NESMI mit administratorska prava,' + #13#10 +
-               'protoze by dite mohlo odinstalovat ochranu.' + #13#10#13#10 +
-               'Zadejte jine uzivatelske jmeno.', mbError, MB_OK);
+        MsgBox('CHYBA: Účet "' + ChildUsername + '" má práva administrátora!' + #13#10#13#10 +
+               'Dětský účet NESMÍ mít administrátorská práva,' + #13#10 +
+               'aby dítě nemohlo vypnout nebo odinstalovat ochranu.' + #13#10#13#10 +
+               'Zvolte prosím jiného uživatele nebo vytvořte nový účet.', mbError, MB_OK);
         Result := False;
         Exit;
       end;
@@ -778,16 +778,16 @@ begin
         // Existing account - no password needed
         if (ChildPassword = '') and (ChildPasswordConfirm = '') then
         begin
-          MsgBox('Ucet "' + ChildUsername + '" jiz existuje.' + #13#10 +
-                 'Pouzijeme tento stavajici ucet pro dite.' + #13#10#13#10 +
-                 'Na tento ucet budou aplikovana bezpecnostni omezeni.', mbInformation, MB_OK);
+          MsgBox('Účet "' + ChildUsername + '" již v systému existuje.' + #13#10 +
+                 'Tento účet bude nastaven jako sledovaný dětský účet.' + #13#10#13#10 +
+                 'Při instalaci na něj budou aplikována zvolená bezpečnostní omezení.', mbInformation, MB_OK);
           // Skip password validation - using existing account
         end
         else
         begin
-          MsgBox('Ucet "' + ChildUsername + '" jiz existuje!' + #13#10#13#10 +
-                 'Pokud chcete pouzit existujici ucet, nechte heslo PRAZDNE.' + #13#10 +
-                 'Pokud chcete vytvorit NOVY ucet, zadejte jine uzivatelske jmeno.', mbInformation, MB_OK);
+          MsgBox('Účet "' + ChildUsername + '" již existuje!' + #13#10#13#10 +
+                 'Pokud chcete použít tento existující účet, ponechte pole pro heslo PRÁZDNÁ.' + #13#10 +
+                 'Pokud chcete vytvořit NOVÝ účet, zvolte jiné uživatelské jméno.', mbInformation, MB_OK);
           Result := False;
           Exit;
         end;

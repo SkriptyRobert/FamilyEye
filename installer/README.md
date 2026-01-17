@@ -6,8 +6,8 @@ Projekt obsahuje dva oddělené instalátory:
 
 | Instalátor | Účel | Cílový počítač |
 |------------|------|----------------|
-| **Server** | Dashboard pro rodiče | Rodičovský PC |
-| **Agent** | Monitorování | Dětský PC |
+| **FamilyEye Server** | Ovládací panel pro rodiče | Rodičovský PC |
+| **FamilyEye Agent** | Monitorování a ochrana | Dětský PC |
 
 ---
 
@@ -21,15 +21,15 @@ Projekt obsahuje dva oddělené instalátory:
 5. Přidá firewall pravidlo
 
 ### Průvodce instalací:
-- **Port serveru** - na jakém portu běží (výchozí: 8000)
-- **E-mail a heslo** - pro přihlášení do dashboardu
+- **Port serveru** – na jakém portu poběží webové rozhraní (výchozí: 8000)
+- **E-mail a heslo** – pro přihlášení do rodičovské administrace
 
 ### Build:
 ```
 1. Nainstalujte Inno Setup 6
 2. Otevřete installer/server/setup_server.iss
 3. Build → Compile
-4. Výstup: installer/server/output/ParentalControlServer_Setup_2.0.0.exe
+4. Výstup: `installer/server/output/FamilyEyeServer_Setup_2.1.5.exe`
 ```
 
 ---
@@ -44,16 +44,16 @@ Projekt obsahuje dva oddělené instalátory:
 5. Vyžaduje heslo pro odinstalaci
 
 ### Průvodce instalací:
-- **Adresa serveru** - kde běží rodičovský dashboard
-- **Párovací token** - z rodičovského dashboardu
-- **Název zařízení** - jak se bude zobrazovat
+- **Adresa serveru** – URL adresa, kde běží rodičovský server
+- **Párovací kód (token)** – bezpečnostní kód z rodičovského ovládacího panelu
+- **Název zařízení** – jak se bude počítač zobrazovat v přehledu
 
 ### Build:
 ```
 1. Nainstalujte Inno Setup 6
 2. Otevřete installer/agent/setup_agent.iss
 3. Build → Compile
-4. Výstup: installer/agent/output/ParentalControlAgent_Setup_2.1.5.exe
+4. Výstup: `installer/agent/output/FamilyEyeAgent_Setup_2.2.0.exe`
 ```
 
 ---
@@ -66,11 +66,10 @@ installer/
 │
 ├── agent/                       # Agent instalátor
 │   ├── setup_agent.iss         # Inno Setup skript
-│   ├── agent_installer_gui.py  # Alternativní Python GUI
 │   ├── assets/                 # Ikony, obrázky
-│   │   ├── agent_icon.ico
-│   │   ├── wizard_image.bmp
-│   │   └── wizard_small.bmp
+│   │   ├── setup_icon.ico
+│   │   ├── wizard_side.bmp
+│   │   └── wizard_top.bmp
 │   └── output/                 # Zkompilované EXE
 │
 └── server/                     # Server instalátor
@@ -95,10 +94,11 @@ Pro build instalátoru je potřeba vytvořit:
 
 | Soubor | Rozměry | Popis |
 |--------|---------|-------|
-| `agent_icon.ico` | 256x256 | Ikona agenta |
-| `server_icon.ico` | 256x256 | Ikona serveru |
-| `wizard_image.bmp` | 164x314 | Obrázek vlevo v průvodci |
-| `wizard_small.bmp` | 55x55 | Malá ikona vpravo nahoře |
+| `setup_icon.ico` | 256x256 | Hlavní ikona aplikace |
+| `wizard_side.bmp` | 164x314 | Obrázek vlevo v průvodci (Agent) |
+| `wizard_top.bmp` | 55x55 | Malá ikona vpravo nahoře (Agent) |
+| `wizard_image.bmp` | 164x314 | Obrázek vlevo v průvodci (Server) |
+| `wizard_small.bmp` | 55x55 | Malá ikona vpravo nahoře (Server) |
 
 ### Python Embedded
 Pro standalone instalátor je potřeba přidat:
