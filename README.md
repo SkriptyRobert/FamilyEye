@@ -14,12 +14,11 @@ Komunitní příspěvky (bug fixy, nové funkce) jsou vřele vítány! Podívejt
 ## ✨ Features
 
 - **📱 Multi-Platform Agents** - Windows & Android monitoring clients
-- **🔒 Smart Shield** - Real-time content scanning with keyword detection
+- **🛡️ Smart Shield (Game-Changer)** - Advanced real-time on-screen content analysis. Goes beyond simple DNS blocking to detect harmful visuals and text in any app.
 - **⏰ Screen Time Management** - Daily limits, app limits, and schedules
 - **📊 Usage Analytics** - Detailed reports with insights and trends
 - **🌐 Web Dashboard** - Modern React-based parent dashboard
 - **🔐 Offline-First** - Agents work without internet, sync when connected
-- **👻 Ghost Mode** - Stealth operation without child awareness
 
 ## 🏗️ Architecture
 

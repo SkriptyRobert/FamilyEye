@@ -1,9 +1,10 @@
 # FamilyEye 🛡️
 
-> **Kompletní řešení rodičovské kontroly** - Monitorujte, chraňte a veďte své děti digitálním světem.
+> **Kompletní řešení rodičovské kontroly**
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_CZ)
 [![Status: Open Source (Non-Commercial)](https://img.shields.io/badge/Status-Open%20Source%20(Non--Commercial)-orange)](README_CZ.md)
+[![Language: English](https://img.shields.io/badge/Lang-English-blue)](README.md)
 
 **FamilyEye je open-source projekt pro osobní nekomerční použití.**
 Komunitní příspěvky (opravy chyb, nové funkce) jsou vřele vítány! Podívejte se do [CONTRIBUTING_CZ.md](CONTRIBUTING_CZ.md).
@@ -12,82 +13,122 @@ Komunitní příspěvky (opravy chyb, nové funkce) jsou vřele vítány! Podív
 
 ## ✨ Funkce
 
-### 🖥️ Windows Agent
-- **Sledování v reálném čase**: Monitoruje aktivní okna a využití aplikací.
-- **Inteligentní limity**: Nastavte denní limity pro konkrétní aplikace nebo kategorie.
-- **Blokování obsahu**: Blokuje nevhodné weby a aplikace (Smart Shield).
-- **Screenshoty na vyžádání**: Vzdálený pohled na obrazovku dítěte.
-- **Offline Mode**: Funguje i bez internetu (data se synchronizují po připojení).
+- **📱 Multi-Platformní Agenti** - Monitorovací klienti pro Windows a Android
+- **🛡️ Smart Shield (Game-Changer)** - Pokročilá analýza obsahu na obrazovce v reálném čase. Jde nad rámec běžného blokování webů – detekuje škodlivý text i vizuály v jakékoli aplikaci.
+- **⏰ Správa Času** - Denní limity, limity aplikací a rozvrhy
+- **📊 Analýza Používání** - Detailní reporty s přehledy a trendy
+- **🌐 Webový Dashboard** - Moderní rodičovské rozhraní (React)
+- **🔐 Offline-First** - Agenti fungují bez internetu, synchronizují se po připojení
 
-### 📱 Android Agent
-- **Detekce aplikací**: Sleduje používání mobilních aplikací.
-- **Vynucení pravidel**: Blokuje aplikace po překročení limitu (překryvnou obrazovkou).
-- **Bezpečná odinstalace**: Ochrana proti smazání dítětem.
+## 🏗️ Architektura
 
-### 🌐 Dashboard (Rodičovská část)
-- **Přehledné statistiky**: Grafy používání (denní/týdenní).
-- **Správa pravidel**: Jednoduché rozhraní pro nastavení limitů a povolených časů.
-- **Vzdálené ovládání**: Zamykání zařízení, reset PINu (v přípravě).
-
----
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Rodičovský Dashboard                    │
+│                    (React + Vite + CSS)                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ HTTPS
+┌─────────────────────────▼───────────────────────────────────┐
+│                    Backend API                               │
+│              (FastAPI + SQLite + WebSocket)                  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ HTTPS
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│   Windows Agent     │       │   Android Agent     │
+│  (Python + PyQt5)   │       │ (Kotlin + Compose)  │
+└─────────────────────┘       └─────────────────────┘
+```
 
 ## 🚀 Rychlý Start
 
 ### Prerekvizity
-- Python 3.11+
+
+- Python 3.10+
 - Node.js 18+
-- (Volitelně) Docker
+- (Pro Android) Android Studio + JDK 17
 
-### Instalace (Vývojová verze)
+### 1. Klonování & Nastavení Backendu
 
-1.  **Klonování repozitáře**
-    ```bash
-    git clone https://github.com/SkriptyRobert/FamilyEye.git
-    cd FamilyEye
-    ```
+```bash
+git clone https://github.com/SkriptyRobert/FamilyEye.git
+cd FamilyEye
 
-2.  **Nastavení Backend**
-    ```bash
-    cd backend
-    python -m venv venv
-    .\venv\Scripts\activate
-    pip install -r requirements.txt
-    python run_https.py
-    ```
+# Vytvoření virtuálního prostředí
+cd backend
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 
-3.  **Nastavení Frontend**
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
+# Instalace závislostí
+pip install -r requirements.txt
 
-4.  **Otevřete v prohlížeči**: `https://localhost:5173` (nebo dle výstupu konzole)
+# Spuštění backendu
+python run_https.py
+```
 
----
+### 2. Nastavení Frontendu
 
-## 🏗️ Architektura
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Projekt se skládá ze tří hlavních částí:
+### 3. Přístup k Dashboardu
 
-1.  **Backend (FastAPI)**: Centrální mozek, REST API, databáze (SQLite/PostgreSQL).
-2.  **Frontend (React/Vite)**: Moderní webové rozhraní pro rodiče.
-3.  **Agenti (Windows/Android)**: Klientské aplikace běžící na zařízeních dětí.
+Otevřete `https://localhost:8000` ve svém prohlížeči.
 
----
+Výchozí přihlašovací údaje budou vytvořeny při prvním spuštění.
+
+## 📁 Struktura Projektu
+
+```
+FamilyEye/
+├── backend/           # FastAPI backend server
+│   ├── app/           # Kód aplikace
+│   │   ├── api/       # REST endpointy
+│   │   ├── models/    # SQLAlchemy modely
+│   │   └── services/  # Byznys logika
+│   └── requirements.txt
+├── frontend/          # React dashboard
+│   └── src/
+│       ├── components/
+│       └── services/
+├── clients/
+│   ├── android/       # Android agent (Kotlin)
+│   └── windows/       # Windows agent (Python)
+├── installer/         # Inno Setup instalátory
+├── docs/              # Dokumentace
+└── certs/             # SSL certifikáty
+```
+
+## 📚 Dokumentace
+
+| Dokument | Popis |
+|----------|-------|
+| [Architektura](docs/ARCHITECTURE.md) | Přehled architektury systému |
+| [Backend API](docs/API.md) | Dokumentace REST API |
+| [Frontend](docs/FRONTEND.md) | Průvodce vývojem dashboardu |
+| [Nasazení](docs/DEPLOYMENT.md) | Průvodce produkčním nasazením |
+| [Vývoj](docs/DEVELOPMENT.md) | Průvodce nastavením vývojového prostředí |
 
 ## 🤝 Jak přispět
 
-Chcete pomoci? Skvělé! Přečtěte si prosím [CONTRIBUTING_CZ.md](CONTRIBUTING_CZ.md) pro detaily o našem procesu a pravidlech.
+Příspěvky jsou vítány! Prosím podívejte se do [CONTRIBUTING_CZ.md](CONTRIBUTING_CZ.md) pro instrukce.
 
----
+### Rychlý průvodce přispíváním
 
-## 🔒 Bezpečnost
+1. Forkněte repozitář
+2. Vytvořte feature branch (`git checkout -b feature/uzasna-funkce`)
+3. Commitněte změny (`git commit -m 'Pridana uzasna funkce'`)
+4. Pushněte do branche (`git push origin feature/uzasna-funkce`)
+5. Otevřete Pull Request
 
-Naše politika zabezpečení je popsána v [SECURITY_CZ.md](SECURITY_CZ.md).
-Pokud najdete zranitelnost, **nehlaste ji veřejně**, ale napište na **robert.pesout@gmail.com**.
+## 🔐 Bezpečnost
 
----
+Pro bezpečnostní zranitelnosti viz [SECURITY_CZ.md](SECURITY_CZ.md) nebo napište na **robert.pesout@gmail.com** (neotvírejte veřejné issues).
 
 ## 📄 Licence (Nekomerční)
 
@@ -97,3 +138,9 @@ Viz soubor [LICENSE_CZ](LICENSE_CZ) pro detaily.
 **Autor:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com
 
 **Pro komerční použití (firmy, placené služby) nás kontaktujte pro udělení výjimky.**
+
+---
+
+<p align="center">
+  Vyrobeno s ❤️ pro rodiny všude na světě
+</p>
