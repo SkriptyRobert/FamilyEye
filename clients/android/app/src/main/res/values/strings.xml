@@ -30,7 +30,7 @@
     
     <!-- Notifications -->
     <string name="notification_limit_warning_title">Upozornění na limit</string>
-    <string name="notification_limit_warning_text">Zbývá %d%% času pro %s</string>
+    <string name="notification_limit_warning_text">Zbývá %1$d%% času pro %2$s</string>
     <string name="notification_limit_reached_title">Limit dosažen</string>
-    <string name="notification_limit_reached_text">Čas pro %s vypršel</string>
+    <string name="notification_limit_reached_text">Čas pro %1$s vypršel</string>
 </resources>

@@ -356,15 +356,63 @@ const SmartShield = ({ device }) => {
 
             {/* Screenshot Modal */}
             {viewingScreenshot && (
-                <div className="shield-modal-overlay" onClick={() => setViewingScreenshot(null)}>
-                    <div className="shield-modal-content" onClick={e => e.stopPropagation()}>
-                        <button className="shield-modal-close" onClick={() => setViewingScreenshot(null)}>
-                            <X size={20} />
-                        </button>
-                        <img src={viewingScreenshot} alt="Evidence" />
-                    </div>
-                </div>
+                <SecureImageModal
+                    url={viewingScreenshot}
+                    onClose={() => setViewingScreenshot(null)}
+                />
             )}
+        </div>
+    )
+}
+
+// Internal component for secure image handling
+const SecureImageModal = ({ url, onClose }) => {
+    const [blobUrl, setBlobUrl] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        let mounted = true
+        const fetchImage = async () => {
+            try {
+                const response = await api.get(url, { responseType: 'blob' })
+                if (mounted) {
+                    const objectUrl = URL.createObjectURL(response.data)
+                    setBlobUrl(objectUrl)
+                    setLoading(false)
+                }
+            } catch (err) {
+                console.error("Failed to load shield screenshot", err)
+                if (mounted) {
+                    setError("Nepodařilo se načíst snímek")
+                    setLoading(false)
+                }
+            }
+        }
+
+        fetchImage()
+
+        return () => {
+            mounted = false
+            if (blobUrl) URL.revokeObjectURL(blobUrl)
+        }
+    }, [url])
+
+    return (
+        <div className="shield-modal-overlay" onClick={onClose}>
+            <div className="shield-modal-content" onClick={e => e.stopPropagation()}>
+                <button className="shield-modal-close" onClick={onClose}>
+                    <X size={20} />
+                </button>
+
+                {loading ? (
+                    <div className="shield-loading-image">Načítání důkazu...</div>
+                ) : error ? (
+                    <div className="shield-error-image">{error}</div>
+                ) : (
+                    <img src={blobUrl} alt="Evidence" />
+                )}
+            </div>
         </div>
     )
 }

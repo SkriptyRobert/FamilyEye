@@ -165,14 +165,14 @@
 
 .filter-chip:hover {
     background: var(--bg-primary);
-    border-color: var(--text-secondary);
-    color: var(--text-primary);
+    border-color: var(--chip-color, var(--text-secondary));
+    color: var(--chip-color, var(--text-primary));
 }
 
 .filter-chip.active {
-    background: rgba(99, 102, 241, 0.15);
-    border-color: var(--accent-color);
-    color: var(--accent-color);
+    background: var(--chip-bg, rgba(99, 102, 241, 0.15));
+    border-color: var(--chip-color, var(--accent-color));
+    color: var(--chip-color, var(--accent-color));
 }
 
 /* =============================================================================
@@ -1199,4 +1199,23 @@
 .alert-delete-btn:hover {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
+}
+
+/* Secure Image Loading States */
+.shield-loading-image,
+.shield-error-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 300px;
+    min-height: 200px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.shield-error-image {
+    color: #ef4444;
+    flex-direction: column;
+    gap: 8px;
 }

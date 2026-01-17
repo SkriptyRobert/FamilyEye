@@ -55,6 +55,8 @@ import {
     SortDesc,
     Circle,
     CircleDot,
+    Shield,
+    Scroll,
 } from 'lucide-react'
 
 // Map of icon names to components
@@ -152,6 +154,14 @@ const iconMap = {
     // Status indicators
     circle: Circle,
     'circle-dot': CircleDot,
+
+    // Smart Shield
+    shield: Shield,
+    'shield-alert': Shield,
+    'shield-check': Shield,
+
+    // Rules
+    scroll: Scroll,
 }
 
 /**

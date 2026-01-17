@@ -38,18 +38,30 @@ def cleanup_device_data(db: Session, device_id: int):
     # 1. Delete Shield Alert Screenshots
     alerts = db.query(ShieldAlert).filter(ShieldAlert.device_id == device_id).all()
     for alert in alerts:
-        if alert.screenshot_url and "/static/uploads/" in alert.screenshot_url:
-            # Extract relative path: /static/uploads/filename -> uploads/filename
-            # Adjust based on how URL is stored. 
-            # If stored as http://.../static/uploads/..., split on static/
-            try:
-                if "static/uploads/" in alert.screenshot_url:
+        rel_path = None
+        if alert.screenshot_url:
+            # Handle legacy static URLs
+            if "/static/uploads/" in alert.screenshot_url:
+                try:
                     parts = alert.screenshot_url.split("static/uploads/")
                     if len(parts) > 1:
                         rel_path = os.path.join("uploads", parts[1])
-                        delete_file_safely(rel_path)
-            except Exception as e:
-                logger.error(f"Failed to parse/delete screenshot {alert.screenshot_url}: {e}")
+                except Exception:
+                    pass
+            # Handle new secure API URLs
+            elif "/api/files/screenshots/" in alert.screenshot_url:
+                try:
+                    # Format: .../api/files/screenshots/{device_id}/{filename}
+                    # Physical path: uploads/screenshots/{device_id}/{filename}
+                    parts = alert.screenshot_url.split("/api/files/screenshots/")
+                    if len(parts) > 1:
+                        # parts[1] is device_id/filename
+                        rel_path = os.path.join("uploads", "screenshots", parts[1])
+                except Exception:
+                    pass
+
+        if rel_path:
+             delete_file_safely(rel_path)
 
     # 2. Delete DB Records (Cascades usually handle this, but explicit is safer for files)
     # The actual DB deletion will be handled by cascade or caller if they delete the Device object.
@@ -101,15 +113,26 @@ def cleanup_old_data(db: Session, retention_days_logs: int = None, retention_day
         deleted_alerts = 0
         for alert in old_alerts:
             # Physical file delete
-            if alert.screenshot_url and "static/uploads/" in alert.screenshot_url:
-                try:
-                    parts = alert.screenshot_url.split("static/uploads/")
-                    if len(parts) > 1:
-                        rel_path = os.path.join("uploads", parts[1])
-                        if delete_file_safely(rel_path):
-                            deleted_files += 1
-                except Exception:
-                    pass
+            rel_path = None
+            if alert.screenshot_url:
+                if "static/uploads/" in alert.screenshot_url:
+                    try:
+                        parts = alert.screenshot_url.split("static/uploads/")
+                        if len(parts) > 1:
+                            rel_path = os.path.join("uploads", parts[1])
+                    except Exception:
+                        pass
+                elif "/api/files/screenshots/" in alert.screenshot_url:
+                    try:
+                        parts = alert.screenshot_url.split("/api/files/screenshots/")
+                        if len(parts) > 1:
+                            rel_path = os.path.join("uploads", "screenshots", parts[1])
+                    except Exception:
+                        pass
+            
+            if rel_path:
+                if delete_file_safely(rel_path):
+                    deleted_files += 1
             
             db.delete(alert)
             deleted_alerts += 1

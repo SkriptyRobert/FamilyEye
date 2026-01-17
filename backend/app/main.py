@@ -8,6 +8,7 @@ from .config import settings
 from . import models
 import logging
 import sys
+import asyncio
 
 # Setup logging
 logging.basicConfig(
@@ -65,7 +66,7 @@ async def startup_event():
         logger.warning(f"SSL initialization skipped: {e}")
 
     # Start automated cleanup task
-    import asyncio
+    # Start automated cleanup task
     asyncio.create_task(run_daily_cleanup())
 
 
@@ -139,6 +140,11 @@ uploads_path = os.path.join(os.getcwd(), "uploads")
 os.makedirs(uploads_path, exist_ok=True)
 # NOTE: Screenshots are NOT served as public static files for security.
 # Use /api/files/screenshots/{device_id}/{filename} with authentication instead.
+
+# Serve Installers (Public)
+installers_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "installer", "agent", "output")
+if os.path.exists(installers_path):
+    app.mount("/installers", StaticFiles(directory=installers_path), name="installers")
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist")

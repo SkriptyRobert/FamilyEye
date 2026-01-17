@@ -57,7 +57,7 @@ const NotificationDropdown = () => {
                                 allNotifications.push({
                                     id,
                                     type: 'error',
-                                    iconName: 'x-circle',
+                                    iconName: 'scroll',
                                     title: `${app.app_name} - limit překročen`,
                                     message: `${device.name}: Použito ${Math.round(app.usage_minutes)}/${app.limit_minutes} min`,
                                     deviceId: device.id,
@@ -69,7 +69,7 @@ const NotificationDropdown = () => {
                                 allNotifications.push({
                                     id: idWarn,
                                     type: 'warning',
-                                    iconName: 'alert-triangle',
+                                    iconName: 'scroll',
                                     title: `${app.app_name} - blízko limitu`,
                                     message: `${device.name}: Zbývá ${Math.round(app.remaining_minutes)} min`,
                                     deviceId: device.id,
@@ -90,18 +90,18 @@ const NotificationDropdown = () => {
                             allNotifications.push({
                                 id: `${device.id}-daily-exceeded-${todayStr}`,
                                 type: 'error',
-                                iconName: 'circle-dot',
+                                iconName: 'scroll',
                                 title: 'Denní limit vyčerpán',
                                 message: `${device.name}: ${usedMinutes}/${limitMinutes} min`,
                                 deviceId: device.id,
-                                deviceName: device.name,
+                                name: device.name,
                                 priority: 0
                             })
                         } else if (percentage >= 80) {
                             allNotifications.push({
                                 id: `${device.id}-daily-warning-${todayStr}`,
                                 type: 'warning',
-                                iconName: 'alert-triangle',
+                                iconName: 'scroll',
                                 title: 'Denní limit se blíží',
                                 message: `${device.name}: Zbývá ${limitMinutes - usedMinutes} min`,
                                 deviceId: device.id,
