@@ -1,29 +1,47 @@
-# Politika Zabezpečení (Security Policy)
-
-Bereme bezpečnost vážně. FamilyEye je nástroj pro ochranu rodin, a proto je bezpečnost na prvním místě.
+# Politika Zabezpečení
 
 ## Podporované Verze
 
-Opravy bezpečnostních chyb poskytujeme pro následující verze:
-
-| Verze | Podporováno | Poznámka |
-| ------- | ------------------ | ----- |
-| 1.0.x | ✅ Ano | Současná stabilní verze |
-| < 1.0 | ❌ Ne | Starší vývojové verze |
+| Verze | Podporováno |
+| ------- | ------------------ |
+| 1.x.x   | :white_check_mark: |
 
 ## Hlášení Zranitelností
 
-Pokud objevíte bezpečnostní chybu, nahlaste nám ji prosím soukromě:
+**Prosím NEHLAŠTE bezpečnostní chyby prostřednictvím veřejných GitHub Issues.**
 
-**Email:** robert.pesout@gmail.com (Róbert Pešout, BertSoftware)
-**Doba odezvy:** Do 48 hodin.
+Pokud objevíte bezpečnostní zranitelnost, nahlaste ji prosím následovně:
 
-**NEOTVÍREJTE** prosím veřejné GitHub Issue pro bezpečnostní chyby, dokud nejsou opraveny.
+1. **Email:** Pošlete detaily na **robert.pesout@gmail.com** (Róbert Pešout, BertSoftware)
+2. **Uveďte:**
+   - Popis zranitelnosti
+   - Kroky k reprodukci
+   - Potenciální dopad
+   - Navrhované opravy (volitelné)
 
-## Best Practices pro Uživatele
+### Co očekávat
 
-1.  Měňte si `SECRET_KEY` v `.env` pro produkční nasazení.
-2.  Nikdy nevystavujte port 8000 veřejně do internetu bez SSL/TLS.
-3.  Používejte silná hesla pro FamilyEye účty.
+- **Doba odezvy:** Snažíme se odpovědět do 48 hodin
+- **Aktualizace:** Budeme vás informovat o našem postupu
+- **Kredit:** Rádi vás uvedeme v poděkování u opravy (pokud si to přejete)
 
-Děkujeme, že pomáháte udržet FamilyEye bezpečné! 🛡️
+## Bezpečnostní Doporučení (Best Practices)
+
+Při nasazování FamilyEye:
+
+1. **Vždy nastavte `SECRET_KEY`** - Nikdy nepoužívejte defaultní hodnotu v produkci
+2. **Používejte HTTPS** - Umístěte platné SSL certifikáty do `certs/`
+3. **Zabezpečte databázi** - Udržujte `parental_control.db` šifrovanou nebo chráněnou
+4. **Aktualizujte** - Pravidelně aktualizujte na nejnovější verzi
+
+## Známá Bezpečnostní Opatření
+
+### Uložení PINu (Android Agent)
+Android agent používá SHA-256 pro lokální uložení PINu. Pro zvýšení bezpečnosti v budoucích verzích plánujeme migraci na bcrypt se solí specifickou pro zařízení.
+
+### Self-Signed Certifikáty
+Pro nasazení v lokální síti jsou self-signed certifikáty akceptovatelné. Pro veřejné nasazení použijte Let's Encrypt nebo podobnou certifikační autoritu.
+
+---
+
+Děkujeme, že pomáháte udržet FamilyEye bezpečné! 🔐
