@@ -4,6 +4,10 @@ import socket
 import secrets
 from typing import Optional
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if present
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
