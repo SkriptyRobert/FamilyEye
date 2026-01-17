@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
 import { Sun, Moon, Eye } from 'lucide-react'
-import axios from 'axios'
-import { setToken, setBackendUrl, getBackendUrl } from '../utils/auth'
-import logo from '../assets/logo.png' // Import logo
+import api, { updateApiBaseURL } from '../../services/api'
+import { setToken, setBackendUrl, getBackendUrl } from '../../utils/auth'
+import logo from '../../assets/logo.png' // Import logo
 import './Login.css'
 
 const Login = ({ onLogin, darkMode, setDarkMode }) => {
@@ -102,9 +101,12 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
     setError('')
 
     try {
+      // Update global API service with the current backend URL
+      updateApiBaseURL(backendUrl)
       setBackendUrl(backendUrl)
+
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
-      const response = await axios.post(`${backendUrl}${endpoint}`, {
+      const response = await api.post(endpoint, {
         email,
         password,
         role: 'parent'

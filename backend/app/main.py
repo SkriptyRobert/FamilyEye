@@ -30,11 +30,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware - povolení všech originů pro development
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Pro development - v produkci použít konkrétní seznam
-    allow_credentials=False,  # Musí být False když allow_origins=["*"]
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,  # Changed to True since we use specific origins
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -46,10 +46,8 @@ security = HTTPBearer()
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup."""
-    logger.info(f"Parental Control Backend starting on {settings.HOST}:{settings.PORT}")
+    logger.info(f"FamilyEye Backend starting on {settings.HOST}:{settings.PORT}")
     logger.info(f"Database: {settings.DATABASE_URL}")
-    print(f"Parental Control Backend starting on {settings.HOST}:{settings.PORT}")
-    print(f"Database: {settings.DATABASE_URL}")
     
     # Initialize SSL certificates if not exists
     try:
@@ -109,16 +107,7 @@ async def health_check():
 @app.get("/api/info")
 async def get_server_info():
     """Get server information for client configuration."""
-    import socket
-    def get_local_ip():
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except Exception:
-            return "127.0.0.1"
+    from .config import get_local_ip
     
     local_ip = get_local_ip()
     return {
