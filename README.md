@@ -1,0 +1,137 @@
+# FamilyEye 🛡️
+
+> **Complete parental control solution for families** - Monitor, protect, and guide your children's digital experience.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+## ✨ Features
+
+- **📱 Multi-Platform Agents** - Windows & Android monitoring clients
+- **🔒 Smart Shield** - Real-time content scanning with keyword detection
+- **⏰ Screen Time Management** - Daily limits, app limits, and schedules
+- **📊 Usage Analytics** - Detailed reports with insights and trends
+- **🌐 Web Dashboard** - Modern React-based parent dashboard
+- **🔐 Offline-First** - Agents work without internet, sync when connected
+- **👻 Ghost Mode** - Stealth operation without child awareness
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Parent Dashboard                        │
+│                    (React + Vite + CSS)                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ HTTPS
+┌─────────────────────────▼───────────────────────────────────┐
+│                    Backend API                               │
+│              (FastAPI + SQLite + WebSocket)                  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ HTTPS
+          ┌───────────────┴───────────────┐
+          ▼                               ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│   Windows Agent     │       │   Android Agent     │
+│  (Python + PyQt5)   │       │ (Kotlin + Compose)  │
+└─────────────────────┘       └─────────────────────┘
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- (For Android) Android Studio + JDK 17
+
+### 1. Clone & Setup Backend
+
+```bash
+git clone https://github.com/SkriptyRobert/Parential-Control-Enterprise.git
+cd Parential-Control-Enterprise
+
+# Create virtual environment
+cd backend
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run backend
+python run_https.py
+```
+
+### 2. Setup Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 3. Access Dashboard
+
+Open `https://localhost:8000` in your browser.
+
+Default credentials will be created on first run.
+
+## 📁 Project Structure
+
+```
+FamilyEye/
+├── backend/           # FastAPI backend server
+│   ├── app/           # Application code
+│   │   ├── api/       # REST endpoints
+│   │   ├── models/    # SQLAlchemy models
+│   │   └── services/  # Business logic
+│   └── requirements.txt
+├── frontend/          # React dashboard
+│   └── src/
+│       ├── components/
+│       └── services/
+├── clients/
+│   ├── android/       # Android agent (Kotlin)
+│   └── windows/       # Windows agent (Python)
+├── installer/         # Inno Setup installers
+├── docs/              # Documentation
+└── certs/             # SSL certificates
+```
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System architecture overview |
+| [Backend API](docs/API.md) | REST API documentation |
+| [Frontend](docs/FRONTEND.md) | Dashboard development guide |
+| [Deployment](docs/DEPLOYMENT.md) | Production deployment guide |
+| [Development](docs/DEVELOPMENT.md) | Developer setup guide |
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Quick Contribution Guide
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 🔐 Security
+
+For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email security@familyeye.app (do not open public issues).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  Made with ❤️ for families everywhere
+</p>
