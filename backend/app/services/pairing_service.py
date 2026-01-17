@@ -136,8 +136,13 @@ def create_device_from_pairing(
         import json
         import os
         
-        # Path to default_keywords.json (root of backend)
-        json_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "default_keywords.json")
+        # Path to smart_shield_defaults.json (in app/config)
+        # __file__ is backend/app/services/pairing_service.py
+        # os.path.dirname(__file__) -> backend/app/services
+        # os.path.dirname(..) -> backend/app
+        # .. / config / smart_shield_defaults.json
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        json_path = os.path.join(base_dir, "config", "smart_shield_defaults.json")
         
         if os.path.exists(json_path):
             with open(json_path, "r", encoding="utf-8") as f:

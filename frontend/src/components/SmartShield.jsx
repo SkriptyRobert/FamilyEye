@@ -169,7 +169,7 @@ const SmartShield = ({ device }) => {
 
     // Group keywords by category
     const keywordsByCategory = useMemo(() => {
-        const grouped = { bullying: [], drugs: [], violence: [], custom: [] }
+        const grouped = { adult: [], bullying: [], drugs: [], violence: [], custom: [] }
         keywords.forEach(kw => {
             const cat = kw.category || 'custom'
             if (grouped[cat]) {

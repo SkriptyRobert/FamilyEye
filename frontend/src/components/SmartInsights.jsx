@@ -13,6 +13,13 @@ const SmartInsights = ({ insights }) => {
 
     if (!insights) return <div className="bento-card">Načítám analýzu...</div>;
 
+    const formatDecimalHour = (decimal) => {
+        if (decimal == null) return '?';
+        const hours = Math.floor(decimal);
+        const minutes = Math.round((decimal - hours) * 60);
+        return `${hours}:${minutes.toString().padStart(2, '0')}`;
+    };
+
     const renderAnomalies = () => {
         const { anomalies } = insights;
         const items = [];
@@ -21,7 +28,8 @@ const SmartInsights = ({ insights }) => {
             items.push({ icon: <Moon size={16} />, text: `Noční sova: Aktivita po 22:00!`, type: 'error' });
         }
         if (anomalies.is_early_start) {
-            items.push({ icon: <Sunrise size={16} />, text: `Dnes začal o hodně dříve (${anomalies.avg_start_hour}h obvykle)`, type: 'warning' });
+            const timeStr = formatDecimalHour(anomalies.avg_start_hour);
+            items.push({ icon: <Sunrise size={16} />, text: `Dnes začal dříve (běžně kolem ${timeStr})`, type: 'warning' });
         }
         if (anomalies.new_apps && anomalies.new_apps.length > 0) {
             items.push({ icon: <Info size={16} />, text: `Nové aplikace: ${anomalies.new_apps.join(', ')}`, type: 'info' });
@@ -126,7 +134,7 @@ const SmartInsights = ({ insights }) => {
                 <div className="insight-educational-panel">
                     <div className="edu-section">
                         <h4><Scale size={16} style={{ marginRight: '6px' }} /> Digitální Bilance</h4>
-                        <p>Opírá se o doporučení <strong>WHO</strong> a <strong>AAP</strong>. Pro školní věk je 2h rekreačního času limit pro zachování zdravého spánku a psychické pohody.</p>
+                        <p>Opírá se o doporučení <a href="https://www.who.int/news/item/24-04-2019-to-grow-up-healthy-children-need-to-sit-less-and-play-more" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>WHO</a> a <a href="https://www.aap.org/en/patient-care/media-and-children/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>AAP</a>. Pro školní věk je 2h rekreačního času limit pro zachování zdravého spánku a psychické pohody.</p>
                     </div>
                     <div className="edu-section">
                         <h4><Search size={16} style={{ marginRight: '6px' }} /> Anomálie</h4>

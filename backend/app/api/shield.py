@@ -66,7 +66,7 @@ def get_agent_keywords(auth: AgentRulesRequest, db: Session = Depends(get_db)):
 # --- Alert Reporting (Agent) ---
 
 @router.post("/alert", status_code=status.HTTP_201_CREATED)
-def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
+async def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
     """Report a content detection alert from the agent."""
     # Lookup by string GUID
     device = db.query(Device).filter(Device.device_id == alert_data.device_id).first()
@@ -129,6 +129,22 @@ def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_db)):
     )
     db.add(alert)
     db.commit()
+    
+    # Notify Parent via WebSocket
+    try:
+        from .websocket import notify_user
+        await notify_user(device.parent_id, {
+            "type": "shield_alert",
+            "device_id": device.id,
+            "device_name": device.name,
+            "keyword": alert.keyword,
+            "app_name": alert.app_name,
+            "severity": alert.severity,
+            "timestamp": alert.timestamp.isoformat() if alert.timestamp else None
+        })
+    except Exception as e:
+        print(f"Failed to send notification: {e}")
+
     return {"status": "alert_recorded"}
 
 # --- Alert Viewing (Frontend) ---

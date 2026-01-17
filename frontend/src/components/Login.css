@@ -21,6 +21,16 @@
   color: var(--accent-color);
   text-align: center;
   margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.login-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
 }
 
 .login-box h2 {
@@ -105,4 +115,3 @@ form {
   font-size: 14px;
   border: 1px solid var(--error-color);
 }
-

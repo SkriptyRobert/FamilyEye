@@ -133,6 +133,32 @@ const NotificationDropdown = () => {
                             })
                         }
                     }
+
+                    // --- NEW: Fetch Smart Shield Alerts ---
+                    try {
+                        const shieldRes = await api.get(`/api/shield/alerts/${device.id}?limit=5`)
+                        const alerts = shieldRes.data || []
+                        const today = new Date().setHours(0, 0, 0, 0)
+
+                        alerts.forEach(alert => {
+                            // Only show alerts from today (or very recent unread)
+                            const alertDate = new Date(alert.timestamp)
+                            if (alertDate >= today && !alert.is_read) {
+                                allNotifications.push({
+                                    id: `shield-${alert.id}`,
+                                    type: 'error',
+                                    iconName: 'shield-alert', // DynamicIcon must support this or fallback
+                                    title: 'Smart Shield Alert!',
+                                    message: `${device.name}: Detekováno "${alert.keyword}" (${alert.app_name || 'Neznámá aplikace'})`,
+                                    deviceId: device.id,
+                                    deviceName: device.name,
+                                    priority: 0 // Highest priority
+                                })
+                            }
+                        })
+                    } catch (e) {
+                        console.error('Failed to fetch shield alerts', e)
+                    }
                 } catch (err) {
                     console.error(`Error fetching summary for device ${device.id}:`, err)
                 }

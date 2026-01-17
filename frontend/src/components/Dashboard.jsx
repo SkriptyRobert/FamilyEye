@@ -9,6 +9,7 @@ import StatusOverview from './StatusOverview'
 import SmartShieldView from './SmartShieldView' // Import
 import NotificationDropdown from './NotificationDropdown'
 import './Dashboard.css'
+import logo from '../assets/logo.png'
 import {
   LayoutDashboard,
   Smartphone,
@@ -74,7 +75,7 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
             <Menu size={24} color="var(--text-primary)" />
           </button>
           <h1 className="header-title">
-            <span className="title-icon">👁️</span>
+            <img src={logo} alt="FamilyEye" className="title-logo" />
             <span className="title-text">FamilyEye</span>
             <span className="title-subtitle">Rodičovská kontrola</span>
           </h1>

@@ -1,7 +1,13 @@
 import React from 'react'
-import { ChevronRight, X, Users, Pill, Swords, Settings } from 'lucide-react'
+import { ChevronRight, X, Users, Pill, Swords, Settings, EyeOff } from 'lucide-react'
 
 const CATEGORIES = {
+    adult: {
+        label: 'Dospělí',
+        color: '#db2777', // Pink-600
+        bgColor: 'rgba(219, 39, 119, 0.1)',
+        borderColor: 'rgba(219, 39, 119, 0.3)'
+    },
     bullying: {
         label: 'Šikana',
         color: '#f97316',
@@ -39,6 +45,7 @@ const CategorySection = ({
     if (!config) return null
 
     const iconMap = {
+        adult: EyeOff,
         bullying: Users,
         drugs: Pill,
         violence: Swords,

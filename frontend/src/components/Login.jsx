@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Sun, Moon, Eye } from 'lucide-react'
 import axios from 'axios'
 import { setToken, setBackendUrl, getBackendUrl } from '../utils/auth'
+import logo from '../assets/logo.png' // Import logo
 import './Login.css'
 
 const Login = ({ onLogin, darkMode, setDarkMode }) => {
@@ -132,7 +133,10 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
         </div>
-        <h1>👁️ FamilyEye</h1>
+        <h1>
+          <img src={logo} alt="FamilyEye" className="login-logo" />
+          FamilyEye
+        </h1>
         <h2>{isLogin ? 'Přihlášení' : 'Registrace'}</h2>
 
         <div className="toggle">
