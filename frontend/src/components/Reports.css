@@ -1,6 +1,16 @@
 /* =============================================
-   REPORTS - BENTO GRID LAYOUT
+   REPORTS - BENTO GRID LAYOUT - MODULAR VERSION
+   ============================================= 
+   
+   Imported Modules:
+   - Reports/ReportMetrics.css
+   - Reports/ReportApps.css
+   - Reports/ProcessMonitor.css
    ============================================= */
+
+@import './Reports/ReportMetrics.css';
+@import './Reports/ReportApps.css';
+@import './Reports/ProcessMonitor.css';
 
 .reports-container {
   padding: 24px;
@@ -68,311 +78,6 @@
 .bento-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-
-/* =============================================
-   TOP ROW: METRIC CARDS
-   ============================================= */
-
-.metric-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 140px;
-}
-
-.metric-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.metric-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.metric-value.huge {
-  font-size: 42px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.metric-value.app-name {
-  font-size: 22px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metric-value.muted {
-  font-size: 16px;
-  color: var(--text-secondary);
-}
-
-.metric-subvalue {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.metric-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 12px;
-  margin-top: 8px;
-}
-
-.metric-badge.green {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-}
-
-.metric-badge.red {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-/* Total Time Card - Special Styling */
-.metric-card.total-time {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
-  border-color: rgba(99, 102, 241, 0.3);
-}
-
-/* Daily Limit Progress */
-.limit-progress-container {
-  width: 100%;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 8px 0;
-}
-
-.limit-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
-  border-radius: 6px;
-  transition: width 0.5s ease;
-}
-
-.limit-progress-bar.warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.limit-progress-bar.exceeded {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-/* =============================================
-   MIDDLE ROW: CHART + APPS
-   ============================================= */
-
-.weekly-chart {
-  grid-column: span 2;
-  min-height: 280px;
-}
-
-.apps-card {
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-
-.apps-card h3 {
-  margin: 0 0 16px 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.apps-list {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-/* App Item */
-.app-item {
-  cursor: pointer;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.app-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--border-color);
-  transform: translateX(4px);
-}
-
-/* App Row with icon */
-.app-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.app-icon-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.app-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.app-item .app-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.app-duration {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(99, 102, 241, 0.3);
-  padding: 2px 8px;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-
-/* App Progress Bar */
-.app-bar-container {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.app-bar {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-/* Limit Indicator Row */
-.app-limit-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.app-limit-bar-container {
-  flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.app-limit-bar {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #10b981, #34d399);
-  transition: width 0.3s ease;
-}
-
-.app-limit-bar.warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-}
-
-.app-limit-bar.critical,
-.app-limit-bar.exceeded {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-}
-
-.app-limit-text {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.app-limit-text.warning {
-  color: #f59e0b;
-}
-
-.app-limit-text.critical,
-.app-limit-text.exceeded {
-  color: #ef4444;
-}
-
-/* No apps state */
-.no-apps {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--text-secondary);
-  padding: 20px;
-  gap: 8px;
-}
-
-.no-apps-icon {
-  font-size: 32px;
-  opacity: 0.5;
-}
-
-/* Top App Card enhancements */
-.top-app-display {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
-}
-
-.top-app-icon {
-  font-size: 28px;
-}
-
-/* Badge Colors */
-.metric-badge.badge-red {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.metric-badge.badge-green {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-/* Limit percentage display */
-.limit-percentage {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 4px 0;
 }
 
 /* =============================================
@@ -460,6 +165,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Adjust imported components grid positioning */
   .metric-card:nth-child(3) {
     grid-column: span 2;
   }
@@ -506,11 +212,9 @@
   .bento-footer,
   .process-monitor-panel {
     grid-column: auto !important;
-    /* Reset grid positioning */
     width: 100%;
     box-sizing: border-box;
     min-width: 0;
-    /* Allow flex shrinking */
   }
 
   .metric-value.huge {
@@ -520,6 +224,52 @@
   .bento-footer {
     flex-wrap: wrap;
     gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 16px 12px;
+    text-align: center;
+  }
+
+  .footer-stat {
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .footer-value {
+    font-size: 16px;
+  }
+
+  .footer-label {
+    font-size: 11px;
+  }
+
+  /* Monitor specific mobile overrides */
+  .monitor-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .process-table {
+    max-height: 400px;
+  }
+
+  .process-table-header {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+
+  .process-row {
+    padding: 12px 12px;
+  }
+
+  .process-row .col-name {
+    font-size: 13px;
+  }
+
+  .process-row .col-status {
+    font-size: 11px;
   }
 }
 
@@ -540,258 +290,4 @@
   .metric-card {
     min-height: 120px;
   }
-}
-
-/* =============================================
-   PROCESS MONITOR PANEL - IT STYLE
-   ============================================= */
-
-.process-monitor-panel {
-  grid-column: 1 / -1;
-  background: linear-gradient(180deg,
-      rgba(0, 0, 0, 0.6),
-      rgba(10, 15, 20, 0.8));
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  border-radius: 8px;
-  overflow: hidden;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-}
-
-.monitor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: rgba(16, 185, 129, 0.15);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.monitor-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.monitor-title h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #10b981;
-  letter-spacing: 0.5px;
-}
-
-.process-count {
-  background: #10b981;
-  color: #000;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.monitor-timestamp {
-  font-size: 11px;
-  color: rgba(16, 185, 129, 0.8);
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background: #10b981;
-  border-radius: 50%;
-  animation: pulse-live 1.5s infinite;
-  box-shadow: 0 0 8px #10b981;
-}
-
-@keyframes pulse-live {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.4;
-  }
-}
-
-.process-table {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.process-table-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  position: sticky;
-  top: 0;
-}
-
-.process-table-header .col-name {
-  flex: 1;
-}
-
-.process-table-header .col-status {
-  width: 80px;
-  text-align: right;
-}
-
-.process-table-body {
-  font-size: 12px;
-}
-
-.process-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background 0.15s ease;
-}
-
-.process-row:hover {
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.process-row:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.process-row:nth-child(even):hover {
-  background: rgba(16, 185, 129, 0.1);
-}
-
-.process-row .col-name {
-  flex: 1;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
-}
-
-.process-row .col-status {
-  width: 80px;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.process-row .col-status.running {
-  color: #10b981;
-}
-
-/* Scrollbar styling for process table */
-.process-table::-webkit-scrollbar {
-  width: 6px;
-}
-
-.process-table::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.process-table::-webkit-scrollbar-thumb {
-  background: rgba(16, 185, 129, 0.4);
-  border-radius: 3px;
-}
-
-.process-table::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.6);
-}
-
-/* Mobile adjustments */
-@media (max-width: 768px) {
-  .monitor-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .process-table {
-    max-height: 400px;
-    /* More vertical space on mobile */
-  }
-
-  .process-table-header {
-    font-size: 11px;
-    /* Slightly larger header */
-    padding: 10px 12px;
-  }
-
-  .process-row {
-    padding: 12px 12px;
-    /* Larger touch targets / visuals */
-  }
-
-  .process-row .col-name {
-    font-size: 13px;
-    /* Larger font for readability */
-  }
-
-  .process-row .col-status {
-    font-size: 11px;
-  }
-
-  /* Footer mobile improvements */
-  .bento-footer {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    /* 3 columns for 3 items */
-    gap: 12px;
-    padding: 16px 12px;
-    text-align: center;
-  }
-
-  .footer-stat {
-    flex-direction: column;
-    gap: 4px;
-    justify-content: center;
-  }
-
-  .footer-value {
-    font-size: 16px;
-  }
-
-  .footer-label {
-    font-size: 11px;
-  }
-}
-
-/* Clickable App Item in Reports */
-.clickable-app-report {
-  cursor: pointer;
-  position: relative;
-  transition: background-color 0.2s ease;
-}
-
-.clickable-app-report:hover {
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.app-meta-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.chevron-icon {
-  font-size: 20px;
-  color: var(--text-secondary);
-  opacity: 0.3;
-  transition: all 0.2s ease;
-  line-height: 1;
-  font-weight: 300;
-  margin-left: 4px;
-}
-
-.clickable-app-report:hover .chevron-icon {
-  opacity: 1;
-  color: var(--accent-color);
-  transform: translateX(4px);
 }

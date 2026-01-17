@@ -1,0 +1,125 @@
+/* =============================================
+   REPORTS - METRIC CARDS
+   Extracted from Reports.css
+   ============================================= */
+
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 140px;
+}
+
+.metric-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.metric-value.huge {
+    font-size: 42px;
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.metric-value.app-name {
+    font-size: 22px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.metric-value.muted {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.metric-subvalue {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.metric-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-top: 8px;
+}
+
+.metric-badge.green {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.metric-badge.red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.metric-badge.badge-red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.metric-badge.badge-green {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Total Time Card - Special Styling */
+.metric-card.total-time {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Daily Limit Progress */
+.limit-progress-container {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.limit-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
+
+.limit-progress-bar.warning {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.limit-progress-bar.exceeded {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+/* Limit percentage display */
+.limit-percentage {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 4px 0;
+}
