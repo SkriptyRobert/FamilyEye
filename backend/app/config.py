@@ -41,14 +41,18 @@ class Settings:
     CORS_ORIGINS: list = [
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://localhost:5174",
+        "https://localhost:3000",
+        "https://localhost:5173",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
+        "https://127.0.0.1:3000",
         f"http://{_local_ip}:3000",
+        f"https://{_local_ip}:3000",
         f"http://{_local_ip}:5173",
-        f"http://{_local_ip}:5174",
-        "*",  # Allow all for standalone/local network mode
+        f"https://{_local_ip}:5173",
+        f"http://{_local_ip}:{PORT}",
+        f"https://{_local_ip}:{PORT}",
+        "https://localhost:8000",
+        "http://localhost:8000",
     ]
     
     # Pairing

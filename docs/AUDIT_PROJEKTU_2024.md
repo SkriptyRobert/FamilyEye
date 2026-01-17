@@ -1,556 +1,276 @@
-# Audit Projektu FamilyEye - Komplexní Analýza
+## Audit projektu FamilyEye (hloubkový audit: duplicity, lean, refactoring, security pro domácí standalone)
 
-**Datum auditu:** 2024  
-**Auditor:** Senior Architekt / Senior Programátor / Security Expert / UI/UX Specialista  
-**Verze projektu:** 1.0.0
-
----
-
-## EXECUTIVE SUMMARY
-
-Projekt FamilyEye je rodičovská kontrola s podporou Android a Windows agentů. Celkově je projekt **dobře strukturovaný** s moderní architekturou, ale obsahuje několik **kritických bezpečnostních problémů** a **duplicitní/zbytečné soubory**, které je třeba vyřešit před nasazením do produkce.
-
-**Celkové hodnocení: 7.5/10**
-
-### Klíčové zjištění:
-- ✅ **Dobrá architektura** - čistá separace modulů, dependency injection
-- ⚠️ **Bezpečnostní rizika** - CORS, hardcoded credentials, chybějící rate limiting
-- ⚠️ **Duplicitní kód** - duplicitní soubory v backendu
-- ⚠️ **Zbytečné soubory** - .resolved soubory v dokumentaci
-- ✅ **Optimalizace kódu** - délka kódu je přiměřená funkcionalitě
+**Datum auditu:** 2026-01-17  
+**Rozsah:** backend, frontend, Android agent, Windows agent, instalátor, dokumentace, dev skripty  
+**Cíl:** zhodnotit duplicity, nadbytečné/testovací artefakty, spaghetti/refactoring hot-spoty, “lean” stav (jen nutné pro běh) a bezpečnostní rizika ve scénáři domácího standalone provozu
 
 ---
 
-## 1. STRUKTURA PROJEKTU
+## Executive summary
 
-### 1.1 Obecná Organizace
+Projekt má celkově rozumně navrženou architekturu (oddělený backend/frontend, agenti zvlášť), ale workspace (a potenciálně i repo) je v praxi **nelean** kvůli přítomnosti velkých build/dev artefaktů a runtime dat. Kódově je největší problém udržovatelnosti **monolitický Windows enforcer** a několik “God-file” hot-spotů v backendu a UI. V bezpečnosti (i pro domácí provoz) jsou největší rizika **defaultní SECRET_KEY**, **veřejné statické servírování screenshotů**, a možnost špatné konfigurace TLS/verify.
 
-**Hodnocení: 8/10**
-
-**Pozitiva:**
-- ✅ Čistá separace: `backend/`, `frontend/`, `clients/android/`, `clients/windows/`
-- ✅ Logická struktura modulů v každé části
-- ✅ Dokumentace v `docs/` adresáři
-- ✅ Konfigurační soubory na správných místech
-
-**Problémy:**
-- ⚠️ Chybí `.gitignore` kontrola (některé build artifacts mohou být commitovány)
-- ⚠️ `backend/app/config/` a `backend/config/` - duplicitní konfigurační adresáře
-- ⚠️ `backend/app.log` by měl být v `.gitignore`
-
-### 1.2 Modulární Separace
-
-**Hodnocení: 8.5/10**
-
-**Backend (`backend/app/`):**
-- ✅ Čistá separace: `api/`, `services/`, `models.py`, `schemas.py`
-- ✅ Routery jsou správně organizované podle funkcionality
-- ⚠️ **KRITICKÉ:** Duplicitní soubor `insights_service.py`:
-  - `backend/app/services/insights_service.py` (230 řádků)
-  - `backend/app/services/experimental/insights_service.py` (237 řádků)
-  - **Řešení:** Smazat experimental verzi nebo sloučit rozdíly
-
-**Android Agent (`clients/android/`):**
-- ✅ Vynikající struktura s MVVM pattern
-- ✅ Čistá separace: `data/`, `service/`, `ui/`, `di/`
-- ✅ Použití Hilt pro dependency injection
-- ✅ Repository pattern správně implementován
-- ✅ Room database pro lokální ukládání
-
-**Windows Agent (`clients/windows/agent/`):**
-- ✅ Logická struktura modulů
-- ✅ Separace: `monitor.py`, `enforcer.py`, `reporter.py`
-- ✅ IPC komunikace správně oddělená
+**Celkové hodnocení (kvalita/udržovatelnost/lean/security): 6.5/10**  
 
 ---
 
-## 2. ANDROID AGENT - DETAILNÍ ANALÝZA
+## Metodika a poznámky k měření
 
-### 2.1 Architektura
-
-**Hodnocení: 9/10**
-
-**Pozitiva:**
-- ✅ **Moderní stack:** Kotlin, Jetpack Compose, Hilt, Room, Coroutines
-- ✅ **Dependency Injection:** Hilt správně implementován
-- ✅ **Repository Pattern:** `AgentConfigRepository` s implementací
-- ✅ **MVVM:** ViewModels správně oddělené od UI
-- ✅ **Service Architecture:** Foreground service + Accessibility service správně navržené
-
-**Struktura tříd:**
-```
-FamilyEyeApp (Application)
-├── FamilyEyeService (Foreground Service)
-│   ├── UsageTracker
-│   ├── Reporter
-│   ├── RuleEnforcer
-│   └── WebSocketClient
-├── AppDetectorService (Accessibility Service)
-│   ├── ContentScanner
-│   └── BlockOverlayManager
-└── UI (Compose)
-    ├── MainActivity
-    └── Screens (Pairing, Dashboard, Settings)
-```
-
-### 2.2 Kvalita Kódu
-
-**Hodnocení: 8/10**
-
-**Pozitiva:**
-- ✅ Čistý Kotlin kód s moderními idiomy
-- ✅ Správné použití Coroutines pro async operace
-- ✅ Error handling na většině míst
-- ✅ Logging pomocí Timber
-
-**Problémy:**
-
-1. **Hardcoded hodnoty:**
-```kotlin
-// build.gradle.kts:26,35
-buildConfigField("String", "BACKEND_URL", "\"https://192.168.0.145:8000\"")
-```
-   - ⚠️ **RIZIKO:** Backend URL je hardcoded v build konfiguraci
-   - **Řešení:** Použít BuildConfig s možností runtime konfigurace
-
-2. **TODO komentáře:**
-```kotlin
-// FamilyEyeService.kt:227
-// TODO: Update daily usage state if we track it locally for limits?
-
-// FamilyEyeService.kt:258
-// TODO: Use dedicated persistent icon
-```
-   - ⚠️ Nevyřešené TODO - měly by být buď implementovány nebo smazány
-
-3. **Companion object s mutable state:**
-```kotlin
-// AppDetectorService.kt:24-29
-companion object {
-    @Volatile
-    var currentPackage: String? = null
-    
-    @Volatile
-    var instance: AppDetectorService? = null
-}
-```
-   - ⚠️ Singleton pattern pomocí companion object - lepší by bylo použít proper DI singleton
-
-### 2.3 Spaghetti Kód Detekce
-
-**Hodnocení: 7.5/10**
-
-**Nalezené problémy:**
-
-1. **AppDetectorService.kt (311 řádků)**
-   - ⚠️ Příliš dlouhá třída s mnoha zodpovědnostmi
-   - ⚠️ Metoda `onAccessibilityEvent()` má 115 řádků - měla by být rozdělena
-   - **Doporučení:** Extrahovat logiku blokování do samostatné třídy `BlockingHandler`
-
-2. **RuleEnforcer.kt (219 řádků)**
-   - ✅ Relativně čistý, ale některé metody jsou dlouhé
-   - ⚠️ Metoda `_update_blocked_apps()` má 125 řádků - měla by být rozdělena
-
-3. **FamilyEyeService.kt (264 řádky)**
-   - ✅ Dobře strukturovaný, ale některé metody by mohly být kratší
-
-**Celkově:** Android agent **NENÍ spaghetti kód**, ale některé třídy by mohly být lépe rozděleny.
-
-### 2.4 Přebytečný/Nadbytečný Kód
-
-**Nalezeno:**
-- ✅ Žádný zjevný dead code
-- ✅ Všechny třídy jsou používány
-- ⚠️ Některé importy mohou být nevyužité (linter by to měl detekovat)
-
-### 2.5 Délka Kódu vs. Funkcionalita
-
-**Analýza:**
-- **Odhadovaný počet řádků:** ~3000-4000 řádků Kotlin kódu
-- **Funkcionalita:**
-  - ✅ App blocking
-  - ✅ Time limits
-  - ✅ Schedule enforcement
-  - ✅ Usage tracking
-  - ✅ Smart Shield (content scanning)
-  - ✅ Screenshot capture
-  - ✅ WebSocket real-time communication
-  - ✅ Local database (Room)
-  - ✅ UI (Compose)
-
-**Hodnocení: 8/10**
-- ✅ Délka kódu je **přiměřená** funkcionalitě
-- ✅ Není přehnaně verbose
-- ✅ Není příliš minimalistic
+- Audit vychází z analýzy stromu souborů, velikostí, seznamu největších souborů, hledání “test/dev/build/log/cache” artefaktů, a identifikace refactoring hot-spotů podle délky souborů.
+- Počty řádků níže jsou počítané pro “core” soubory a **nezahrnují** typicky ignorované nebo generované adresáře: `node_modules`, `venv`, `__pycache__`, `build`, `dist`, `.git`. Pokud by byly commitované, reálné LOC i objem by byl výrazně vyšší.
 
 ---
 
-## 3. BACKEND - DETAILNÍ ANALÝZA
+## Inventura: co v projektu není “lean” (artefakty, runtime data, testovací věci)
 
-### 3.1 Architektura
+### Největší “nelean” položky podle velikosti (workspace)
 
-**Hodnocení: 8/10**
+Následující položky nejsou nutné pro běh logiky projektu jako takové (jsou to závislosti, buildy, logy, runtime data, release artefakty). Pokud jsou commitované nebo distribuované společně se zdrojáky, zbytečně zvyšují riziko i náklady.
 
-**Pozitiva:**
-- ✅ FastAPI s moderní strukturou
-- ✅ SQLAlchemy ORM
-- ✅ Routery správně oddělené
-- ✅ Services layer pro business logiku
-- ✅ Schemas pro validaci (Pydantic)
+- **`clients/android/app/build/`**: ~302.9 MB (build artefakty, nemají být součástí zdrojáků)
+- **`frontend/node_modules/`**: ~112.1 MB (závislosti, nemají být ve zdrojácích)
+- **`backend/venv/`**: ~76.0 MB (Python venv, nemá být ve zdrojácích)
+- **`installer/agent/output/`**: ~75.0 MB (hotové instalátory, release artefakty, typicky mimo repo)
+- **`installer/agent/dist/`**: ~26.0 MB (zkompilované EXE, release artefakty)
+- **`installer/agent/build/`**: ~36.8 MB (build artefakty)
+- **`backend/uploads/`**: ~2.2 MB (runtime screenshots; v repu navíc výrazný privacy risk)
+- **`backend/app.log`**: ~5.3 MB (log soubor; v repu je to citlivé i zbytečné)
+- **`parental_control.db`**: ~0.5 MB (runtime DB; nemá být commitovaná)
+- **`clients/android/build_log*.txt`**: build logy (nejsou nutné pro běh)
 
-**Struktura:**
-```
-backend/app/
-├── api/          # API endpoints (routers)
-├── services/     # Business logic
-├── models.py     # Database models
-├── schemas.py    # Pydantic schemas
-├── database.py   # DB connection
-└── config.py     # Configuration
-```
+Poznámka: v kořenové `.gitignore` už je velká část těchto věcí uvedena (např. `node_modules/`, `venv/`, `build/`, `dist/`, `output/`, `*.db`, `*.log`). To je správně. Přesto je důležité ověřit, že nic z toho není historicky commitováno, a že při distribuci “source zip” se tyto adresáře nepřibalují.
 
-### 3.2 Kvalita Kódu
+### Core kód: přibližný objem (bez build/venv/node_modules/dist)
 
-**Hodnocení: 7.5/10**
+Celkem cca **36 788 řádků** napříč ~181 soubory těchto typů:
+- `.py`: 11 859 řádků
+- `.kt`: 4 653 řádků
+- `.jsx`: 6 996 řádků
+- `.js`: 1 285 řádků
+- `.css`: 8 956 řádků
+- `.json`: 3 039 řádků
 
-**Pozitiva:**
-- ✅ Čistý Python kód
-- ✅ Type hints na většině míst
-- ✅ Docstrings u funkcí
-- ✅ Error handling
-
-**Problémy:**
-
-1. **KRITICKÉ - Duplicitní soubor:**
-```python
-# backend/app/services/insights_service.py (230 řádků)
-# backend/app/services/experimental/insights_service.py (237 řádků)
-```
-   - ⚠️ **IDENTICKÝ KÓD** s malými rozdíly v komentářích
-   - **Řešení:** Smazat `experimental/` verzi nebo sloučit
-
-2. **Hardcoded SECRET_KEY:**
-```python
-# config.py:23
-SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-```
-   - ⚠️ **BEZPEČNOSTNÍ RIZIKO:** Defaultní secret key
-   - **Řešení:** Vyžadovat environment variable, žádný default
-
-3. **CORS povoluje všechny originy:**
-```python
-# main.py:36
-allow_origins=["*"],  # Pro development - v produkci použít konkrétní seznam
-```
-   - ⚠️ **KRITICKÉ BEZPEČNOSTNÍ RIZIKO**
-   - **Řešení:** Environment-based CORS config
-
-### 3.3 Spaghetti Kód Detekce
-
-**Hodnocení: 8/10**
-
-**Nalezené problémy:**
-
-1. **enforcer.py (Windows agent, 882 řádků)**
-   - ⚠️ **VELMI DLOUHÁ TŘÍDA** - měla by být rozdělena
-   - ⚠️ Metoda `update()` orchestrates mnoho zodpovědností
-   - **Doporučení:** Rozdělit na:
-     - `RuleEnforcer` (core)
-     - `ScheduleEnforcer`
-     - `TimeLimitEnforcer`
-     - `NetworkEnforcer`
-
-2. **main.py (backend, 160 řádků)**
-   - ✅ Relativně čistý
-   - ⚠️ Některé helper funkce by mohly být v samostatném modulu
-
-**Celkově:** Backend je **dobře strukturovaný**, ale Windows agent enforcer je příliš dlouhý.
-
-### 3.4 Přebytečný/Nadbytečný Kód
-
-**Nalezeno:**
-- ⚠️ **Duplicitní `insights_service.py`** - smazat experimental verzi
-- ✅ Žádný zjevný dead code
-- ⚠️ Některé importy mohou být nevyužité
-
-### 3.5 Délka Kódu vs. Funkcionalita
-
-**Analýza:**
-- **Odhadovaný počet řádků:** ~5000-6000 řádků Python kódu
-- **Funkcionalita:**
-  - ✅ REST API (FastAPI)
-  - ✅ Authentication & Authorization
-  - ✅ Device management
-  - ✅ Rules management
-  - ✅ Usage reporting
-  - ✅ WebSocket support
-  - ✅ Smart Shield (keywords)
-  - ✅ File uploads (screenshots)
-  - ✅ Insights calculation
-  - ✅ Database (SQLite)
-
-**Hodnocení: 8/10**
-- ✅ Délka kódu je **přiměřená** funkcionalitě
-- ✅ Není přehnaně verbose
+Hodnocení: množství kódu je pro funkce projektu přiměřené, ale existuje několik souborů, které jsou zbytečně velké a koncentrují příliš mnoho zodpovědností (viz sekce refactoring).
 
 ---
 
-## 4. WINDOWS AGENT - DETAILNÍ ANALÝZA
+## Duplicity a redundantní části (kód, dokumentace, build/ops soubory)
 
-### 4.1 Architektura
+### Funkční duplicita v backendu
 
-**Hodnocení: 7.5/10**
+- **`backend/app/services/insights_service.py` vs `backend/app/services/experimental/insights_service.py`**
+  - Obsah je prakticky stejný; liší se hlavně komentářem a “EXPERIMENTAL” štítkem.
+  - Dopad: zvyšuje mentální zátěž, riziko “opravil jsem to v jednom souboru, ale ne ve druhém”.
+  - Doporučení: sjednotit na jednu implementaci (např. ponechat `insights_service.py`, experimental odstranit nebo převést na dokumentační poznámku/testy).
 
-**Pozitiva:**
-- ✅ Čistá separace modulů
-- ✅ Service architecture (Session 0)
-- ✅ IPC komunikace správně implementována
-- ✅ Process monitoring
+### Duplicity / deriváty v dokumentaci
 
-**Struktura:**
-```
-clients/windows/agent/
-├── main.py              # Entry point
-├── monitor.py           # Process monitoring
-├── enforcer.py          # Rule enforcement (PŘÍLIŠ DLOUHÝ)
-├── reporter.py          # Usage reporting
-├── network_control.py   # Network blocking
-├── notifications.py     # UI notifications
-└── ipc_*.py            # IPC communication
-```
+- **`docs/*.md.resolved`**
+  - Typicky jde o pracovní/derivovaný stav dokumentu.
+  - Dopad: šum v repu, riziko udržování dvou “pravd”.
+  - Doporučení: archivovat mimo repo nebo držet jen jednu canonical verzi.
 
-### 4.2 Kvalita Kódu
+### Testovací a pomocné skripty, které nejsou nutné pro běh
 
-**Hodnocení: 7/10**
+Tyto soubory jsou užitečné pro vývoj/build, ale nejsou nutné pro runtime:
 
-**Pozitiva:**
-- ✅ Čistý Python kód
-- ✅ Error handling
-- ✅ Logging
+- **`installer/agent/test.iss`**
+  - Testovací instalátor, obsahuje testovací hodnoty (např. hardcoded health URL na localhost) a slabší bezpečnostní nastavení (např. ssl_verify false v generované konfiguraci).
+  - Doporučení: jasně oddělit od produkčního instalátoru (`setup_agent.iss`) a nebrat jako “produkční zdroj pravdy”. Pokud se nepoužívá, odstranit.
 
-**Problémy:**
+- **`dev/*.bat`**
+  - Dev convenience skripty (start/stop/pair). V pohodě pro interní vývoj, ale pro “lean release source” by měly být buď dokumentované jako dev-only, nebo přesunuté do `tools/` apod.
 
-1. **enforcer.py je PŘÍLIŠ DLOUHÝ (882 řádků)**
-   - ⚠️ Porušuje Single Responsibility Principle
-   - ⚠️ Obsahuje: rule fetching, time sync, app blocking, schedule enforcement, network blocking, daily limits
-   - **Doporučení:** Rozdělit na více tříd
+- **`clients/android/build_log*.txt`**
+  - Build logy, nejsou součástí produktu.
 
-2. **Hardcoded hodnoty:**
-```python
-# Některé konstanty by měly být v config
-```
+### Release/build artefakty přítomné v repu (potenciálně)
 
-### 4.3 Spaghetti Kód Detekce
+- `installer/agent/build/`, `installer/agent/dist/`, `installer/agent/output/`  
+  - Doporučení: držet mimo repo nebo v samostatném “releases” úložišti.
 
-**Hodnocení: 6.5/10**
+### Runtime data soubory přítomné ve stromu
 
-**Nalezené problémy:**
+- **`backend/uploads/screenshots/...`**
+  - Vysoké privacy riziko, navíc šum pro repo.
+  - Doporučení: nikdy necommitovat; zavést retention a přístup přes autentizaci (viz security).
 
-1. **enforcer.py - KRITICKÉ**
-   - ⚠️ 882 řádků v jedné třídě
-   - ⚠️ Metoda `update()` má 22 řádků, ale volá 6 různých enforce metod
-   - ⚠️ Metoda `_update_blocked_apps()` má 125 řádků
-   - ⚠️ Metoda `_enforce_blocked_apps()` má 100 řádků
-   - ⚠️ Metoda `_enforce_time_limits()` má 70 řádků
-   - ⚠️ Metoda `_enforce_schedule()` má 93 řádků
+- **`clients/windows/agent/report_queue.json`, `clients/windows/agent/usage_cache.json`**
+  - Pravděpodobně runtime cache/queue.
+  - Doporučení: necommitovat (mít šablonu nebo vytvářet za běhu).
 
-   **Toto je největší problém v celém projektu!**
+- **`backend/app.log`**
+  - Runtime log soubor, nepatří do repa.
 
-2. **main.py (351 řádků)**
-   - ⚠️ Relativně dlouhý, ale akceptovatelný
-   - ✅ Dobře strukturovaný
-
-**Celkově:** Windows agent má **největší problémy se strukturou** - enforcer.py je příliš monolitický.
+- **`parental_control.db`**
+  - Runtime DB, nepatří do repa.
 
 ---
 
-## 5. BEZPEČNOSTNÍ AUDIT
+## Spaghetti kód a refactoring hot-spoty
 
-### 5.1 Kritické Bezpečnostní Problémy
+Tady je seznam největších souborů v “core” kódu (mimo build/venv/node_modules/dist) a proč jsou kandidáti na refactoring:
 
-**Hodnocení: 5/10**
+### Windows agent
 
-1. **CORS povoluje všechny originy:**
-```python
-# backend/app/main.py:36
-allow_origins=["*"],  # Pro development
-```
-   - 🔴 **KRITICKÉ:** V produkci musí být konkrétní seznam
-   - **Doporučení:** Environment variable `CORS_ORIGINS`
+- **`clients/windows/agent/enforcer.py` (~881 řádků)**
+  - Indikace “God object”: obsahuje fetch pravidel, time sync, enforcement app bloků, schedule, limity, network block, notifikace, shutdown logiku.
+  - Riziko: změny v jedné oblasti rozbíjí jinou, špatná testovatelnost, vysoká kognitivní zátěž.
+  - Doporučení refaktoringu (minimální rozdělení):
+    - `rules_fetcher.py` (komunikace + caching)
+    - `time_provider.py` (trusted time + sync)
+    - `enforce_apps.py` (app block + kill)
+    - `enforce_limits.py` (time limit, daily limit)
+    - `enforce_schedule.py` (schedule logika)
+    - `enforce_network.py` (firewall / vpn / proxy)
+    - `enforcer.py` pouze orchestrátor a state
 
-2. **Hardcoded SECRET_KEY:**
-```python
-# backend/app/config.py:23
-SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-```
-   - 🔴 **KRITICKÉ:** Defaultní secret key je bezpečnostní riziko
-   - **Doporučení:** Vyžadovat env var, žádný default
+- **`clients/windows/agent/monitor.py` (~716 řádků)** a **`clients/windows/agent/network_control.py` (~489 řádků)**
+  - Doporučení: zkontrolovat SRP, vytáhnout “rules mapping” a parsery do pomocných modulů, sjednotit datové modely.
 
-3. **Hardcoded BACKEND_URL v Android:**
-```kotlin
-// build.gradle.kts:26,35
-buildConfigField("String", "BACKEND_URL", "\"https://192.168.0.145:8000\"")
-```
-   - 🟡 **STŘEDNÍ:** Mělo by být konfigurovatelné
-   - **Doporučení:** Runtime konfigurace nebo BuildConfig s možností override
+### Android agent
 
-4. **Chybějící Rate Limiting:**
-   - 🟡 **STŘEDNÍ:** API nemá rate limiting
-   - **Doporučení:** Implementovat pomocí `slowapi` nebo podobné knihovny
+- **`clients/android/app/src/main/java/com/familyeye/agent/service/AppDetectorService.kt` (~310 řádků)**
+  - `onAccessibilityEvent` řeší současně: detekci app, whitelist, enforcement, overlay, async usage checks, Smart Shield scanning, screenshot flow.
+  - Doporučení: rozdělit na “policy engine” (co blokovat) a “effects” (jak blokovat: overlay/home/back, report, screenshot).
 
-5. **Chybějící Input Validation:**
-   - 🟡 **STŘEDNÍ:** Některé endpoints nemají dostatečnou validaci
-   - **Doporučení:** Pydantic schemas jsou dobré, ale měly by být použity všude
+- **`clients/android/app/src/main/java/com/familyeye/agent/ui/screens/SetupWizardScreen.kt` (~549 řádků)** a **`PairingScreen.kt` (~342 řádků)**
+  - Příznak UI monolitu: hodně logiky v jednom souboru.
+  - Doporučení: rozdělit na menší Compose komponenty + ViewModel use-cases.
 
-6. **SSL Verify může být vypnuté:**
-   - 🟡 **STŘEDNÍ:** V některých konfiguracích může být SSL verify vypnuté
-   - **Doporučení:** V produkci vždy zapnout
+### Backend
 
-### 5.2 Doporučení pro Bezpečnost
+- **`backend/app/api/reports/summary_endpoint.py` (~566 řádků)**, **`backend/app/api/devices.py` (~476 řádků)**, **`backend/app/api/reports/stats_endpoints.py` (~458 řádků)**
+  - Častý problém: “endpoint soubory” míchají validaci, business logiku, agregace, formátování odpovědí.
+  - Doporučení: přesunout výpočty a agregace do `services/` a v API nechávat jen IO vrstvy.
 
-1. ✅ Implementovat rate limiting
-2. ✅ Přidat CSRF protection (i když JWT pomáhá)
-3. ✅ Certificate pinning v mobile agentech
-4. ✅ Audit logging pro bezpečnostní události
-5. ✅ Secrets management (např. HashiCorp Vault nebo podobné)
-6. ✅ Input sanitization všude
-7. ✅ SQL injection protection (SQLAlchemy pomáhá, ale mělo by být explicitní)
+### Frontend
+
+- **`frontend/src/utils/formatting.js` (~617 řádků)**, **`frontend/src/components/RuleEditor.jsx` (~548 řádků)**, **`Reports.jsx` (~399 řádků)**
+  - Doporučení: rozdělit utility podle domén (time/formatting/charts) a komponenty rozřezat na menší “presentational” části.
 
 ---
 
-## 6. ZBYTEČNÉ SOUBORY
+## Lean posouzení: obsahuje projekt “jen to nutné”?
 
-### 6.1 Nalezené Zbytečné Soubory
+### Co je nutné pro běh (domácí standalone)
 
-1. **`.resolved` soubory v `docs/`:**
-   - `docs/implementation_plan.md.resolved`
-   - `docs/security_audit.md.resolved`
-   - `docs/walkthrough.md.resolved`
-   - **Doporučení:** Smazat nebo přesunout do archivní složky
+- Backend (`backend/app` + requirements + spouštěcí skripty)
+- Frontend zdrojáky (`frontend/src`) a buď:
+  - build proces (pak `dist` generovat), nebo
+  - hotové `frontend/dist` pokud je cílem “single-binary/standalone balík”, kde backend servíruje statický frontend
+- Agenti (Android/Windows) zdrojáky
 
-2. **Duplicitní `insights_service.py`:**
-   - `backend/app/services/insights_service.py`
-   - `backend/app/services/experimental/insights_service.py`
-   - **Doporučení:** Smazat experimental verzi (pokud není potřeba)
+### Co typicky nutné není (a zvyšuje šum i riziko)
 
-3. **Build artifacts:**
-   - `clients/android/app/build/` - měl by být v `.gitignore`
-   - `clients/android/build/` - měl by být v `.gitignore`
-   - `backend/app/__pycache__/` - měl by být v `.gitignore`
+- `frontend/node_modules`, `backend/venv` (závislosti, generovat/instalovat)
+- `clients/android/app/build`, `installer/agent/build`, `installer/agent/dist`, `installer/agent/output` (build/release)
+- runtime data: `backend/uploads/**`, `backend/app.log`, `parental_control.db`, agent cache JSONy
+- build logy (`clients/android/build_log*.txt`)
+- odvozené doc soubory (`docs/*.resolved`)
 
-### 6.2 Doporučení
-
-- ✅ Přidat/aktualizovat `.gitignore`
-- ✅ Smazat `.resolved` soubory
-- ✅ Smazat duplicitní `insights_service.py`
+Hodnocení: jako “source repo” to zatím nepůsobí lean (ve workspace je hodně generovaných věcí). Na úrovni architektury je ale možné projekt snadno “zleanovat” hlavně úklidem artefaktů a jasnou separací build vs runtime.
 
 ---
 
-## 7. OPTIMALIZACE KÓDU
+## Security pro domácí standalone použití: rizika a proč
 
-### 7.1 Čistota Kódu
+### Threat model (domácí)
 
-**Hodnocení: 7.5/10**
+I když je cílem “domácí standalone”, typické reálné hrozby jsou:
+- dítě má lokální přístup k počítači/telefonu (pokusy o bypass)
+- další zařízení v domácí LAN (návštěvy, nezabezpečené Wi-Fi)
+- škodlivý web/rozšíření v prohlížeči rodiče (dashboard) nebo dítěte
+- chybné vystavení backendu do internetu (port forwarding, veřejná IP, cloud)
 
-**Pozitiva:**
-- ✅ Většina kódu je čistá a čitelná
-- ✅ Moderní programovací praktiky
-- ✅ Type hints (Python) a type safety (Kotlin)
+### Rizika identifikovaná v projektu
 
-**Problémy:**
-- ⚠️ Některé třídy jsou příliš dlouhé (enforcer.py)
-- ⚠️ Některé metody jsou příliš dlouhé (onAccessibilityEvent)
-- ⚠️ Některé TODO komentáře nejsou vyřešeny
+#### Vysoká závažnost (i doma)
 
-### 7.2 Délka Kódu
+- **Defaultní `SECRET_KEY` v backendu**
+  - Pokud zůstane default, útočník může snadněji falšovat JWT nebo narušit autentizaci (záleží na přesné implementaci tokenů).
+  - Doma je to pořád vysoké riziko, protože kompromitace backendu nebo únik tokenu je reálný scénář.
 
-**Celkový odhad:**
-- Android Agent: ~3000-4000 řádků
-- Backend: ~5000-6000 řádků
-- Windows Agent: ~3000-4000 řádků
-- Frontend: ~2000-3000 řádků (odhad)
-- **Celkem: ~13000-17000 řádků**
+- **Veřejné statické servírování uploadů**
+  - Backend mountuje `uploads/` jako statické soubory (`/static/uploads/...`), tedy screenshoty jsou dostupné bez dodatečné autorizace na úrovni web serveru.
+  - Proč je to problém doma: pokud je backend dostupný v LAN, kdokoliv v LAN může zkusit stahovat soubory, a URL screenshotu se může objevit v logách/UI/API.
 
-**Hodnocení: 8/10**
-- ✅ Délka kódu je **přiměřená** funkcionalitě
-- ✅ Není přehnaně verbose
-- ✅ Není příliš minimalistic (což by mohlo znamenat chybějící funkcionalitu)
+#### Střední závažnost (záleží na nasazení)
 
-### 7.3 Refaktoring Doporučení
+- **CORS nastavené na `*`**
+  - Pokud API používá jen bearer tokeny a nejsou cookies, CORS samo o sobě nezpůsobí průnik bez tokenu.
+  - Proč je to pořád riziko: zbytečně to rozšiřuje “browser attack surface” (při XSS nebo úniku tokenu) a je to špatný default pro situace, kdy se backend omylem vystaví mimo LAN.
 
-1. **Vysoká priorita:**
-   - 🔴 Rozdělit `enforcer.py` (Windows) na více tříd
-   - 🔴 Rozdělit `AppDetectorService.onAccessibilityEvent()` na menší metody
-   - 🔴 Smazat duplicitní `insights_service.py`
+- **TLS/verify režim a self-signed certy**
+  - V testovacím instalátoru je naznačen režim “akceptuj self-signed” a konfigurace `ssl_verify: false`.
+  - Doma: MITM přes kompromitovanou Wi-Fi/router je reálný scénář. Pokud by klienti ignorovali ověření certifikátu, lze podvrhnout server.
 
-2. **Střední priorita:**
-   - 🟡 Extrahovat konstanty z kódu do config souborů
-   - 🟡 Implementovat proper singleton pattern místo companion object
-   - 🟡 Vyřešit TODO komentáře
+- **API klíče a citlivá data v plaintextu**
+  - Pokud jsou API klíče uložené v DB v plaintextu, kompromitace DB znamená kompromitaci agentů.
 
-3. **Nízká priorita:**
-   - 🟢 Přidat více unit testů
-   - 🟢 Přidat více dokumentace
-   - 🟢 Optimalizovat některé algoritmy
+#### Nižší závažnost (spíš kvalita/udržovatelnost)
 
----
+- **Hardcoded `BACKEND_URL` v Android build konfiguraci**
+  - Primárně maintainability/UX problém (párování/konfigurace), sekundárně i security (snadné přesměrování na špatný server při nepozorném buildu).
 
-## 8. CELKOVÉ HODNOCENÍ
+### Security doporučení (prioritizace pro domácí standalone)
 
-### 8.1 Shrnutí
+- **Priorita 1 (nutné):**
+  - vynutit nastavení `SECRET_KEY` bez defaultu
+  - chránit přístup k uploadům (ne servírovat screenshoty jako veřejné statické soubory; nebo použít jednorázové/signed URL)
+  - zamezit `ssl_verify: false` v produkčních cestách
 
-| Kategorie | Hodnocení | Komentář |
-|-----------|-----------|----------|
-| **Struktura projektu** | 8/10 | Dobře organizovaný, malé problémy s duplicitami |
-| **Android Agent** | 8.5/10 | Vynikající architektura, malé problémy s délkou metod |
-| **Backend** | 7.5/10 | Dobrá struktura, bezpečnostní problémy |
-| **Windows Agent** | 6.5/10 | Příliš monolitický enforcer |
-| **Bezpečnost** | 5/10 | Kritické problémy s CORS a credentials |
-| **Kvalita kódu** | 7.5/10 | Obecně dobrá, některé části potřebují refaktoring |
-| **Délka kódu** | 8/10 | Přiměřená funkcionalitě |
-
-**CELKOVÉ HODNOCENÍ: 7.5/10**
-
-### 8.2 Klíčové Problémy k Řešení
-
-1. 🔴 **KRITICKÉ:** CORS povoluje všechny originy
-2. 🔴 **KRITICKÉ:** Hardcoded SECRET_KEY s defaultní hodnotou
-3. 🔴 **VYSOKÁ:** Rozdělit `enforcer.py` (882 řádků)
-4. 🟡 **STŘEDNÍ:** Smazat duplicitní soubory
-5. 🟡 **STŘEDNÍ:** Hardcoded BACKEND_URL v Android
-6. 🟡 **STŘEDNÍ:** Implementovat rate limiting
-
-### 8.3 Doporučení
-
-**Před nasazením do produkce:**
-1. ✅ Opravit všechny kritické bezpečnostní problémy
-2. ✅ Smazat duplicitní soubory
-3. ✅ Refaktorovat `enforcer.py`
-4. ✅ Přidat rate limiting
-5. ✅ Přidat proper error handling všude
-6. ✅ Přidat unit testy (alespoň pro kritické části)
-
-**Dlouhodobě:**
-1. ✅ Přidat více dokumentace
-2. ✅ Implementovat CI/CD
-3. ✅ Přidat monitoring a logging
-4. ✅ Optimalizovat výkon
-5. ✅ Přidat více testů
+- **Priorita 2 (doporučené):**
+  - omezit CORS na konkrétní originy dashboardu
+  - zavést rate limiting (i doma pomůže proti “noise” a primitivním pokusům)
+  - nastavit retenční politiku pro screenshoty a logy (a necommitovat je)
 
 ---
 
-## 9. ZÁVĚR
+## Konkrétní seznam souborů k posouzení/odstranění z repa (pokud nejsou čistě lokální)
 
-Projekt FamilyEye je **dobře navržený** s moderní architekturou a čistým kódem. Hlavní problémy jsou:
+### Dev/build/test artefakty
 
-1. **Bezpečnostní rizika** - které je třeba vyřešit před produkčním nasazením
-2. **Monolitický enforcer** - který by měl být rozdělen pro lepší udržovatelnost
-3. **Duplicitní soubory** - které zbytečně zvyšují komplexitu
+- `backend/venv/`
+- `frontend/node_modules/`
+- `clients/android/app/build/`
+- `installer/agent/build/`
+- `installer/agent/dist/`
+- `installer/agent/output/`
+- `clients/android/build_log*.txt`
+- `installer/agent/test.iss` (pokud není aktivně používán)
+- `dev/*.bat` (ponechat, ale označit jako dev-only)
 
-Po vyřešení těchto problémů bude projekt připraven pro produkční nasazení.
+### Runtime data (nepatří do zdrojáků)
 
-**Doporučení:** Zaměřit se nejprve na bezpečnostní problémy, poté na refaktoring enforceru, a nakonec na cleanup duplicitních souborů.
+- `backend/uploads/**`
+- `backend/app.log`
+- `parental_control.db`
+- `clients/windows/agent/report_queue.json`
+- `clients/windows/agent/usage_cache.json`
+
+---
+
+## Doporučený postup (krátký, praktický)
+
+- **Lean cleanup (1-2 hodiny):**
+  - ověřit, že artefakty nejsou commitované; pokud ano, odstranit z historie (git) a ponechat jen v release pipeline
+  - sjednotit `insights_service.py` (odstranit experimental duplicitu)
+  - odstranit nebo archivovat `docs/*.resolved`
+  - odstranit runtime data (uploads, db, logs) ze zdrojového stromu
+
+- **Refactoring (1-3 dny):**
+  - rozdělit `clients/windows/agent/enforcer.py` na menší moduly podle zodpovědností
+  - rozdělit `AppDetectorService.kt` na policy + effects
+  - přesunout těžké agregace v backend reportech do `services/`
+
+- **Security hardening pro domácí režim (0.5-2 dny):**
+  - odstranit defaultní `SECRET_KEY`, vynutit konfiguraci
+  - zabezpečit přístup ke screenshotům (neveřejné static mount)
+  - auditovat, kde se může objevit `ssl_verify: false` a uzamknout to pro produkční buildy
+  - omezit CORS na dashboard originy
 
 ---
 
 **Konec auditu**
+

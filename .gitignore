@@ -36,3 +36,33 @@ screenshot*.png
 # OS specific checks
 .DS_Store
 Thumbs.db
+
+# Dev scripts (keep locally, not in production release)
+/dev/
+
+# Runtime data - Windows Agent
+clients/windows/agent/report_queue.json
+clients/windows/agent/usage_cache.json
+clients/windows/agent/config.json
+clients/windows/config.json
+
+# Runtime data - Backend
+backend/uploads/
+backend/app.log
+uploads/
+
+# Android build logs
+clients/android/build_log*.txt
+
+# Derived/resolved documentation
+*.resolved
+
+# Test installer (not for production)
+installer/agent/test.iss
+
+# Windows shortcuts
+*.lnk
+
+# IDE and workspace
+.agent/
+.cursor/
