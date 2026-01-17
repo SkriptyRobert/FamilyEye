@@ -1,0 +1,310 @@
+/* =============================================================================
+   Keyword Manager Styles - Extracted from SmartShield.css
+   ============================================================================= */
+
+.keywords-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.keywords-header {
+    margin-left: 8px;
+    margin-bottom: 8px;
+}
+
+.keywords-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.keywords-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.keywords-info-highlight {
+    color: var(--accent-color);
+    font-size: 13px;
+    display: block;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.categories-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Category Section */
+.category-section {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.category-header:hover {
+    background: rgba(128, 128, 128, 0.05);
+}
+
+.category-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.category-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.category-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-count {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.category-chevron {
+    color: var(--text-secondary);
+    transition: transform 0.25s ease;
+}
+
+.category-chevron.expanded {
+    transform: rotate(90deg);
+}
+
+.category-content {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border-color);
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.category-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.keyword-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.keyword-chip-modern {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid;
+    transition: all 0.2s ease;
+}
+
+.keyword-chip-modern:hover {
+    transform: translateY(-1px);
+}
+
+.chip-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.chip-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(128, 128, 128, 0.1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.chip-delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444 !important;
+    opacity: 1;
+}
+
+/* Quick Add Form */
+.category-quick-add {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.quick-add-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.quick-add-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.quick-add-input:focus {
+    outline: none;
+    border-color: var(--category-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.quick-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-add-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* Global Add Section */
+.global-add-section {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.global-add-section h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+}
+
+.global-add-form {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.global-add-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.global-add-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.global-add-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.global-add-select {
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.global-add-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.global-add-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.global-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.global-add-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -6px rgba(99, 102, 241, 0.5);
+}
