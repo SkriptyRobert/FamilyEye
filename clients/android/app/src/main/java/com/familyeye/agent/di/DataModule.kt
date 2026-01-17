@@ -7,8 +7,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.familyeye.agent.data.local.AgentDatabase
 import com.familyeye.agent.data.local.UsageLogDao
+import com.familyeye.agent.data.local.RuleDao
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import com.familyeye.agent.data.repository.AgentConfigRepositoryImpl
+import com.familyeye.agent.data.repository.RuleRepository
+import com.familyeye.agent.data.repository.RuleRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -47,6 +50,11 @@ object DataModule {
     @Singleton
     fun provideUsageLogDao(database: AgentDatabase): UsageLogDao = 
         database.usageLogDao()
+
+    @Provides
+    @Singleton
+    fun provideRuleDao(database: AgentDatabase): RuleDao = 
+        database.ruleDao()
 }
 
 @Module
@@ -58,4 +66,10 @@ abstract class RepositoryModule {
     abstract fun bindAgentConfigRepository(
         impl: AgentConfigRepositoryImpl
     ): AgentConfigRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRuleRepository(
+        impl: RuleRepositoryImpl
+    ): RuleRepository
 }

@@ -3,29 +3,34 @@ package com.familyeye.agent.service
 import com.familyeye.agent.data.api.dto.RuleDTO
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RuleEnforcer @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
-    private val configRepository: AgentConfigRepository
+    private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository
 ) {
-    // In a real app, these would come from Room DB
-    private val rules = MutableStateFlow<List<RuleDTO>>(emptyList())
+    // Cache rules in memory for synchronous access (volatile for thread safety)
+    @Volatile
+    private var cachedRules: List<RuleDTO> = emptyList()
 
-    suspend fun updateRules(newRules: List<RuleDTO>) {
-        timber.log.Timber.d("RuleEnforcer: Updating rules: ${newRules.size}")
-        newRules.forEach { timber.log.Timber.d("Rule: ${it.appName} (${it.ruleType}) Enabled:${it.enabled}") }
-        rules.emit(newRules)
+    init {
+        // Observe rules from repository immediately
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            ruleRepository.getRules().collect { newRules ->
+                 timber.log.Timber.d("RuleEnforcer: Rules updated from DB: ${newRules.size}")
+                 cachedRules = newRules
+            }
+        }
     }
+
+    private fun getRules(): List<RuleDTO> = cachedRules
 
     fun isAppBlocked(packageName: String): Boolean {
         val appLabel = getAppName(packageName)
-        val currentRules = rules.value
+        val currentRules = getRules()
         
         timber.log.Timber.v("Checking blocking for $packageName ($appLabel). Rules count: ${currentRules.size}")
         
@@ -68,22 +73,19 @@ class RuleEnforcer @Inject constructor(
     
     fun isDeviceLocked(): Boolean {
         // "Lock Now" functionality
-        return rules.value.any { rule ->
+        return getRules().any { rule ->
             rule.enabled && rule.ruleType == "lock_device"
         }
     }
 
     fun isDailyLimitExceeded(totalUsageSeconds: Int): Boolean {
-        return rules.value.any { rule ->
+        return getRules().any { rule ->
              val isLimitRule = rule.enabled && rule.ruleType == "daily_limit" && rule.timeLimit != null
              if (isLimitRule) {
                  val limitSeconds = rule.timeLimit!! * 60
                  val exceeded = limitSeconds <= totalUsageSeconds
                  if (exceeded) {
                      timber.log.Timber.w("Daily Limit EXCEEDED: Used $totalUsageSeconds s >= Limit $limitSeconds s")
-                 } else {
-                     // Verbose log only occasionally to avoid spam? Or just rely on V logs elsewhere.
-                     // timber.log.Timber.v("Daily Limit Check: Used $totalUsageSeconds s < Limit $limitSeconds s")
                  }
                  exceeded
              } else {
@@ -94,7 +96,7 @@ class RuleEnforcer @Inject constructor(
     
     fun isDeviceScheduleBlocked(): Boolean {
         // Device Schedule: ruleType="schedule" AND appName is NULL or Empty
-        return rules.value.any { rule ->
+        return getRules().any { rule ->
             if (!rule.enabled || rule.ruleType != "schedule") return@any false
             if (!rule.appName.isNullOrEmpty()) return@any false // Skip App Schedules
             
@@ -106,7 +108,7 @@ class RuleEnforcer @Inject constructor(
         val appLabel = getAppName(packageName)
         
         // App Schedule: ruleType="schedule" AND appName matches packageName/label
-        return rules.value.any { rule ->
+        return getRules().any { rule ->
             if (!rule.enabled || rule.ruleType != "schedule") return@any false
             
             val ruleName = rule.appName ?: return@any false
@@ -122,7 +124,7 @@ class RuleEnforcer @Inject constructor(
 
     fun getActiveAppScheduleRule(packageName: String): RuleDTO? {
         val appLabel = getAppName(packageName)
-        return rules.value.find { rule ->
+        return getRules().find { rule ->
              if (!rule.enabled || rule.ruleType != "schedule") return@find false
             
              val ruleName = rule.appName ?: return@find false
@@ -137,7 +139,7 @@ class RuleEnforcer @Inject constructor(
     }
 
     fun getActiveDeviceScheduleRule(): RuleDTO? {
-         return rules.value.find { rule ->
+         return getRules().find { rule ->
             if (!rule.enabled || rule.ruleType != "schedule") return@find false
             if (!rule.appName.isNullOrEmpty()) return@find false
             
@@ -167,7 +169,7 @@ class RuleEnforcer @Inject constructor(
     fun isAppTimeLimitExceeded(packageName: String, usageSeconds: Int): Boolean {
          val appLabel = getAppName(packageName)
          
-         return rules.value.any { rule ->
+         return getRules().any { rule ->
             if (!rule.enabled || rule.ruleType != "time_limit") return@any false
             
             val ruleName = rule.appName ?: return@any false
@@ -181,7 +183,7 @@ class RuleEnforcer @Inject constructor(
 
     fun isUnlockSettingsActive(): Boolean {
         // Check for any enabled "unlock_settings" rule that is currently valid
-        return rules.value.any { rule ->
+        return getRules().any { rule ->
             if (!rule.enabled || rule.ruleType != "unlock_settings") return@any false
             
             // If no schedule, assume valid if enabled (though usually we set schedule)

@@ -34,7 +34,8 @@ const StatusOverview = () => {
         feedback: actionFeedback,
         handleDeviceAction,
         handleAppAction,
-        handleAdjustLimit
+        handleAdjustLimit,
+        handleHideApp
     } = useQuickActions(refetch)
 
     // 3. Local UI state
@@ -164,7 +165,7 @@ const StatusOverview = () => {
                         onAdjustLimit={onAdjustLimitWrapper}
                         onShowAllApps={setShowAllAppsModal}
                         onShowScreenshot={setShowScreenshotModal}
-                        onHideApp={(app) => console.log('Hide app not implemented yet', app)}
+                        onHideApp={handleHideApp}
                     />
                 ))}
             </div>

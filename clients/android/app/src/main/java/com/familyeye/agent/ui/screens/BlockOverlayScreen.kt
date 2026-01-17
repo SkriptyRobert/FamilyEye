@@ -41,10 +41,11 @@ fun BlockOverlayScreen(appName: String, blockType: BlockType, scheduleInfo: Stri
                     BlockType.DEVICE_SCHEDULE -> "Mimo povolený čas"
                     BlockType.DEVICE_LIMIT -> "Denní limit vyčerpán"
                     BlockType.APP_FORBIDDEN -> "Aplikace zakázána"
+                    BlockType.TAMPERING -> "Pokus o narušení ochrany!"
                     else -> "Aplikace zablokována"
                 },
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
+                color = if (blockType == BlockType.TAMPERING) MaterialTheme.colorScheme.error else Color.White,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
@@ -71,6 +72,7 @@ fun BlockOverlayScreen(appName: String, blockType: BlockType, scheduleInfo: Stri
                     BlockType.APP_FORBIDDEN -> "Tato aplikace (nebo hra) není povolena."
                     BlockType.APP_SCHEDULE -> "Přístup k této aplikaci je v tuto dobu omezen."
                     BlockType.APP_LIMIT -> "Tvůj časový limit pro tuto aplikaci na dnešek vypršel."
+                    BlockType.TAMPERING -> "Tato akce je přísně zakázána! Pokus byl zaznamenán a odeslán rodičům."
                     else -> "Přístup zablokován."
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -126,5 +128,6 @@ enum class BlockType {
     APP_FORBIDDEN,
     APP_SCHEDULE,
     APP_LIMIT,
+    TAMPERING,
     GENERIC
 }

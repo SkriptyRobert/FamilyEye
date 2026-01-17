@@ -216,26 +216,12 @@ class FamilyEyeService : Service() {
         }
     }
 
+    @Inject
+    lateinit var ruleRepository: com.familyeye.agent.data.repository.RuleRepository
+
     private suspend fun fetchRules() {
         try {
-            val deviceId = configRepository.deviceId.firstOrNull() ?: return
-            val apiKey = configRepository.apiKey.firstOrNull() ?: return
-            
-            // Use injected 'api' instead of ApiClient
-            val response = api.getRules(
-                com.familyeye.agent.data.api.dto.AgentAuthRequest(deviceId, apiKey)
-            )
-            
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    Timber.i("Rules fetched: ${body.rules.size} rules. Daily usage: ${body.dailyUsageSeconds}s")
-                    ruleEnforcer.updateRules(body.rules)
-                    // TODO: Update daily usage state if we track it locally for limits?
-                }
-            } else {
-                Timber.w("Failed to fetch rules: ${response.code()}")
-            }
+             ruleRepository.refreshRules()
         } catch (e: Exception) {
             Timber.e(e, "Exception in fetchRules")
         }

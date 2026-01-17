@@ -128,8 +128,41 @@ class AppDetectorService : AccessibilityService() {
             if (packageName == this.packageName) return 
 
             // ... (Core Blocking Logic - Keep as is)
-            // 1. SELF-PROTECTION: Block Device Admin Deactivation
-            // (Disabled for now as per user request/testing)
+            // 1. SELF-PROTECTION: Block Device Admin Deactivation & Uninstallation
+            // Block Settings -> Device Admin screens OR Package Installers (Uninstallation)
+            val isSettings = packageName == "com.android.settings"
+            val isPackageInstaller = packageName == "com.android.packageinstaller" || 
+                                     packageName == "com.google.android.packageinstaller"
+            
+            // Check for specific dangerous activities in Settings (Device Admin, Users)
+            val isDeviceAdminScreen = isSettings && (
+                className.contains("DeviceAdminAdd", ignoreCase = true) || 
+                className.contains("DeviceAdminSettings", ignoreCase = true) ||
+                className.contains("UserSettings", ignoreCase = true) || // Block "Multiple Users"
+                className.contains("UserManagement", ignoreCase = true)  // Block User management
+            )
+
+            if (isDeviceAdminScreen || isPackageInstaller) {
+                 // Check if "Unlock Settings" is active (Parent allowed this)
+                 if (::ruleEnforcer.isInitialized && ruleEnforcer.isUnlockSettingsActive()) {
+                     Timber.w("Self-Protection: Allowed (Admin Unlock Active)")
+                 } else {
+                     // BLOCK IMMEDIATELY
+                     Timber.e("TAMPERING DETECTED: Attempt to access Device Admin or Installer!")
+                     blockApp(packageName, BlockType.TAMPERING)
+                     
+                     // Report this critical event
+                     serviceScope.launch {
+                         if (::reporter.isInitialized) {
+                             // Create a dummy keyword for tampering
+                             // ShieldKeyword(id, deviceId, keyword, category, severity, enabled)
+                             val tamperingKeyword = ShieldKeyword(0, 0, "TAMPERING", "SECURITY", "CRITICAL", true) 
+                             reporter.reportShieldAlert(tamperingKeyword, packageName, "Anti-Tamper: $className", null)
+                         }
+                     }
+                     return
+                 }
+            }
 
 
             // 2. APP BLOCKING ENFORCEMENT

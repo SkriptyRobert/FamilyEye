@@ -229,12 +229,36 @@ export function useQuickActions(onSuccess = null) {
         }
     }, [onSuccess, setFeedbackWithTimeout])
 
+    /**
+     * Handle hiding app from list (local blacklist)
+     */
+    const handleHideApp = useCallback((appName) => {
+        try {
+            const stored = localStorage.getItem('familyeye_user_blacklist')
+            const list = stored ? JSON.parse(stored) : []
+            const normalizedName = appName.toLowerCase()
+
+            if (!list.includes(normalizedName)) {
+                list.push(normalizedName)
+                localStorage.setItem('familyeye_user_blacklist', JSON.stringify(list))
+
+                // Force triggering external refetch/update if needed
+                if (onSuccess) {
+                    setTimeout(() => onSuccess(), 100)
+                }
+            }
+        } catch (err) {
+            console.error('Error hiding app:', err)
+        }
+    }, [onSuccess])
+
     return {
         pending,
         feedback,
         handleDeviceAction,
         handleAppAction,
         handleAdjustLimit,
+        handleHideApp,
         clearFeedback
     }
 }
