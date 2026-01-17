@@ -1,5 +1,5 @@
 """Authentication endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
@@ -9,6 +9,7 @@ from ..database import get_db
 from ..models import User
 from ..schemas import UserCreate, UserResponse, LoginRequest, TokenResponse
 from ..config import settings
+from ..rate_limiter import check_rate_limit
 
 router = APIRouter()
 security = HTTPBearer()
@@ -83,9 +84,29 @@ def get_current_parent(
     return current_user
 
 
+def _get_client_ip(request: Request) -> str:
+    """Get client IP from request, handling proxies."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
+    # Rate limiting: 3 registrations per minute per IP
+    client_ip = _get_client_ip(request)
+    is_allowed, remaining, retry_after = check_rate_limit(
+        client_ip, endpoint="register", max_requests=3, window_seconds=60
+    )
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many registration attempts. Please try again later.",
+            headers={"Retry-After": str(retry_after)}
+        )
+    
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -123,8 +144,20 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """Login and get access token."""
+    # Rate limiting: 5 login attempts per minute per IP
+    client_ip = _get_client_ip(request)
+    is_allowed, remaining, retry_after = check_rate_limit(
+        client_ip, endpoint="login", max_requests=5, window_seconds=60
+    )
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again later.",
+            headers={"Retry-After": str(retry_after)}
+        )
+    
     user = db.query(User).filter(User.email == login_data.email).first()
     if not user or not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
@@ -146,4 +179,5 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""
     return current_user
+
 

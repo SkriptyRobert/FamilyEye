@@ -134,10 +134,11 @@ app.include_router(trust.router, prefix="/api/trust", tags=["trust"])
 app.include_router(files.router, prefix="/api/files", tags=["files"])
 app.include_router(shield.router, prefix="/api", tags=["shield"]) # Note: Router has "/shield" prefix internaly
 
-# Serve Uploads (Screenshots)
+# Uploads directory (screenshots served via authenticated /api/files/screenshots endpoint)
 uploads_path = os.path.join(os.getcwd(), "uploads")
 os.makedirs(uploads_path, exist_ok=True)
-app.mount("/static/uploads", StaticFiles(directory=uploads_path), name="uploads")
+# NOTE: Screenshots are NOT served as public static files for security.
+# Use /api/files/screenshots/{device_id}/{filename} with authentication instead.
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist")

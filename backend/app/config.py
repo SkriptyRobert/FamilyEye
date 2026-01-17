@@ -1,7 +1,11 @@
 """Configuration settings."""
 import os
 import socket
+import secrets
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_local_ip():
     """Get local IP address for network access."""
@@ -16,11 +20,28 @@ def get_local_ip():
         # Fallback to localhost
         return "127.0.0.1"
 
+def _get_secret_key() -> str:
+    """Get or generate SECRET_KEY securely."""
+    env_key = os.getenv("SECRET_KEY", "")
+    insecure_default = "your-secret-key-change-in-production"
+    
+    if env_key and env_key != insecure_default:
+        return env_key
+    
+    # Auto-generate secure key for standalone/development use
+    generated_key = secrets.token_urlsafe(32)
+    logger.warning(
+        "⚠️ SECRET_KEY not set or using insecure default. "
+        "Auto-generated secure key for this session. "
+        "Set SECRET_KEY environment variable for production!"
+    )
+    return generated_key
+
 class Settings:
     """Application settings."""
     
-    # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    # Security - auto-generate if not set
+    SECRET_KEY: str = _get_secret_key()
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24)))  # 24 hours
     
