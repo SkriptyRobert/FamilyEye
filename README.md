@@ -4,6 +4,7 @@
 
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
 [![Status: Open Source (Non-Commercial)](https://img.shields.io/badge/Status-Open%20Source%20(Non--Commercial)-orange)](README.md)
+[![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
 
 **FamilyEye je open-source projekt pro osobní nekomerční použití.**
 Komunitní příspěvky (bug fixy, nové funkce) jsou vřele vítány! Podívejte se do [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -130,12 +131,14 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email security@familyeye.app (do not open public issues).
 
-## 📄 Licence (Non-Commercial)
+## 📄 License (Non-Commercial)
 
-Tento projekt je licencován pod **CC BY-NC-SA 4.0** (Uveďte autora-Neužívejte komerčně-Zachovejte licenci).
-Viz soubor [LICENSE](LICENSE) pro detaily.
+This project is licensed under **CC BY-NC-SA 4.0** (Attribution-NonCommercial-ShareAlike).
+See [LICENSE](LICENSE) file for details.
 
-**Pro komerční použití (firmy, placené služby) nás kontaktujte pro udělení výjimky.**
+**Author:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com
+
+**For commercial use (companies, paid services), please contact us for an exception.**
 
 ---
 

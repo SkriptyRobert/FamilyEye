@@ -12,7 +12,7 @@
 
 If you discover a security vulnerability, please report it by:
 
-1. **Email:** Send details to security@familyeye.app
+1. **Email:** Send details to **robert.pesout@gmail.com** (Róbert Pešout, BertSoftware)
 2. **Include:**
    - Description of the vulnerability
    - Steps to reproduce

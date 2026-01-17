@@ -1,26 +1,32 @@
 # Contributing to FamilyEye 🤝
 
-Jsem rád, že chceš pomoci vylepšit FamilyEye! Každý bug fix nebo nápad se počítá.
+Glad you want to help improve FamilyEye! Every bug fix or idea counts.
 
-## Jak přispět (jednoduše & lidsky)
+## How to Contribute (Simple & Human)
 
-1.  **Forkni si to** - Udělej si kopii projektu k sobě.
-2.  **Uprav to/Oprav to** - Udělej změny ve své `feature` branchi.
-3.  **Pošli PR (Pull Request)** - Až to budeš mít, pošli to zpátky.
+1.  **Fork it** - Make a copy of the project to your own account.
+2.  **Fix/Edit it** - Make changes in your `feature` branch.
+3.  **Send a PR (Pull Request)** - Once you're done, send it back.
 
-### Technické minimum
-- **Backend:** `python run_https.py` (v `backend/` virtuálním prostředí)
-- **Frontend:** `npm run dev` (v `frontend/`)
-- Měj čistý kód, ať se v tom vyznáme.
+### Technical Minimum
+- **Backend:** `python run_https.py` (in `backend/` virtual environment)
+- **Frontend:** `npm run dev` (in `frontend/`)
+- Keep your code clean so we can understand it.
 
 ---
 
-## ⚖️ Právní dohoda (Nutné minimum)
+## ⚖️ Legal Agreement (Required Minimum)
 
-Abychom udrželi projekt udržitelný, potřebujeme mít jasná práva:
+To keep the project sustainable, we need clear rights:
 
-**Odesláním příspěvku (Pull Request) potvrzujete, že:**
-1.  Jste autorem kódu.
-2.  Udělujete správci projektu (**FamilyEye Maintainer**) neomezené, trvalé právo tento kód používat, upravovat a začleňovat do budoucích verzí projektu, a to **i pod jinými (včetně komerčních) licencemi**.
+**By submitting a contribution (Pull Request), you confirm that:**
+1.  You are the author of the code.
+2.  You grant the project maintainer (**Róbert Pešout (BertSoftware) - robert.pesout@gmail.com**) the unlimited, perpetual right to use, modify, and incorporate this code into future versions of the project, **even under other (including commercial) licenses**.
 
-*Proč?* Protože chceme mít možnost projekt v budoucnu rozvíjet jakýmkoliv směrem, aniž bychom museli obíhat stovky přispěvatelů s prosbou o svolení. Vy stále zůstáváte autorem, jen nám dáváte volnou ruku s vaším příspěvkem.
+*Why?* Because we want the option to develop the project in any direction in the future without having to chase down hundreds of contributors for permission. You remain the author, but you give us a free hand with your contribution.
+
+---
+
+## Code of Conduct
+
+Treat others with respect. We are here to build a useful tool for families, not to argue.
