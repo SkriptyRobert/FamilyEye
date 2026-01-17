@@ -1,5 +1,9 @@
-/* DeviceCard Component Styles */
+/* DeviceCard Component Styles - MODULAR VERSION */
 /* Uses existing StatusOverview.css styles as base, with component-specific overrides */
+
+/* Import modules */
+@import './DeviceStats.css';
+@import './DeviceActions.css';
 
 .device-card {
     background: var(--glass-bg, rgba(255, 255, 255, 0.7));
@@ -116,48 +120,6 @@
     color: var(--text-muted, #94a3b8);
 }
 
-/* Usage display */
-.usage-today {
-    margin-bottom: var(--space-3, 12px);
-}
-
-.usage-primary {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2, 8px);
-}
-
-.usage-value {
-    font-size: var(--font-size-2xl, 1.5rem);
-    font-weight: var(--font-weight-bold, 700);
-    color: var(--text-primary, #0f172a);
-    font-variant-numeric: tabular-nums;
-}
-
-.usage-label {
-    font-size: var(--font-size-sm, 0.875rem);
-    color: var(--text-secondary, #64748b);
-}
-
-/* Limit chips container */
-.limit-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2, 8px);
-    margin-bottom: var(--space-3, 12px);
-}
-
-.limit-chips-more {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    font-weight: var(--font-weight-medium, 500);
-    color: var(--text-secondary, #64748b);
-    background: var(--bg-tertiary, #f1f5f9);
-    border-radius: var(--radius-md, 8px);
-}
-
 /* Expand indicator */
 .expand-indicator {
     text-align: center;
@@ -243,159 +205,7 @@
     margin-bottom: var(--space-3, 12px);
 }
 
-.show-all-apps-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1, 4px);
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    color: var(--accent-color, #6366f1);
-    background: transparent;
-    border: 1px solid var(--accent-color, #6366f1);
-    border-radius: var(--radius-md, 8px);
-    cursor: pointer;
-    transition: all var(--transition-fast, 150ms);
-}
-
-.show-all-apps-btn:hover {
-    background: rgba(99, 102, 241, 0.1);
-}
-
-/* Limits expanded section */
-.limits-section-expanded .limit-item-expanded {
-    padding: var(--space-3, 12px);
-    background: var(--bg-secondary, #ffffff);
-    border-radius: var(--radius-md, 8px);
-    margin-bottom: var(--space-2, 8px);
-}
-
-.limits-section-expanded .limit-item-expanded:last-child {
-    margin-bottom: 0;
-}
-
-.limits-section-expanded .limit-item-expanded.green {
-    border-left: 3px solid var(--color-success, #10b981);
-}
-
-.limits-section-expanded .limit-item-expanded.orange {
-    border-left: 3px solid var(--color-warning, #f59e0b);
-}
-
-.limits-section-expanded .limit-item-expanded.red {
-    border-left: 3px solid var(--color-error, #ef4444);
-}
-
-.limit-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-2, 8px);
-}
-
-.limit-app-name {
-    font-weight: var(--font-weight-medium, 500);
-    color: var(--text-primary, #0f172a);
-}
-
-.limit-text {
-    font-size: var(--font-size-sm, 0.875rem);
-    font-weight: var(--font-weight-medium, 500);
-    font-variant-numeric: tabular-nums;
-}
-
-.limit-text.green {
-    color: var(--color-success, #10b981);
-}
-
-.limit-text.orange {
-    color: var(--color-warning, #f59e0b);
-}
-
-.limit-text.red {
-    color: var(--color-error, #ef4444);
-}
-
-.limit-bar-container {
-    width: 100%;
-    height: 6px;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: var(--radius-full, 9999px);
-    overflow: hidden;
-    margin-bottom: var(--space-2, 8px);
-}
-
-.limit-bar {
-    height: 100%;
-    border-radius: var(--radius-full, 9999px);
-    transition: width var(--transition-slow, 300ms);
-}
-
-.limit-bar.green {
-    background: var(--color-success, #10b981);
-}
-
-.limit-bar.orange {
-    background: var(--color-warning, #f59e0b);
-}
-
-.limit-bar.red {
-    background: var(--color-error, #ef4444);
-}
-
-.limit-quick-actions {
-    display: flex;
-    gap: var(--space-2, 8px);
-    margin-top: var(--space-2, 8px);
-}
-
-.limit-action-btn {
-    padding: var(--space-1, 4px) var(--space-3, 12px);
-    font-size: var(--font-size-xs, 0.75rem);
-    font-weight: var(--font-weight-medium, 500);
-    border-radius: var(--radius-md, 8px);
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-secondary, #ffffff);
-    cursor: pointer;
-    transition: all var(--transition-fast, 150ms);
-}
-
-.limit-action-btn:hover:not(:disabled) {
-    background: var(--bg-tertiary, #f1f5f9);
-}
-
-.limit-action-btn:disabled,
-.limit-action-btn.pending {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.limit-action-btn.subtract {
-    color: var(--color-error, #ef4444);
-}
-
-.limit-action-btn.add,
-.limit-action-btn.add-more {
-    color: var(--color-success, #10b981);
-}
-
-.limit-action-feedback {
-    margin-top: var(--space-2, 8px);
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    border-radius: var(--radius-sm, 6px);
-}
-
-.limit-action-feedback.success {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--color-success, #10b981);
-}
-
-.limit-action-feedback.error {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--color-error, #ef4444);
-}
-
-/* Apps list */
+/* Apps list container */
 .apps-list {
     display: flex;
     flex-direction: column;
@@ -460,131 +270,11 @@
     font-variant-numeric: tabular-nums;
 }
 
-.app-quick-actions {
-    display: flex;
-    gap: var(--space-1, 4px);
-}
-
-.app-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    font-weight: var(--font-weight-medium, 500);
-    border-radius: var(--radius-sm, 6px);
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-secondary, #ffffff);
-    cursor: pointer;
-    transition: all var(--transition-fast, 150ms);
-}
-
-.app-action-btn.block:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: var(--color-error, #ef4444);
-    color: var(--color-error, #ef4444);
-}
-
-.app-action-btn.limit:hover:not(:disabled) {
-    background: rgba(99, 102, 241, 0.1);
-    border-color: var(--accent-color, #6366f1);
-    color: var(--accent-color, #6366f1);
-}
-
-.app-action-btn.hide:hover:not(:disabled) {
-    background: rgba(100, 116, 139, 0.1);
-    border-color: var(--text-secondary, #64748b);
-    color: var(--text-secondary, #64748b);
-}
-
-.app-action-btn:disabled,
-.app-action-btn.pending {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.app-has-rule-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    font-weight: var(--font-weight-medium, 500);
-    color: var(--color-success, #10b981);
-    background: rgba(16, 185, 129, 0.1);
-    border-radius: var(--radius-full, 9999px);
-}
-
-.app-action-feedback {
-    width: 100%;
-    padding: var(--space-1, 4px) var(--space-2, 8px);
-    font-size: var(--font-size-xs, 0.75rem);
-    border-radius: var(--radius-sm, 6px);
-    margin-top: var(--space-1, 4px);
-}
-
-.app-action-feedback.success {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--color-success, #10b981);
-}
-
-.app-action-feedback.error {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--color-error, #ef4444);
-}
-
-/* Extended action buttons */
-.actions-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2, 8px);
-}
-
-.action-btn-full {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-3, 12px);
-    font-size: var(--font-size-sm, 0.875rem);
-    font-weight: var(--font-weight-medium, 500);
-    border-radius: var(--radius-md, 8px);
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-secondary, #ffffff);
-    cursor: pointer;
-    transition: all var(--transition-fast, 150ms);
-}
-
-.action-btn-full:hover:not(:disabled) {
-    background: var(--bg-tertiary, #f1f5f9);
-}
-
-.action-btn-full:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.action-btn-full.unlock:hover:not(:disabled) {
-    border-color: var(--color-success, #10b981);
-    color: var(--color-success, #10b981);
-}
-
-.action-btn-full.reset-pin:hover:not(:disabled) {
-    border-color: var(--color-warning, #f59e0b);
-    color: var(--color-warning, #f59e0b);
-}
-
-.action-btn-full.resume:hover:not(:disabled) {
-    border-color: var(--accent-color, #6366f1);
-    color: var(--accent-color, #6366f1);
-}
-
 /* =============================================================================
    MOBILE RESPONSIVE STYLES
    ============================================================================= */
 
 @media (max-width: 767px) {
-
-    /* Device card mobile layout */
     .device-card {
         padding: var(--space-4, 16px);
         border-radius: var(--radius-lg, 12px);
@@ -592,10 +282,8 @@
 
     .device-card:hover {
         transform: none;
-        /* Disable hover transform on mobile */
     }
 
-    /* Header stacks vertically on small screens */
     .device-header {
         flex-direction: column;
         gap: var(--space-2, 8px);
@@ -618,7 +306,6 @@
         text-align: left;
         width: 100%;
         padding-left: 52px;
-        /* Align with name after icon */
     }
 
     /* Usage value slightly smaller */
@@ -653,7 +340,6 @@
 
     .detail-icon {
         display: none;
-        /* Hide icons on mobile to save space */
     }
 
     /* Section header stacks */
@@ -690,7 +376,6 @@
 
     .limit-bar-container {
         height: 8px;
-        /* Thicker for visibility */
     }
 
     /* Limit quick actions wrap and grow */
@@ -737,7 +422,6 @@
 
     .top-app-window-title {
         display: none;
-        /* Hide window title on mobile */
     }
 
     /* App quick actions full width on mobile */
@@ -798,6 +482,12 @@
     }
 
     .app-item-main {
-        min-width: 250px;
+        min-width: 100%;
+        margin-bottom: var(--space-2, 8px);
+    }
+
+    .app-quick-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
