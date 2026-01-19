@@ -122,6 +122,7 @@ class FamilyEyeService : Service() {
                     webSocketClient.start()
                     startRuleFetching()
                     startCommandListening()
+                    startSecurityMonitoring() // Phase 3: Security checks
                 } else {
                     Timber.i("Device not paired, waiting for pairing...")
                     webSocketClient.stop()
@@ -239,11 +240,63 @@ class FamilyEyeService : Service() {
     @Inject
     lateinit var ruleRepository: com.familyeye.agent.data.repository.RuleRepository
 
+    @Inject
+    lateinit var selfProtectionHandler: com.familyeye.agent.enforcement.SelfProtectionHandler
+
     private suspend fun fetchRules() {
         try {
              ruleRepository.refreshRules()
         } catch (e: Exception) {
             Timber.e(e, "Exception in fetchRules")
+        }
+    }
+
+    /**
+     * Phase 3: Periodic security monitoring.
+     * Checks for system-level tampering attempts like Developer Options or ADB.
+     */
+    private fun startSecurityMonitoring() {
+        serviceScope.launch {
+            while (isActive) {
+                try {
+                    val issues = selfProtectionHandler.checkSystemTampering()
+                    
+                    for ((issueType, _) in issues) {
+                        // Report each security issue to backend
+                        Timber.w("Security issue detected: $issueType - reporting to backend")
+                        reportSecurityAlert(issueType)
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Error in security monitoring")
+                }
+                delay(60_000) // Check every 60 seconds
+            }
+        }
+    }
+
+    private suspend fun reportSecurityAlert(issueType: String) {
+        try {
+            val deviceId = configRepository.getDeviceId() ?: return
+            
+            val alertMessage = when (issueType) {
+                "DEVELOPER_OPTIONS_ENABLED" -> "Developer Options is enabled on device"
+                "ADB_DEBUGGING_ENABLED" -> "USB Debugging (ADB) is enabled on device"
+                else -> "Security issue detected: $issueType"
+            }
+            
+            val request = com.familyeye.agent.data.api.dto.ShieldAlertRequest(
+                device_id = deviceId,
+                keyword = "TAMPERING:$issueType",
+                app_name = "System Settings",
+                detected_text = alertMessage,
+                screenshot_url = null,
+                severity = "critical"
+            )
+            
+            api.reportShieldAlert(request)
+            Timber.i("Security alert reported: $issueType")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to report security alert")
         }
     }
 
