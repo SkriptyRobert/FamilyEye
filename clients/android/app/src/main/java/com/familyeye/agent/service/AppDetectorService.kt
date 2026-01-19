@@ -181,6 +181,13 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
+    fun recheckEnforcement() {
+        val pkg = currentPackage
+        if (pkg != null) {
+            handleWindowChange(pkg, null)
+        }
+    }
+
     private fun checkTimeLimits(packageName: String) {
         serviceScope.launch {
             if (!::usageTracker.isInitialized) return@launch
@@ -193,14 +200,15 @@ class AppDetectorService : AccessibilityService() {
                     blockApp(packageName, result.blockType)
                 }
                 is EnforcementResult.Allow -> {
-                    // Only hide if we aren't showing a PERSISTENT block (like device lock)
-                    // For now, simple hide is fine as checkTimeLimits runs periodically
-                    // But we might want to be careful not to hide "just because"
+                    // Critical Fix: If we were blocked but now are allowed (e.g. time added, schedule ended),
+                    // we MUST hide the overlay if it's showing.
+                    if (blockOverlayManager.isShowing()) {
+                        Timber.i("Unblocking $packageName - Time limits passed/refreshed")
+                        blockOverlayManager.hide()
+                    }
                 }
                 else -> {
                      // Do nothing on allow? Or hide?
-                     // If we explicitly allow, maybe we should hide if an overlay was showing for THIS app?
-                     // usageTracker.triggerOverlay handles the showing.
                 }
             }
         }

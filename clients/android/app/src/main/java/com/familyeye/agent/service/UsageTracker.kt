@@ -73,6 +73,13 @@ class UsageTracker @Inject constructor(
         // Skip tracking if our own overlay is showing (avoid self-counting)
         if (blockOverlayManager.isShowing()) {
             lastCheckTime = currentTime
+            
+            // Critical Fix: Even if blocked, we must periodically re-check enforcement.
+            // If the schedule ended or limits were raised, AppDetectorService needs to know 
+            // to hide the overlay.
+            Timber.v("Overlay active - requesting enforcement re-check")
+            AppDetectorService.instance?.recheckEnforcement()
+            
             return
         }
 
@@ -148,13 +155,17 @@ class UsageTracker @Inject constructor(
 
         // 3. Global Schedule
         if (ruleEnforcer.isDeviceScheduleBlocked()) {
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_SCHEDULE)
+            val rule = ruleEnforcer.getActiveDeviceScheduleRule()
+            val info = rule?.let { "${it.scheduleStartTime} - ${it.scheduleEndTime}" }
+            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_SCHEDULE, info)
             return
         }
         
         // 4. App Schedule
         if (ruleEnforcer.isAppScheduleBlocked(packageName)) {
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_SCHEDULE)
+            val rule = ruleEnforcer.getActiveAppScheduleRule(packageName)
+            val info = rule?.let { "${it.scheduleStartTime} - ${it.scheduleEndTime}" }
+            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_SCHEDULE, info)
             return
         }
         
@@ -167,18 +178,19 @@ class UsageTracker @Inject constructor(
 
     private suspend fun triggerOverlay(
         packageName: String, 
-        blockType: com.familyeye.agent.ui.screens.BlockType = com.familyeye.agent.ui.screens.BlockType.GENERIC
+        blockType: com.familyeye.agent.ui.screens.BlockType = com.familyeye.agent.ui.screens.BlockType.GENERIC,
+        scheduleInfo: String? = null
     ) {
         Timber.w("Core Limit exceeded for $packageName! Triggering block via AppDetector.")
         try {
             kotlinx.coroutines.withContext(Dispatchers.Main) {
                 // Use the centralized blocking logic in AppDetectorService
                 // This ensures consistency: Home Action + Delay + Overlay Protection
-                AppDetectorService.instance?.blockApp(packageName, blockType) 
+                AppDetectorService.instance?.blockApp(packageName, blockType, scheduleInfo) 
                     ?: run {
                         // Fallback if service instance not available (rare)
                         Timber.w("AppDetectorService instance null, falling back to direct overlay")
-                        blockOverlayManager.show(packageName, blockType)
+                        blockOverlayManager.show(packageName, blockType, scheduleInfo)
                     }
             }
         } catch (e: Exception) {
