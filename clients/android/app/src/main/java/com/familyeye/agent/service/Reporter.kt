@@ -78,9 +78,39 @@ class Reporter @Inject constructor(
                 } catch (e: Exception) {
                     Timber.e(e, "Error in Reporter loop")
                 }
-                delay(AgentConstants.SYNC_INTERVAL_MS)
+                // Phase 4: Adaptive sync interval based on battery
+                delay(getSyncInterval())
             }
         }
+    }
+
+    /**
+     * Phase 4 Optimization: Adaptive sync interval based on battery and data saver mode.
+     * Returns longer interval when battery is low to conserve power.
+     */
+    private suspend fun getSyncInterval(): Long {
+        val batteryLevel = getBatteryLevel()
+        val isDataSaver = configRepository.dataSaverEnabled.first()
+        
+        return when {
+            batteryLevel < AgentConstants.BATTERY_LOW_THRESHOLD -> {
+                Timber.v("Battery low ($batteryLevel%) - using extended sync interval")
+                AgentConstants.SYNC_INTERVAL_BATTERY_LOW_MS
+            }
+            isDataSaver && !isWifiConnected() -> {
+                Timber.v("Data Saver active, no WiFi - using extended sync interval")
+                AgentConstants.SYNC_INTERVAL_BATTERY_LOW_MS
+            }
+            else -> AgentConstants.SYNC_INTERVAL_MS
+        }
+    }
+
+    /**
+     * Get current battery level as percentage (0-100).
+     */
+    private fun getBatteryLevel(): Int {
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
+        return batteryManager?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
     }
 
     /**

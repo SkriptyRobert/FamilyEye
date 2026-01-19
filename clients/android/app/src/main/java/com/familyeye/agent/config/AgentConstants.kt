@@ -29,6 +29,24 @@ object AgentConstants {
     const val SYNC_INTERVAL_MS = 30_000L  // 30 seconds
 
     /**
+     * Interval for syncing when battery is low (milliseconds).
+     * Longer interval to conserve battery.
+     */
+    const val SYNC_INTERVAL_BATTERY_LOW_MS = 60_000L  // 60 seconds
+
+    /**
+     * Battery level threshold for low-battery mode (percentage 0-100).
+     * Below this level, sync interval is extended to conserve battery.
+     */
+    const val BATTERY_LOW_THRESHOLD = 20
+
+    /**
+     * Maximum number of logs to send via WebSocket.
+     * Larger batches go via HTTP for reliability.
+     */
+    const val WEBSOCKET_LOG_BATCH_THRESHOLD = 20
+
+    /**
      * Delay before taking screenshots (milliseconds).
      * Allows UI to fully render before capture.
      */
