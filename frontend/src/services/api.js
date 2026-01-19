@@ -33,7 +33,7 @@ export const updateApiBaseURL = (newUrl) => {
   api.defaults.baseURL = newUrl
 }
 
-// Add token to requests
+// Add token to requests and prevent caching
 api.interceptors.request.use((config) => {
   const token = getToken()
   if (token) {
@@ -43,6 +43,10 @@ api.interceptors.request.use((config) => {
   if (backendUrl) {
     config.baseURL = backendUrl
   }
+  // Prevent browser caching of API responses
+  config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+  config.headers['Pragma'] = 'no-cache'
+  config.headers['Expires'] = '0'
   return config
 }, (error) => {
   return Promise.reject(error)

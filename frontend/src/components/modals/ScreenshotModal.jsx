@@ -20,22 +20,33 @@ const ScreenshotModal = ({ device, onClose }) => {
         if (!device?.last_screenshot) return
 
         let mounted = true
+        const screenshotPath = device.last_screenshot
+
+        // Check if it's a base64 data URI (legacy format)
+        if (screenshotPath.startsWith('data:image/')) {
+            setImageUrl(screenshotPath)
+            return
+        }
+
         const fetchImage = async () => {
             setLoading(true)
             setError(null)
             try {
-                // If the URL is already absolute and points to our API, we need to fetch it with auth
-                // But api.get adds baseURL. If last_screenshot is full URL, we need to handle it.
-                // device.last_screenshot typically comes from backend as full URL (http://.../api/...)
+                // If it's a relative path like "screenshots/xxx/file.jpg", prepend /api/files/
+                // If it's already a full URL, use as-is
+                let fetchUrl = screenshotPath
+                if (!screenshotPath.startsWith('http') && !screenshotPath.startsWith('/api/')) {
+                    fetchUrl = `/api/files/${screenshotPath}`
+                } else if (screenshotPath.startsWith('http')) {
+                    // Full URL from backend - extract path part if needed
+                    // e.g., http://...../api/files/screenshots/xxx/file.jpg
+                    const pathMatch = screenshotPath.match(/\/api\/files\/(.+)$/)
+                    if (pathMatch) {
+                        fetchUrl = `/api/files/${pathMatch[1]}`
+                    }
+                }
 
-                // We'll strip the base URL if needed or just use the full URL with axios
-                // api.get logic: if url is absolute, axios might handle it, but our api instance has baseURL set.
-                // Safer: Extract the path relative to baseURL or just use axios directly with headers.
-                // Ideally, use our 'api' instance to get the interceptors (Auth header).
-
-                // Hack: If URL starts with http, we can pass it directly. Axios usually handles absolute URLs by ignoring baseURL.
-
-                const response = await api.get(device.last_screenshot, {
+                const response = await api.get(fetchUrl, {
                     responseType: 'blob'
                 })
 
@@ -55,7 +66,7 @@ const ScreenshotModal = ({ device, onClose }) => {
 
         return () => {
             mounted = false
-            if (imageUrl) URL.revokeObjectURL(imageUrl)
+            if (imageUrl && !imageUrl.startsWith('data:')) URL.revokeObjectURL(imageUrl)
         }
     }, [device?.last_screenshot])
 

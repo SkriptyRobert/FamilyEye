@@ -1,15 +1,29 @@
 package com.familyeye.agent.service
 
 import com.familyeye.agent.data.api.dto.RuleDTO
-import com.familyeye.agent.data.repository.AgentConfigRepository
-import kotlinx.coroutines.flow.Flow
+import com.familyeye.agent.policy.AppBlockPolicy
+import com.familyeye.agent.policy.DeviceLockPolicy
+import com.familyeye.agent.policy.LimitPolicy
+import com.familyeye.agent.policy.SchedulePolicy
+import com.familyeye.agent.policy.UnlockPolicy
+import com.familyeye.agent.utils.AppInfoResolver
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Facade for rule enforcement that delegates to specialized policy classes.
+ * 
+ * This class maintains the same public API for backward compatibility
+ * while internally using the modular policy classes.
+ */
 @Singleton
 class RuleEnforcer @Inject constructor(
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
+    @ApplicationContext private val context: android.content.Context,
     private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository
 ) {
     // Cache rules in memory for synchronous access (volatile for thread safety)
@@ -18,203 +32,137 @@ class RuleEnforcer @Inject constructor(
 
     init {
         // Observe rules from repository immediately
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             ruleRepository.getRules().collect { newRules ->
-                 timber.log.Timber.d("RuleEnforcer: Rules updated from DB: ${newRules.size}")
-                 cachedRules = newRules
+                Timber.d("RuleEnforcer: Rules updated from DB: ${newRules.size}")
+                cachedRules = newRules
             }
         }
     }
 
     private fun getRules(): List<RuleDTO> = cachedRules
 
+    /**
+     * Check if an app is blocked by any app_block rule.
+     */
     fun isAppBlocked(packageName: String): Boolean {
         val appLabel = getAppName(packageName)
-        val currentRules = getRules()
-        
-        timber.log.Timber.v("Checking blocking for $packageName ($appLabel). Rules count: ${currentRules.size}")
-        
-        return currentRules.any { rule ->
-            if (!rule.enabled || rule.ruleType != "app_block") return@any false
-            
-            val ruleName = rule.appName ?: return@any false
-            
-            // 1. Exact Package Match
-            if (ruleName.equals(packageName, ignoreCase = true)) {
-                timber.log.Timber.w("BLOCK MATCH (Exact): $packageName")
-                return@any true
-            }
-            
-            // 2. Partial Package Match
-            if (packageName.contains(ruleName, ignoreCase = true)) {
-                timber.log.Timber.w("BLOCK MATCH (Partial): $packageName contains $ruleName")
-                return@any true
-            }
-            
-            // 3. Label Match
-            if (ruleName.equals(appLabel, ignoreCase = true)) {
-                 timber.log.Timber.w("BLOCK MATCH (Label): $appLabel == $ruleName")
-                 return@any true
-            }
-            
-            false
+        val isBlocked = AppBlockPolicy.isBlocked(packageName, appLabel, getRules())
+        if (isBlocked) {
+            Timber.w("App blocked: $packageName ($appLabel)")
         }
+        return isBlocked
     }
 
-    private fun getAppName(packageName: String): String {
-        return try {
-            val packageManager = context.packageManager
-            val info = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(info).toString()
-        } catch (e: Exception) {
-            packageName // Fallback
-        }
+    /**
+     * Get the human-readable name for an app.
+     */
+    fun getAppName(packageName: String): String {
+        return AppInfoResolver.getAppName(context, packageName)
     }
-    
+
+    /**
+     * Check if the device is currently locked.
+     */
     fun isDeviceLocked(): Boolean {
-        // "Lock Now" functionality
-        return getRules().any { rule ->
-            rule.enabled && rule.ruleType == "lock_device"
-        }
+        return DeviceLockPolicy.isLocked(getRules())
     }
 
+    /**
+     * Check if the daily limit is exceeded.
+     */
     fun isDailyLimitExceeded(totalUsageSeconds: Int): Boolean {
-        return getRules().any { rule ->
-             val isLimitRule = rule.enabled && rule.ruleType == "daily_limit" && rule.timeLimit != null
-             if (isLimitRule) {
-                 val limitSeconds = rule.timeLimit!! * 60
-                 val exceeded = limitSeconds <= totalUsageSeconds
-                 if (exceeded) {
-                     timber.log.Timber.w("Daily Limit EXCEEDED: Used $totalUsageSeconds s >= Limit $limitSeconds s")
-                 }
-                 exceeded
-             } else {
-                 false
-             }
+        val exceeded = LimitPolicy.isDailyLimitExceeded(totalUsageSeconds, getRules())
+        if (exceeded) {
+            Timber.w("Daily limit exceeded: $totalUsageSeconds seconds")
         }
-    }
-    
-    fun isDeviceScheduleBlocked(): Boolean {
-        // Device Schedule: ruleType="schedule" AND appName is NULL or Empty
-        return getRules().any { rule ->
-            if (!rule.enabled || rule.ruleType != "schedule") return@any false
-            if (!rule.appName.isNullOrEmpty()) return@any false // Skip App Schedules
-            
-            isRuleActiveNow(rule)
-        }
+        return exceeded
     }
 
+    /**
+     * Check if the device is currently in a blocked schedule period.
+     */
+    fun isDeviceScheduleBlocked(): Boolean {
+        return SchedulePolicy.isDeviceScheduleBlocked(getRules())
+    }
+
+    /**
+     * Check if an app is currently in a blocked schedule period.
+     */
     fun isAppScheduleBlocked(packageName: String): Boolean {
         val appLabel = getAppName(packageName)
-        
-        // App Schedule: ruleType="schedule" AND appName matches packageName/label
-        return getRules().any { rule ->
-            if (!rule.enabled || rule.ruleType != "schedule") return@any false
-            
-            val ruleName = rule.appName ?: return@any false
-            val isMatch = ruleName.equals(packageName, ignoreCase = true) || 
-                          packageName.contains(ruleName, ignoreCase = true) ||
-                          ruleName.equals(appLabel, ignoreCase = true)
-                          
-            if (!isMatch) return@any false
-            
-            isRuleActiveNow(rule)
-        }
+        return SchedulePolicy.isAppScheduleBlocked(packageName, appLabel, getRules())
     }
 
+    /**
+     * Get the active app schedule rule for a package.
+     */
     fun getActiveAppScheduleRule(packageName: String): RuleDTO? {
         val appLabel = getAppName(packageName)
-        return getRules().find { rule ->
-             if (!rule.enabled || rule.ruleType != "schedule") return@find false
-            
-             val ruleName = rule.appName ?: return@find false
-             val isMatch = ruleName.equals(packageName, ignoreCase = true) || 
-                           packageName.contains(ruleName, ignoreCase = true) ||
-                           ruleName.equals(appLabel, ignoreCase = true)
-                          
-             if (!isMatch) return@find false
-            
-             isRuleActiveNow(rule)
-        }
+        return SchedulePolicy.getActiveAppScheduleRule(packageName, appLabel, getRules())
     }
 
+    /**
+     * Get the active device schedule rule.
+     */
     fun getActiveDeviceScheduleRule(): RuleDTO? {
-         return getRules().find { rule ->
-            if (!rule.enabled || rule.ruleType != "schedule") return@find false
-            if (!rule.appName.isNullOrEmpty()) return@find false
-            
-            isRuleActiveNow(rule)
-        }
+        return SchedulePolicy.getActiveDeviceScheduleRule(getRules())
     }
 
-    private fun isRuleActiveNow(rule: RuleDTO): Boolean {
-        // Check Days
-        val now = java.util.Calendar.getInstance()
-        val dayOfWeek = (now.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7 // 0=Mon, 6=Sun
-        
-        val days = rule.scheduleDays
-        if (!days.isNullOrEmpty()) {
-            val allowedDays = days.split(",").mapNotNull { it.trim().toIntOrNull() }
-            if (!allowedDays.contains(dayOfWeek)) {
-                return false 
-            }
-        }
-
-        val start = rule.scheduleStartTime ?: return false
-        val end = rule.scheduleEndTime ?: return false
-        
-        return isCurrentTimeInRange(start, end)
-    }
-    
+    /**
+     * Check if an app's time limit is exceeded.
+     */
     fun isAppTimeLimitExceeded(packageName: String, usageSeconds: Int): Boolean {
-         val appLabel = getAppName(packageName)
-         
-         return getRules().any { rule ->
-            if (!rule.enabled || rule.ruleType != "time_limit") return@any false
-            
-            val ruleName = rule.appName ?: return@any false
-            val isMatch = ruleName.equals(packageName, ignoreCase = true) || 
-                          packageName.contains(ruleName, ignoreCase = true) ||
-                          ruleName.equals(appLabel, ignoreCase = true)
-            
-            isMatch && (rule.timeLimit?.times(60) ?: Int.MAX_VALUE) <= usageSeconds
+        val appLabel = getAppName(packageName)
+        val exceeded = LimitPolicy.isAppTimeLimitExceeded(packageName, appLabel, usageSeconds, getRules())
+        if (exceeded) {
+            Timber.w("App time limit exceeded: $packageName ($usageSeconds seconds)")
         }
+        return exceeded
     }
 
+    /**
+     * Check if settings unlock is currently active (parent allowed access).
+     */
     fun isUnlockSettingsActive(): Boolean {
-        // Check for any enabled "unlock_settings" rule that is currently valid
-        return getRules().any { rule ->
-            if (!rule.enabled || rule.ruleType != "unlock_settings") return@any false
-            
-            // If no schedule, assume valid if enabled (though usually we set schedule)
-            val start = rule.scheduleStartTime ?: return@any true
-            val end = rule.scheduleEndTime ?: return@any true
-            
-            isCurrentTimeInRange(start, end)
-        }
+        return UnlockPolicy.isUnlockActive(getRules())
     }
 
-    private fun isCurrentTimeInRange(startStr: String, endStr: String): Boolean {
-        try {
-            val now = java.util.Calendar.getInstance()
-            val currentMinutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-            
-            fun parseMinutes(timeStr: String): Int {
-                val parts = timeStr.split(":")
-                return parts[0].toInt() * 60 + parts[1].toInt()
-            }
-            
-            val startMinutes = parseMinutes(startStr)
-            val endMinutes = parseMinutes(endStr)
-            
-            // Handle day wrapping if needed (though unlocked settings is usually short term)
-            if (endMinutes < startMinutes) {
-                return currentMinutes >= startMinutes || currentMinutes < endMinutes
-            }
-            
-            return currentMinutes in startMinutes until endMinutes
-        } catch (e: Exception) {
-            return false
-        }
+    /**
+     * Get remaining daily limit time in seconds.
+     * @return Remaining seconds, or null if no limit
+     */
+    fun getRemainingDailyTime(totalUsageSeconds: Int): Int? {
+        val rule = getRules().find { 
+            it.enabled && it.ruleType == "daily_limit" && it.timeLimit != null 
+        } ?: return null
+        val limitSeconds = rule.timeLimit!! * 60
+        return maxOf(0, limitSeconds - totalUsageSeconds)
+    }
+
+    /**
+     * Get remaining app time limit in seconds.
+     * @return Remaining seconds, or null if no limit
+     */
+    fun getRemainingAppTime(packageName: String, usageSeconds: Int): Int? {
+        val appLabel = getAppName(packageName)
+        return LimitPolicy.getRemainingAppTime(packageName, appLabel, usageSeconds, getRules())
+    }
+
+    /**
+     * Get current rule count for diagnostics.
+     */
+    fun getRuleCount(): Int = cachedRules.size
+
+    /**
+     * Get diagnostic information.
+     */
+    fun getDiagnostics(): Map<String, Any> {
+        return mapOf(
+            "ruleCount" to cachedRules.size,
+            "deviceLocked" to isDeviceLocked(),
+            "deviceScheduleBlocked" to isDeviceScheduleBlocked(),
+            "unlockActive" to isUnlockSettingsActive()
+        )
     }
 }

@@ -89,7 +89,11 @@ class MainActivity : ComponentActivity() {
         // Navigation logic based on pairing state
         // Only redirect to setup wizard if device is NOT paired
         LaunchedEffect(isPaired) {
-            if (isPaired == false) {
+            if (isPaired == true) {
+                navController.navigate("dashboard") {
+                    popUpTo(0) { inclusive = true }
+                }
+            } else if (isPaired == false) {
                 navController.navigate("setup_wizard") {
                     popUpTo(0) { inclusive = true }
                 }

@@ -108,23 +108,31 @@ async def websocket_device_endpoint(
     websocket: WebSocket, 
     device_id: str, 
     api_key: str = None,
-    db: Session = Depends(get_db)  # Depends is tricky in WS, but FastAPI supports it in path
+    db: Session = Depends(get_db)
 ):
-    """WebSocket endpoint for Device Agent."""
-    # Authenticate
-    # Note: Dependencies in WebSocket are supported but `get_db` usually yields. 
-    # We might need to manually handle session if Depends doesn't work well here for connection phase.
-    # But FastAPI allows `websocket: WebSocket` + Depends.
+    """WebSocket endpoint for Device Agent.
     
-    logger.info(f"WS Attempt: device_id={device_id}, api_key={api_key}")
+    Supports API key authentication via:
+    - Query parameter: ?api_key=xxx (legacy)
+    - HTTP header: X-API-Key (preferred, more secure)
+    """
+    # Try to get API key from header if not in query
+    header_api_key = websocket.headers.get("x-api-key")
+    effective_api_key = api_key or header_api_key
+    
+    logger.info(f"WS Attempt: device_id={device_id}, api_key={'present' if effective_api_key else 'missing'}")
+    
+    if not effective_api_key:
+        logger.warning(f"WS Auth Failed: No API key provided for {device_id}")
+        await websocket.close(code=4001, reason="API key required")
+        return
     
     # 1. Verify Device
     from ..models import Device
     
-    # Debug checks removed, standard flow restored
     device = db.query(Device).filter(
         Device.device_id == device_id,
-        Device.api_key == api_key
+        Device.api_key == effective_api_key
     ).first()
     
     if not device:

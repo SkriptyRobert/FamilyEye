@@ -1,6 +1,6 @@
 package com.familyeye.agent.data.api
 
-import com.familyeye.agent.BuildConfig
+import com.familyeye.agent.config.AgentConstants
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +23,13 @@ import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * WebSocket client for real-time communication with the backend.
+ * 
+ * Security improvements:
+ * - API key is sent in HTTP header instead of URL query parameter
+ * - Uses dynamic backend URL from pairing (not hardcoded)
+ */
 @Singleton
 class WebSocketClient @Inject constructor(
     private val client: OkHttpClient,
@@ -62,27 +69,37 @@ class WebSocketClient @Inject constructor(
                 if (webSocket == null && configRepository.isPaired.first()) {
                     val deviceId = configRepository.getDeviceId()
                     val apiKey = configRepository.getApiKey()
+                    val backendUrl = configRepository.getBackendUrl()
                     
-                    if (deviceId != null && apiKey != null) {
-                        connect(deviceId, apiKey)
+                    if (deviceId != null && apiKey != null && backendUrl != null) {
+                        connect(deviceId, apiKey, backendUrl)
                     }
                 }
             } catch (e: Exception) {
                 Timber.e(e, "WebSocket loop error")
             }
             // Check status periodically
-            delay(5000)
+            delay(AgentConstants.WEBSOCKET_RETRY_INTERVAL_MS)
         }
     }
 
-    private fun connect(deviceId: String, apiKey: String) {
-        val baseUrl = BuildConfig.BACKEND_URL.replace("https://", "wss://").replace("http://", "ws://")
-        val url = "$baseUrl/ws/device/$deviceId?api_key=$apiKey"
+    /**
+     * Connect to WebSocket with API key in header (not URL).
+     */
+    private fun connect(deviceId: String, apiKey: String, backendUrl: String) {
+        val wsUrl = backendUrl
+            .replace("https://", "wss://")
+            .replace("http://", "ws://")
         
-        Timber.d("Connecting to WebSocket: $baseUrl/ws/device/***")
+        val url = "$wsUrl/ws/device/$deviceId"
+        
+        // API key in header instead of URL query (security improvement)
+        Timber.d("Connecting to WebSocket: $wsUrl/ws/device/***")
         
         val request = Request.Builder()
             .url(url)
+            .addHeader("X-API-Key", apiKey)  // API key in header, not URL
+            .addHeader("X-Device-ID", deviceId)
             .build()
             
         webSocket = client.newWebSocket(request, object : WebSocketListener() {

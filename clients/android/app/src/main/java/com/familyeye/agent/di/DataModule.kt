@@ -55,6 +55,30 @@ object DataModule {
     @Singleton
     fun provideRuleDao(database: AgentDatabase): RuleDao = 
         database.ruleDao()
+        
+    @Provides
+    @Singleton
+    fun provideEncryptedSharedPreferences(@ApplicationContext context: Context): android.content.SharedPreferences {
+        // Try to use EncryptedSharedPreferences, but fallback to regular SharedPreferences
+        // if encryption fails (common on emulators or after Clear Data)
+        return try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                context,
+                "secret_agent_prefs",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            timber.log.Timber.e(e, "EncryptedSharedPreferences failed, using fallback regular SharedPreferences")
+            // Fallback to regular SharedPreferences (less secure but stable)
+            context.getSharedPreferences("agent_prefs_fallback", Context.MODE_PRIVATE)
+        }
+    }
 }
 
 @Module

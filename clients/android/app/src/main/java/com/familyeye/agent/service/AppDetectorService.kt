@@ -3,6 +3,8 @@ package com.familyeye.agent.service
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityEvent
+import com.familyeye.agent.enforcement.EnforcementResult
+import com.familyeye.agent.enforcement.EnforcementService
 import com.familyeye.agent.ui.screens.BlockType
 import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
@@ -16,9 +18,13 @@ import com.familyeye.agent.data.api.dto.ShieldKeyword
 
 /**
  * Service to detect foreground app changes using Accessibility API.
- * This is faster and more reliable than UsageStatsManager for instant blocking.
+ * 
+ * Refactored to delegate logic to:
+ * - EnforcementService: For blocking decisions
+ * - ContentScanner: For Smart Shield
+ * - ScreenshotHandler: For capturing evidence (moved to private method for now)
  */
-@AndroidEntryPoint // Helper not directly usable in Service without manual injection or HiltService
+@AndroidEntryPoint
 class AppDetectorService : AccessibilityService() {
 
     companion object {
@@ -30,7 +36,7 @@ class AppDetectorService : AccessibilityService() {
     }
 
     @Inject
-    lateinit var ruleEnforcer: RuleEnforcer
+    lateinit var enforcementService: EnforcementService
 
     @Inject
     lateinit var blockOverlayManager: BlockOverlayManager
@@ -44,68 +50,46 @@ class AppDetectorService : AccessibilityService() {
     @Inject
     lateinit var contentScanner: com.familyeye.agent.scanner.ContentScanner
 
+    @Inject
+    lateinit var configRepository: com.familyeye.agent.data.repository.AgentConfigRepository
+
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var isPaired = false
+
+    // Known browser packages for content scanning
+    private val BROWSER_PACKAGES = setOf(
+        "com.android.chrome",
+        "com.google.android.apps.chrome",
+        "com.sec.android.app.sbrowser",
+        "org.mozilla.firefox",
+        "com.microsoft.emmx",
+        "com.opera.browser",
+        "com.brave.browser"
+    )
 
     override fun onCreate() {
         super.onCreate()
         Timber.d("AppDetectorService created")
         instance = this
-    }
-    
-    fun requestScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            // API 30+: Use takeScreenshot with integer ID.
-            // DO NOT access 'this.display' or 'windowManager.defaultDisplay' from Service context on Android 11+
-            // as it throws UnsupportedOperationException.
-            
-            takeScreenshot(
-                android.view.Display.DEFAULT_DISPLAY,
-                this.mainExecutor,
-                object : TakeScreenshotCallback {
-                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
-                        val bitmap = try {
-                            val colorSpace = screenshot.colorSpace
-                            val hardwareBuffer = screenshot.hardwareBuffer
-                            android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, colorSpace)
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to wrap hardware buffer")
-                            null
-                        }
-                        callback(bitmap)
-                    }
-
-                    override fun onFailure(errorCode: Int) {
-                        Timber.e("Screenshot failed with error code: $errorCode")
-                        callback(null)
-                    }
+        
+        // Monitor Paired State
+        serviceScope.launch {
+            if (::configRepository.isInitialized) {
+                configRepository.isPaired.collect { paired ->
+                    isPaired = paired
+                    Timber.i("AppDetectorService: Pairing state changed to $paired")
                 }
-            )
-        } else {
-            Timber.w("Screenshot not supported on this Android version (<30)")
-            callback(null)
+            }
         }
     }
 
-    private val BROWSER_PACKAGES = setOf(
-        "com.android.chrome",
-        "com.google.android.apps.chrome",
-        "com.sec.android.app.sbrowser", // Samsung Internet
-        "org.mozilla.firefox",
-        "com.microsoft.emmx" // Edge
-    )
-
     override fun onServiceConnected() {
         super.onServiceConnected()
-        // Use existing info from XML to preserve capabilities (like canTakeScreenshot)
-        val info = serviceInfo ?: AccessibilityServiceInfo()
-        info.apply {
-            // Listen to Window State (App switching) AND Content Changes (Scrolling/Web loading)
+        val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                          AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                          AccessibilityEvent.TYPE_VIEW_SCROLLED
-            
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            // Append flags, don't overwrite if we want to keep XML flags (though here we define them explicitly)
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 100
@@ -115,148 +99,30 @@ class AppDetectorService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!isPaired) return
+        
         val packageName = event?.packageName?.toString() ?: return
-        val className = event.className?.toString() ?: ""
+        val className = event.className?.toString()
 
-        // 1. Handle Window State Changes (App Switching) - Full Logic
+        // 1. Handle Window State Changes (App Switching)
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            
-            // Update global state for UsageTracker
             currentPackage = packageName
-
-            // Skip our own app
-            if (packageName == this.packageName) return 
-
-            // ... (Core Blocking Logic - Keep as is)
-            // 1. SELF-PROTECTION: Block Device Admin Deactivation & Uninstallation
-            // Block Settings -> Device Admin screens OR Package Installers (Uninstallation)
-            val isSettings = packageName == "com.android.settings"
-            val isPackageInstaller = packageName == "com.android.packageinstaller" || 
-                                     packageName == "com.google.android.packageinstaller"
             
-            // Check for specific dangerous activities in Settings (Device Admin, Users)
-            val isDeviceAdminScreen = isSettings && (
-                className.contains("DeviceAdminAdd", ignoreCase = true) || 
-                className.contains("DeviceAdminSettings", ignoreCase = true) ||
-                className.contains("UserSettings", ignoreCase = true) || // Block "Multiple Users"
-                className.contains("UserManagement", ignoreCase = true)  // Block User management
-            )
-
-            if (isDeviceAdminScreen || isPackageInstaller) {
-                 // Check if "Unlock Settings" is active (Parent allowed this)
-                 if (::ruleEnforcer.isInitialized && ruleEnforcer.isUnlockSettingsActive()) {
-                     Timber.w("Self-Protection: Allowed (Admin Unlock Active)")
-                 } else {
-                     // BLOCK IMMEDIATELY
-                     Timber.e("TAMPERING DETECTED: Attempt to access Device Admin or Installer!")
-                     blockApp(packageName, BlockType.TAMPERING)
-                     
-                     // Report this critical event
-                     serviceScope.launch {
-                         if (::reporter.isInitialized) {
-                             // Create a dummy keyword for tampering
-                             // ShieldKeyword(id, deviceId, keyword, category, severity, enabled)
-                             val tamperingKeyword = ShieldKeyword(0, 0, "TAMPERING", "SECURITY", "CRITICAL", true) 
-                             reporter.reportShieldAlert(tamperingKeyword, packageName, "Anti-Tamper: $className", null)
-                         }
-                     }
-                     return
-                 }
-            }
-
-
-            // 2. APP BLOCKING ENFORCEMENT
-            try {
-                if (::ruleEnforcer.isInitialized && ::blockOverlayManager.isInitialized && ::usageTracker.isInitialized) {
-                    
-                    // A. Device Lock (Highest Priority - Blocks EVERYTHING including Launcher)
-                    // We check this BEFORE whitelist (except critical SystemUI) to ensure "Brick" mode works.
-                    // A. Device Lock (Highest Priority - Blocks EVERYTHING)
-                    if (ruleEnforcer.isDeviceLocked()) {
-                         // Security: If SystemUI (Notification Shade) is pulled down during Lock, close it!
-                         if (packageName == "com.android.systemui") {
-                             Timber.w("Device Locked: Closing Notification Shade")
-                             performGlobalAction(GLOBAL_ACTION_BACK)
-                             // Also try closing status bar directly if API allows (usually BACK works)
-                             return
-                         }
-
-                         // If on launcher, just show overlay (don't go home loop)
-                         if (isLauncher(packageName)) {
-                             blockOverlayManager.show(packageName, BlockType.DEVICE_LOCK)
-                         } else {
-                             blockApp(packageName, BlockType.DEVICE_LOCK)
-                         }
-                         return
-                    }
-
-                    // B. Whitelist Check (for normal app blocking)
-                    if (isWhitelisted(packageName)) {
-                         blockOverlayManager.hide()
-                         return
-                    }
-
-                    // C. Normal Rules (App Block, Schedule, Limits)
-                    // Check 1: Explicit Sync Checks
-                    if (ruleEnforcer.isAppBlocked(packageName)) {
-                         blockApp(packageName, BlockType.APP_FORBIDDEN)
-     } else if (ruleEnforcer.isDeviceScheduleBlocked()) {
-                         // Global Schedule (e.g. Bedtime) -> Blocks EVERYTHING
-                         val rule = ruleEnforcer.getActiveDeviceScheduleRule()
-                         val timeStr = if (rule != null) "${rule.scheduleStartTime} - ${rule.scheduleEndTime}" else null
-
-                         if (packageName != "com.android.systemui") {
-                             if (isLauncher(packageName)) {
-                                 blockOverlayManager.show(packageName, BlockType.DEVICE_SCHEDULE, timeStr)
-                             } else {
-                                 blockApp(packageName, BlockType.DEVICE_SCHEDULE, timeStr)
-                             }
-                             return
-                         }
-                    } else if (ruleEnforcer.isAppScheduleBlocked(packageName)) {
-                         // App Specific Schedule
-                         val rule = ruleEnforcer.getActiveAppScheduleRule(packageName)
-                         val timeStr = if (rule != null) "${rule.scheduleStartTime} - ${rule.scheduleEndTime}" else null
-
-                         blockApp(packageName, BlockType.APP_SCHEDULE, timeStr)
-                    } else {
-                        // Check 2: Async Checks (Daily Limit, App Time Limit)
-                        serviceScope.launch {
-                            val totalUsage = usageTracker.getTotalUsageToday()
-                            val appUsage = usageTracker.getUsageToday(packageName)
-                            
-                            if (ruleEnforcer.isDailyLimitExceeded(totalUsage)) {
-                                 blockApp(packageName, BlockType.DEVICE_LIMIT)
-                            } else if (ruleEnforcer.isAppTimeLimitExceeded(packageName, appUsage)) {
-                                 blockApp(packageName, BlockType.APP_LIMIT)
-                            } else {
-                                // If allowed, hide.
-                                blockOverlayManager.hide()
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Error during blocking check")
-            }
+            // Delegate blocking logic to EnforcementService
+            handleWindowChange(packageName, className)
             
-            Timber.v("Window detected: $packageName / $className")
-            
-            // 3. SMART SHIELD (Trigger on Window Change)
+            // Trigger Smart Shield scanning
             if (::contentScanner.isInitialized) {
                 contentScanner.processScreen(rootInActiveWindow, packageName)
             }
         }
         
-        // 2. Handle Content Changes / Scrolling (Only for Browsers to save battery)
+        // 2. Handle Content Changes (Browsers only)
         else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || 
                  event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             
             if (BROWSER_PACKAGES.contains(packageName)) {
-                // Determine if we should scan based on ContentScanner's internal debounce
-                // We pass the root window to it. It will ignore if too soon.
                 if (::contentScanner.isInitialized) {
-                    // Note: rootInActiveWindow might be null during fast scrolls
                     val root = try { rootInActiveWindow } catch (e: Exception) { null }
                     contentScanner.processScreen(root, packageName)
                 }
@@ -264,80 +130,156 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
-    private fun isLauncher(packageName: String): Boolean {
-        if (packageName.contains("launcher", ignoreCase = true)) return true
-        if (packageName.contains("home", ignoreCase = true)) return true 
-        if (packageName == "com.google.android.apps.nexuslauncher" || 
-            packageName == "com.sec.android.app.launcher") return true
-        return false
-    }
+    private fun handleWindowChange(packageName: String, className: String?) {
+        try {
+            if (!::enforcementService.isInitialized) return
 
-    private fun isWhitelisted(packageName: String): Boolean {
-        // 1. Self allowed
-        if (packageName == this.packageName) return true
-        
-        // 2. System UI allowed?
-        // CAUTION: If we block SystemUI, we might crash.
-        // But if we are LOCKED, we handle SystemUI in the main loop (by closing it).
-        // Here we just return true for SystemUI to avoid "Blocked" overlayloop on the shade itself?
-        // Actually, if we return true here, valid block logic loop won't run.
-        // We should allow SystemUI here BUT handle "Lock Mode" check before whitelist.
-        if (packageName == "com.android.systemui") return true
-        
-        // 3. Settings - BLOCKED UNLESS UNLOCKED
-        if (packageName == "com.android.settings") {
-             if (::ruleEnforcer.isInitialized && ruleEnforcer.isUnlockSettingsActive()) {
-                 Timber.w("Settings Allowed (Admin Unlock Active)")
-                 return true
-             }
-             return false // Block settings by default!
+            // synchronous checks (allow/block decisions that don't need DB)
+            when (val result = enforcementService.evaluate(packageName, className)) {
+                is EnforcementResult.Allow -> {
+                    // Allowed so far, check async time limits
+                    checkTimeLimits(packageName)
+                }
+                is EnforcementResult.Whitelisted -> {
+                    // Fix for overlay disappearing on Home:
+                    // If we are showing an overlay, and we switch to:
+                    // 1. Ourselves (Agent)
+                    // 2. The Launcher (Home Screen)
+                    // Then we shoud NOT hide the overlay automatically. The user must dismiss it.
+                    val isSelf = packageName == this.packageName
+                    val isLauncher = enforcementService.isLauncher(packageName)
+                    
+                    if ((isSelf || isLauncher) && blockOverlayManager.isShowing()) {
+                        Timber.d("Ignoring whitelist hide for $packageName (overlay is likely cause/active)")
+                    } else {
+                        blockOverlayManager.hide()
+                    }
+                }
+                is EnforcementResult.Block -> {
+                    // "Brick Mode" logic:
+                    // If Device is LOCKED or in SCHEDULE DOWNTIME, block the Notification Shade (SystemUI).
+                    // This prevents bypassing the overlay or accessing quick settings.
+                    val isStrictLock = result.blockType == BlockType.DEVICE_LOCK || result.blockType == BlockType.DEVICE_SCHEDULE
+                    
+                    if (isStrictLock && packageName == "com.android.systemui") {
+                        Timber.d("Blocking SystemUI (Notification Shade) due to Strict Lock")
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    } else if (enforcementService.isLauncher(packageName)) {
+                        // Don't block launcher physically (loop), just overlay
+                        blockOverlayManager.show(packageName, result.blockType, result.scheduleInfo)
+                    } else {
+                        blockApp(packageName, result.blockType, result.scheduleInfo)
+                    }
+                }
+                is EnforcementResult.TamperingDetected -> {
+                    // Critical tampering event
+                    handleTampering(packageName, className ?: "unknown")
+                }
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error handling window change")
         }
-        
-        // 4. Launcher allowed (Infinite loop protection)
-        if (isLauncher(packageName)) {
-             Timber.v("Whitelist match (launcher): $packageName")
-             return true
-        }
-
-        return false
     }
 
-    private fun blockApp(packageName: String, blockType: BlockType = BlockType.GENERIC, scheduleInfo: String? = null) {
-        Timber.w("BLOCKED: $packageName ($blockType)")
-        performGlobalAction(GLOBAL_ACTION_HOME)
-        blockOverlayManager.show(packageName, blockType, scheduleInfo)
-    }
-
-    fun handleSmartShieldDetection(keyword: ShieldKeyword, packageName: String, contextText: String) {
-        Timber.w("SMART SHIELD HIT: ${keyword.keyword} in $packageName")
-        
-        // Wait for UI to render (especially for web pages loading)
+    private fun checkTimeLimits(packageName: String) {
         serviceScope.launch {
-            kotlinx.coroutines.delay(1000) 
-            
-            requestScreenshot { bitmap ->
-                if (bitmap != null) {
-                    // Upload alert via Reporter
-                    if (::reporter.isInitialized) {
-                        reporter.reportShieldAlert(keyword, packageName, contextText, bitmap)
-                    }
-                } else {
-                    // Report without screenshot
-                     if (::reporter.isInitialized) {
-                        reporter.reportShieldAlert(keyword, packageName, contextText, null)
-                    }
+            if (!::usageTracker.isInitialized) return@launch
+
+            val totalUsage = usageTracker.getTotalUsageToday()
+            val appUsage = usageTracker.getUsageToday(packageName)
+
+            when (val result = enforcementService.evaluateTimeLimits(packageName, appUsage, totalUsage)) {
+                is EnforcementResult.Block -> {
+                    blockApp(packageName, result.blockType)
+                }
+                is EnforcementResult.Allow -> {
+                    // Only hide if we aren't showing a PERSISTENT block (like device lock)
+                    // For now, simple hide is fine as checkTimeLimits runs periodically
+                    // But we might want to be careful not to hide "just because"
+                }
+                else -> {
+                     // Do nothing on allow? Or hide?
+                     // If we explicitly allow, maybe we should hide if an overlay was showing for THIS app?
+                     // usageTracker.triggerOverlay handles the showing.
                 }
             }
         }
     }
 
-    override fun onInterrupt() {
-        Timber.w("AppDetectorService interrupted")
+    fun blockApp(packageName: String, blockType: BlockType, scheduleInfo: String? = null) {
+        Timber.w("BLOCKED: $packageName ($blockType)")
+        
+        // 1. Force minimize app first
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        
+        // 2. Wait a tiny bit for transition to start, then show overlay
+        // This prevents the "flicker" where overlay shows on top of app before it closes
+        serviceScope.launch {
+            kotlinx.coroutines.delay(150)
+            blockOverlayManager.show(packageName, blockType, scheduleInfo)
+        }
     }
 
+    private fun handleTampering(packageName: String, className: String) {
+        Timber.e("TAMPERING DETECTED: $packageName / $className")
+        blockApp(packageName, BlockType.TAMPERING)
+        
+        // Report critical event
+        serviceScope.launch {
+            if (::reporter.isInitialized) {
+                val tamperingKeyword = ShieldKeyword(0, 0, "TAMPERING", "SECURITY", "CRITICAL", true)
+                requestScreenshot { bitmap ->
+                    reporter.reportShieldAlert(tamperingKeyword, packageName, "Anti-Tamper: $className", bitmap)
+                }
+            }
+        }
+    }
+
+    fun handleSmartShieldDetection(keyword: ShieldKeyword, packageName: String, contextText: String) {
+        Timber.w("SMART SHIELD HIT: ${keyword.keyword} in $packageName")
+        
+        serviceScope.launch {
+            kotlinx.coroutines.delay(1000) 
+            requestScreenshot { bitmap ->
+                if (::reporter.isInitialized) {
+                    reporter.reportShieldAlert(keyword, packageName, contextText, bitmap)
+                }
+            }
+        }
+    }
+
+    fun requestScreenshot(callback: (android.graphics.Bitmap?) -> Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            takeScreenshot(
+                android.view.Display.DEFAULT_DISPLAY,
+                this.mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(result: AccessibilityService.ScreenshotResult) {
+                        try {
+                            val bitmap = android.graphics.Bitmap.wrapHardwareBuffer(
+                                result.hardwareBuffer, result.colorSpace
+                            )
+                            callback(bitmap)
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to wrap screenshot")
+                            callback(null)
+                        }
+                    }
+                    override fun onFailure(errorCode: Int) {
+                        callback(null)
+                    }
+                }
+            )
+        } else {
+            callback(null)
+        }
+    }
+
+    override fun onInterrupt() {}
+    
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        Timber.d("AppDetectorService destroyed")
     }
 }
+

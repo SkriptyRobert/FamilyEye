@@ -23,16 +23,19 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            buildConfigField("String", "BACKEND_URL", "\"https://192.168.0.145:8000\"")
+            // Debug URL - use environment variable or local development default
+            val debugUrl = project.findProperty("DEBUG_BACKEND_URL") as String? ?: "https://192.168.0.145:8000"
+            buildConfigField("String", "BACKEND_URL", "\"$debugUrl\"")
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BACKEND_URL", "\"https://192.168.0.145:8000\"")
+            // Release builds use dynamic URL from pairing - no hardcoded fallback
+            buildConfigField("String", "BACKEND_URL", "\"\"")
         }
     }
     

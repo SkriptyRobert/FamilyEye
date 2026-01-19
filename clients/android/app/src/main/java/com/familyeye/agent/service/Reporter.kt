@@ -1,10 +1,17 @@
 package com.familyeye.agent.service
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import com.familyeye.agent.config.AgentConstants
 import com.familyeye.agent.data.api.FamilyEyeApi
 import com.familyeye.agent.data.api.dto.AgentReportRequest
 import com.familyeye.agent.data.api.dto.AgentUsageLogCreate
 import com.familyeye.agent.data.api.dto.ShieldKeyword
 import com.familyeye.agent.data.local.UsageLogDao
+import com.familyeye.agent.time.SecureTimeProvider
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import kotlinx.coroutines.CoroutineScope
@@ -22,22 +29,45 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Syncs local usage logs to the backend.
+ * Syncs local usage logs to the backend with retry logic and connectivity awareness.
+ * 
+ * Features:
+ * - Exponential backoff for failed sync attempts
+ * - Automatic sync on network reconnection
+ * - Configurable retention period for old logs
+ * - Server time synchronization
  */
 @Singleton
 class Reporter @Inject constructor(
     private val api: FamilyEyeApi,
     private val usageLogDao: UsageLogDao,
     private val configRepository: AgentConfigRepository,
-    private val keywordManager: com.familyeye.agent.scanner.KeywordManager, // Injected
+    private val keywordManager: com.familyeye.agent.scanner.KeywordManager,
+    private val secureTimeProvider: SecureTimeProvider,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     private val reporterScope = CoroutineScope(Dispatchers.IO)
-    private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+    private val isoFormat = SimpleDateFormat(AgentConstants.ISO_DATE_FORMAT, Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
+    // Retry state
+    private var consecutiveFailures = 0
+    private var lastSyncAttempt = 0L
+    
+    // Network connectivity
+    private val connectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    
+    // Sync state
+    @Volatile
+    private var isSyncing = false
+
     fun start() {
+        registerNetworkCallback()
+        
         reporterScope.launch {
             while (isActive) {
                 try {
@@ -47,40 +77,111 @@ class Reporter @Inject constructor(
                 } catch (e: Exception) {
                     Timber.e(e, "Error in Reporter loop")
                 }
-                delay(30000) // Sync every 30 seconds
+                delay(AgentConstants.SYNC_INTERVAL_MS)
             }
+        }
+    }
+
+    /**
+     * Register for network connectivity changes to auto-sync on reconnection.
+     */
+    private fun registerNetworkCallback() {
+        try {
+            val request = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+
+            networkCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Timber.i("Network available - triggering sync")
+                    // Reset failure count on new network
+                    consecutiveFailures = 0
+                    forceSync()
+                }
+
+                override fun onLost(network: Network) {
+                    Timber.i("Network lost")
+                }
+            }
+
+            connectivityManager.registerNetworkCallback(request, networkCallback!!)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to register network callback")
         }
     }
 
     fun forceSync() {
         reporterScope.launch {
-             try {
+            try {
                 doSync()
-             } catch (e: Exception) {
+            } catch (e: Exception) {
                 Timber.e(e, "Error in Force Sync")
-             }
+            }
         }
     }
 
     private suspend fun doSync() {
-        if (configRepository.isPaired.first()) {
-            val isDataSaver = configRepository.dataSaverEnabled.first()
-            
-            if (isDataSaver && !isWifiConnected()) {
-                Timber.d("Data Saver active & NO Wi-Fi - skipping sync")
-            } else {
-                syncLogs()
-            }
+        // Prevent concurrent syncs
+        if (isSyncing) {
+            Timber.v("Sync already in progress, skipping")
+            return
         }
+
+        if (!configRepository.isPaired.first()) {
+            return
+        }
+
+        // Check exponential backoff
+        if (!shouldAttemptSync()) {
+            Timber.v("Backoff active, skipping sync attempt")
+            return
+        }
+
+        val isDataSaver = configRepository.dataSaverEnabled.first()
+        
+        if (isDataSaver && !isWifiConnected()) {
+            Timber.d("Data Saver active & NO Wi-Fi - skipping sync")
+            return
+        }
+
+        isSyncing = true
+        try {
+            syncLogs()
+        } finally {
+            isSyncing = false
+        }
+    }
+
+    /**
+     * Check if we should attempt sync based on exponential backoff.
+     */
+    private fun shouldAttemptSync(): Boolean {
+        if (consecutiveFailures == 0) return true
+
+        val backoffMs = calculateBackoff()
+        val timeSinceLastAttempt = System.currentTimeMillis() - lastSyncAttempt
+
+        return timeSinceLastAttempt >= backoffMs
+    }
+
+    /**
+     * Calculate exponential backoff delay based on consecutive failures.
+     * Max backoff is 5 minutes.
+     */
+    private fun calculateBackoff(): Long {
+        // Base: 5 seconds, doubles each failure, max 5 minutes
+        val baseMs = 5_000L
+        val maxMs = 5 * 60 * 1000L // 5 minutes
+        val backoff = baseMs * (1L shl minOf(consecutiveFailures, 6))
+        return minOf(backoff, maxMs)
     }
 
     private suspend fun syncLogs() {
         val deviceId = configRepository.getDeviceId() ?: return
         val apiKey = configRepository.getApiKey() ?: return
         
-        val unsyncedLogs = usageLogDao.getUnsyncedLogs(limit = 100)
+        val unsyncedLogs = usageLogDao.getUnsyncedLogs(limit = AgentConstants.MAX_UNSYNCED_LOGS_PER_BATCH)
         
-        // Even if no logs, send heartbeat to keep device "Online"
         Timber.d("Syncing ${unsyncedLogs.size} logs to backend (Heartbeat)...")
 
         val reportItems = unsyncedLogs.map { log ->
@@ -96,27 +197,65 @@ class Reporter @Inject constructor(
             deviceId = deviceId,
             apiKey = apiKey,
             usageLogs = reportItems,
-            clientTimestamp = isoFormat.format(Date())
+            clientTimestamp = isoFormat.format(Date(secureTimeProvider.getSecureCurrentTimeMillis()))
         )
+
+        lastSyncAttempt = System.currentTimeMillis()
 
         try {
             val response = api.reportUsage(request)
             if (response.isSuccessful) {
+                // Success - reset failure count
+                consecutiveFailures = 0
+
                 if (unsyncedLogs.isNotEmpty()) {
                     Timber.i("Successfully synced ${unsyncedLogs.size} logs")
                     usageLogDao.markAsSynced(unsyncedLogs.map { it.id })
                     
                     // Cleanup old logs
-                    val oneDayAgo = System.currentTimeMillis() - (24 * 60 * 60 * 1000)
-                    usageLogDao.deleteSyncedLogsOlderThan(oneDayAgo)
+                    val retentionThreshold = System.currentTimeMillis() - AgentConstants.SYNCED_LOG_RETENTION_MS
+                    usageLogDao.deleteSyncedLogsOlderThan(retentionThreshold)
                 } else {
                     Timber.i("Heartbeat sent successfully")
                 }
+
+                // Try to extract server time from response for sync
+                syncServerTime(response)
             } else {
-                Timber.e("Failed to sync logs/heartbeat: ${response.code()}")
+                handleSyncFailure("HTTP ${response.code()}")
             }
         } catch (e: Exception) {
-             Timber.e(e, "Network error during sync")
+            handleSyncFailure(e.message ?: "Unknown error")
+            Timber.e(e, "Network error during sync")
+        }
+    }
+
+    /**
+     * Handle sync failure with exponential backoff.
+     */
+    private fun handleSyncFailure(reason: String) {
+        consecutiveFailures++
+        val nextAttemptMs = calculateBackoff()
+        Timber.w("Sync failed ($reason). Failures: $consecutiveFailures, next attempt in ${nextAttemptMs}ms")
+    }
+
+    /**
+     * Extract and sync server time from response headers.
+     */
+    private fun syncServerTime(response: retrofit2.Response<*>) {
+        try {
+            val dateHeader = response.headers()["Date"]
+            if (dateHeader != null) {
+                val serverDate = java.text.SimpleDateFormat(
+                    "EEE, dd MMM yyyy HH:mm:ss zzz", 
+                    Locale.US
+                ).parse(dateHeader)
+                serverDate?.let {
+                    secureTimeProvider.syncWithServerTime(it.time)
+                }
+            }
+        } catch (e: Exception) {
+            Timber.v("Could not parse server date header: ${e.message}")
         }
     }
 
@@ -141,7 +280,7 @@ class Reporter @Inject constructor(
                     device_id = deviceId,
                     keyword = keyword.keyword,
                     app_name = packageName,
-                    detected_text = contextText.take(200), // Limit length
+                    detected_text = contextText.take(AgentConstants.MAX_CONTEXT_TEXT_LENGTH),
                     screenshot_url = screenshotUrl,
                     severity = keyword.severity
                 )
@@ -178,7 +317,11 @@ class Reporter @Inject constructor(
         return try {
             val file = java.io.File(context.cacheDir, "shield_alert_${System.currentTimeMillis()}.jpg")
             val fos = java.io.FileOutputStream(file)
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, fos) // 70% quality to save data
+            bitmap.compress(
+                android.graphics.Bitmap.CompressFormat.JPEG, 
+                AgentConstants.SCREENSHOT_JPEG_QUALITY, 
+                fos
+            )
             fos.flush()
             fos.close()
             file
@@ -189,9 +332,35 @@ class Reporter @Inject constructor(
     }
 
     private fun isWifiConnected(): Boolean {
-        val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
+    /**
+     * Get sync diagnostic information.
+     */
+    fun getDiagnostics(): Map<String, Any> {
+        return mapOf(
+            "consecutiveFailures" to consecutiveFailures,
+            "lastSyncAttempt" to lastSyncAttempt,
+            "isSyncing" to isSyncing,
+            "nextBackoffMs" to calculateBackoff(),
+            "isWifiConnected" to isWifiConnected()
+        )
+    }
+
+    /**
+     * Clean up resources.
+     */
+    fun stop() {
+        networkCallback?.let {
+            try {
+                connectivityManager.unregisterNetworkCallback(it)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to unregister network callback")
+            }
+        }
+        networkCallback = null
     }
 }

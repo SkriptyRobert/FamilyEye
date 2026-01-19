@@ -8,6 +8,7 @@ import Reports from './Reports'
 import StatusOverview from './StatusOverview'
 import SmartShieldView from './SmartShieldView' // Import
 import NotificationDropdown from './NotificationDropdown'
+import { webSocketService } from '../services/websocket'
 import './Dashboard.css'
 import logo from '../assets/logo.png'
 import {
@@ -36,11 +37,19 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
       try {
         const response = await api.get('/api/info')
         setServerInfo(response.data)
+
+        // Connect to WebSocket (Assuming User ID 1 for MVP/Admin or decode from token)
+        // ideally we get this from /users/me
+        webSocketService.connect(1)
       } catch (error) {
         console.error('Failed to fetch server info:', error)
       }
     }
     fetchServerInfo()
+
+    return () => {
+      webSocketService.disconnect()
+    }
   }, [])
 
   const handleLogout = () => {

@@ -54,6 +54,9 @@ class FamilyEyeService : Service() {
     lateinit var api: com.familyeye.agent.data.api.FamilyEyeApi
 
     @Inject
+    lateinit var blockOverlayManager: BlockOverlayManager
+
+    @Inject
     lateinit var webSocketClient: com.familyeye.agent.data.api.WebSocketClient
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -135,6 +138,13 @@ class FamilyEyeService : Service() {
                      "LOCK_NOW", "UNLOCK_NOW", "REFRESH_RULES" -> {
                          Timber.i("Immediate Rule Refresh Requested")
                          fetchRules()
+                         // Critical Fix for Remote Unlock:
+                         // UsageTracker pauses when overlay is showing. If we unlock, we MUST explicitly hide the overlay
+                         // to allow the user to continue usage. If a different block is still active, UsageTracker will 
+                         // re-show it in the next tick.
+                         launch(Dispatchers.Main) {
+                             blockOverlayManager.hide()
+                         }
                      }
                      "SCREENSHOT_NOW" -> {
                          Timber.i("Screenshot Requested")
@@ -231,9 +241,12 @@ class FamilyEyeService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = getString(R.string.service_notification_title)
             val descriptionText = getString(R.string.service_notification_text)
-            val importance = NotificationManager.IMPORTANCE_LOW
+            // Use IMPORTANCE_DEFAULT instead of LOW to ensure notifications are visible
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
+                // Disable sound for foreground service notification (still visible)
+                setSound(null, null)
             }
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)

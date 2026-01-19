@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import api from '../services/api'
 import { Bell, AlertTriangle, CheckCircle, RefreshCw, X, AlertCircle, WifiOff, CircleDot } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
+import { webSocketService } from '../services/websocket'
 import './NotificationDropdown.css'
 
 const NotificationDropdown = () => {
@@ -15,9 +16,61 @@ const NotificationDropdown = () => {
     const dropdownRef = useRef(null)
 
     useEffect(() => {
+        // Clear stale dismissed notifications (older than 24 hours)
+        const clearStaleDismissals = () => {
+            const stored = localStorage.getItem('familyeye_dismissed_notifications')
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored)
+                    // Keep only today's dismissals (by checking if ID contains today's date)
+                    const todayStr = new Date().toISOString().split('T')[0]
+                    const filtered = parsed.filter(id => id.includes(todayStr))
+                    if (filtered.length !== parsed.length) {
+                        localStorage.setItem('familyeye_dismissed_notifications', JSON.stringify(filtered))
+                        setDismissedIds(filtered)
+                    }
+                } catch (e) {
+                    // If corrupted, clear it
+                    localStorage.removeItem('familyeye_dismissed_notifications')
+                    setDismissedIds([])
+                }
+            }
+        }
+        clearStaleDismissals()
+
         fetchNotifications()
+
+        // Subscribe to Real-time Alerts
+        const unsubscribe = webSocketService.subscribe((data) => {
+            if (data.type === 'shield_alert') {
+                console.log('Real-time Alert Received:', data)
+
+                // Add new alert immediately
+                setNotifications(prev => {
+                    const newAlert = {
+                        id: `shield-${Date.now()}`, // Unique ID for instant alert
+                        type: 'error',
+                        iconName: 'shield-alert',
+                        title: 'Smart Shield Alert! (Nové)',
+                        message: `${data.device_name}: Detekováno "${data.keyword}" (${data.app_name || 'Neznámá aplikace'})`,
+                        deviceId: data.device_id,
+                        deviceName: data.device_name,
+                        priority: -1, // Verify Highest priority
+                        isRealTime: true
+                    }
+
+                    // User said: "always appear even if delete all"
+                    // So we ignore dismissedIds for this incoming event essentially because it has a new ID
+                    return [newAlert, ...prev]
+                })
+            }
+        })
+
         const interval = setInterval(fetchNotifications, 30000)
-        return () => clearInterval(interval)
+        return () => {
+            clearInterval(interval)
+            unsubscribe()
+        }
     }, [])
 
     useEffect(() => {
@@ -145,7 +198,7 @@ const NotificationDropdown = () => {
                             const alertDate = new Date(alert.timestamp)
                             if (alertDate >= today && !alert.is_read) {
                                 allNotifications.push({
-                                    id: `shield-${alert.id}`,
+                                    id: `shield-${alert.id}-${todayStr}`,
                                     type: 'error',
                                     iconName: 'shield-alert', // DynamicIcon must support this or fallback
                                     title: 'Smart Shield Alert!',

@@ -1,7 +1,8 @@
 """Pydantic schemas for request/response validation."""
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from datetime import datetime
 from typing import Optional, List, Dict
+from .config import settings
 
 
 # User schemas
@@ -52,7 +53,7 @@ class DeviceResponse(BaseModel):
     device_id: str
     parent_id: int
     child_id: Optional[int]
-    api_key: str  # Include API key in response for agent setup
+    api_key: str
     paired_at: datetime
     last_seen: Optional[datetime]
     is_active: bool
@@ -64,6 +65,12 @@ class DeviceResponse(BaseModel):
     # Screenshot support
     screenshot_requested: bool = False
     last_screenshot: Optional[str] = None  # Base64 data URI
+
+    @validator("last_screenshot", pre=True)
+    def ensure_full_url(cls, v):
+        if v and not v.startswith("http"):
+            return f"{settings.BACKEND_URL}/api/files/{v}"
+        return v
 
     class Config:
         from_attributes = True
@@ -197,12 +204,14 @@ class CriticalEventRequest(BaseModel):
     message: Optional[str] = None
     timestamp: Optional[datetime] = None
 
+
 # Shield Schemas
 class ShieldKeywordCreate(BaseModel):
     device_id: int
     keyword: str
     category: str = "custom"
     severity: str = "medium"
+
 
 class ShieldKeywordResponse(BaseModel):
     id: int
@@ -216,6 +225,7 @@ class ShieldKeywordResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class ShieldAlertCreate(BaseModel):
     device_id: str # String GUID
     keyword: str
@@ -223,6 +233,7 @@ class ShieldAlertCreate(BaseModel):
     detected_text: Optional[str]
     screenshot_url: Optional[str]
     severity: str
+
 
 class ShieldAlertResponse(BaseModel):
     id: int
@@ -234,6 +245,12 @@ class ShieldAlertResponse(BaseModel):
     severity: str
     is_read: bool
     timestamp: datetime
+
+    @validator("screenshot_url", pre=True)
+    def ensure_full_url(cls, v):
+        if v and not v.startswith("http"):
+             return f"{settings.BACKEND_URL}/api/files/{v}"
+        return v
 
     class Config:
         from_attributes = True

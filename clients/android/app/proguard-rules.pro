@@ -28,3 +28,7 @@
 
 # Timber
 -dontwarn org.jetbrains.annotations.**
+
+# Jetpack Security (EncryptedSharedPreferences)
+-keep class androidx.security.crypto.** { *; }
+-keep class com.google.crypto.tink.** { *; }
