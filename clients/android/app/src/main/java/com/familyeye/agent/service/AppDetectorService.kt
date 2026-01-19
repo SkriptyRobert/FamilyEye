@@ -181,14 +181,47 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
+    /**
+     * Smart Pulse: Optimized periodic check when overlay is active.
+     * Instead of running the entire enforcement cascade, we only check
+     * if the SPECIFIC condition that caused the block is still valid.
+     * This is called by UsageTracker every ~5 seconds when overlay is showing.
+     */
     fun recheckEnforcement() {
+        // Skip if not initialized or no overlay
+        if (!::enforcementService.isInitialized || !blockOverlayManager.isShowing()) return
+        
+        val currentType = blockOverlayManager.currentBlockType ?: return
+        
         serviceScope.launch {
-            val pkg = currentPackage
-            if (pkg != null) {
-                handleWindowChange(pkg, null)
+            val stillBlocked = when (currentType) {
+                BlockType.DEVICE_LOCK -> ruleEnforcer.isDeviceLocked()
+                BlockType.DEVICE_SCHEDULE -> ruleEnforcer.isDeviceScheduleBlocked()
+                BlockType.DEVICE_LIMIT -> {
+                    val totalUsage = usageTracker.getTotalUsageToday()
+                    ruleEnforcer.isDailyLimitExceeded(totalUsage)
+                }
+                BlockType.APP_LIMIT, BlockType.APP_SCHEDULE, BlockType.APP_FORBIDDEN -> {
+                    // For per-app blocks, we need to know which app. 
+                    // Fall back to full check (rare path)
+                    val pkg = blockOverlayManager.getCurrentBlockedPackage() ?: return@launch
+                    when (enforcementService.evaluate(pkg, null)) {
+                        is EnforcementResult.Block -> true
+                        else -> false
+                    }
+                }
+                else -> true // Keep showing for unknown types
+            }
+            
+            if (!stillBlocked) {
+                Timber.i("Smart Pulse: Block condition ($currentType) no longer active - hiding overlay")
+                blockOverlayManager.hide()
             }
         }
     }
+
+    @Inject
+    lateinit var ruleEnforcer: RuleEnforcer
 
     private fun checkTimeLimits(packageName: String) {
         serviceScope.launch {

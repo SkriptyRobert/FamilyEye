@@ -41,7 +41,7 @@ class BlockOverlayManager @Inject constructor(
 
     // Debouncing state - track what's currently shown
     private var currentBlockedPackage: String? = null
-    private var currentBlockType: BlockType? = null
+    internal var currentBlockType: BlockType? = null // Internal for Smart Pulse access
 
     // Lifecycle requirements for ComposeView in Service
     private val lifecycleRegistry = LifecycleRegistry(this)
