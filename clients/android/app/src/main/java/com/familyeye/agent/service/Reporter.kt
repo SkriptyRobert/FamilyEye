@@ -44,6 +44,7 @@ class Reporter @Inject constructor(
     private val configRepository: AgentConfigRepository,
     private val keywordManager: com.familyeye.agent.scanner.KeywordManager,
     private val secureTimeProvider: SecureTimeProvider,
+    private val webSocketClient: com.familyeye.agent.data.api.WebSocketClient, // Phase 1 Optimization
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     private val reporterScope = CoroutineScope(Dispatchers.IO)
@@ -181,6 +182,13 @@ class Reporter @Inject constructor(
         val apiKey = configRepository.getApiKey() ?: return
         
         val unsyncedLogs = usageLogDao.getUnsyncedLogs(limit = AgentConstants.MAX_UNSYNCED_LOGS_PER_BATCH)
+        
+        // Phase 1 Optimization: Skip HTTP heartbeat if WebSocket is connected and no logs to send
+        // WebSocket ping/pong already handles presence detection
+        if (unsyncedLogs.isEmpty() && webSocketClient.isConnected.value) {
+            Timber.v("WebSocket connected, no logs to sync - skipping HTTP heartbeat")
+            return
+        }
         
         Timber.d("Syncing ${unsyncedLogs.size} logs to backend (Heartbeat)...")
 

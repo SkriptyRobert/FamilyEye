@@ -213,15 +213,25 @@ class FamilyEyeService : Service() {
         }
     }
 
+    /**
+     * Phase 1 Optimization: Event-driven rule fetching instead of 30s polling.
+     * Rules are fetched:
+     * 1. Once on startup
+     * 2. When WebSocket reconnects (to catch up with missed changes)
+     * 3. When REFRESH_RULES command is received (handled in startCommandListening)
+     */
     private fun startRuleFetching() {
         serviceScope.launch {
-            while (isActive) {
-                try {
+            // Initial fetch on startup
+            Timber.i("Initial rule fetch on startup")
+            fetchRules()
+            
+            // Re-fetch when WebSocket reconnects (indicates we might have missed updates)
+            webSocketClient.isConnected.collect { connected ->
+                if (connected) {
+                    Timber.i("WebSocket reconnected - refreshing rules to catch up")
                     fetchRules()
-                } catch (e: Exception) {
-                    Timber.e(e, "Error fetching rules")
                 }
-                delay(30_000) // Fetch every 30 seconds
             }
         }
     }
