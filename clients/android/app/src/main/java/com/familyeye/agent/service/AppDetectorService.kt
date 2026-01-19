@@ -182,9 +182,11 @@ class AppDetectorService : AccessibilityService() {
     }
 
     fun recheckEnforcement() {
-        val pkg = currentPackage
-        if (pkg != null) {
-            handleWindowChange(pkg, null)
+        serviceScope.launch {
+            val pkg = currentPackage
+            if (pkg != null) {
+                handleWindowChange(pkg, null)
+            }
         }
     }
 
