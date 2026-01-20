@@ -212,8 +212,8 @@ class UsageReporter:
                     from .ipc_common import msg_show_info
                     self.ipc_server.broadcast(msg_show_info("Zpráva od rodiče", msg))
 
-    def _trigger_screenshot(self):
-        """Send screenshot request to ChildAgent via IPC."""
+    def capture_screenshot_now(self):
+        """Send screenshot request to ChildAgent via IPC used by WebSocket command."""
         if not self.ipc_server:
             self.logger.error("IPC server not available for screenshot")
             return

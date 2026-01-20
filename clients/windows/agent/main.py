@@ -17,6 +17,7 @@ from .monitor import AppMonitor
 from .enforcer import RuleEnforcer
 from .reporter import UsageReporter
 from .logger import get_logger
+from .websocket import WebSocketClient, WebSocketCommand
 
 # Import boot protection
 try:
@@ -54,6 +55,7 @@ class FamilyEyeAgent:
     - Usage reporting
     - IPC server for ChildAgent communication
     - Heartbeat monitoring for ChildAgent (started by Scheduled Task)
+    - WebSocket communication (real-time commands)
     """
     
     def __init__(self):
@@ -62,9 +64,13 @@ class FamilyEyeAgent:
         self.monitor = AppMonitor()
         self.enforcer = RuleEnforcer()
         self.reporter = UsageReporter(self.monitor)
+        self.ws_client = WebSocketClient()
         
         # Set monitor in enforcer
         self.enforcer.set_monitor(self.monitor)
+        
+        # LINK WS CLIENT TO ENFORCER (for dynamic polling optimization)
+        self.enforcer.set_ws_client(self.ws_client)
         
         # Set agent reference in monitor and reporter
         self.monitor.agent = self
@@ -82,6 +88,13 @@ class FamilyEyeAgent:
             self.enforcer.get_trusted_datetime,
             self.enforcer.get_trusted_utc_datetime
         )
+        
+        # Register WebSocket Command Handler
+        self.ws_client.add_command_callback(self._handle_ws_command)
+
+        # Register Reconnection Handlers
+        from .api_client import api_client
+        api_client.add_on_reconnect_callback(self.enforcer.trigger_immediate_fetch)
         
         self.monitor_thread = None
         self.enforcer_thread = None
@@ -161,7 +174,13 @@ class FamilyEyeAgent:
         self.enforcer_thread.start()
         self.reporter_thread.start()
         
-        # 7. IMMEDIATE INITIAL PUSH (Send scan results and current usage state)
+        # 7. Start WebSocket Client (Real-time communication)
+        try:
+            self.ws_client.start()
+        except Exception as e:
+            self.logger.warning(f"Failed to start WebSocket client: {e}")
+
+        # 8. IMMEDIATE INITIAL PUSH (Send scan results and current usage state)
         try:
             self.logger.info("Sending initial data report to backend...")
             # reporter.send_reports() now includes running_processes
@@ -188,12 +207,10 @@ class FamilyEyeAgent:
             self.process_monitor.start()
             
             # Connect components
-            # self.ipc_server.set_heartbeat_callback(self.process_monitor.receive_heartbeat) # ProcessMonitor uses psutil, not heartbeats
             self.ipc_server.set_screenshot_callback(self.reporter.upload_screenshot_from_file)  # Legacy
             self.ipc_server.set_screenshot_ready_callback(self.reporter.handle_screenshot_ready)  # File-based
             self.reporter.set_ipc_server(self.ipc_server)
             
-            # Start loops
             self.logger.info("ProcessMonitor started (Active Recovery enabled)")
         except Exception as e:
             self.logger.warning(f"Failed to start ProcessMonitor: {e}")
@@ -206,7 +223,6 @@ class FamilyEyeAgent:
                           ipc_enabled=_ipc_available)
         
         # ETHICAL TRANSPARENCY: Notify user that monitoring is active
-        # This message goes via IPC to ChildAgent in user session
         try:
             threading.Timer(8.0, lambda: self.enforcer.notification_manager.show_startup_transparent_notification()).start()
         except Exception as e:
@@ -232,7 +248,6 @@ class FamilyEyeAgent:
             from .api_client import api_client
             
             # Check if we triggered 401 during the fetch
-            # Note: The callback registered in start() sets self.auth_failed = True
             api_client.fetch_rules()
             
             if hasattr(self, 'auth_failed') and self.auth_failed:
@@ -248,34 +263,56 @@ class FamilyEyeAgent:
                                   error_message=str(e)[:50],
                                   note="May be temporary issue")
             return True
-    
+            
+    def _handle_ws_command(self, command: WebSocketCommand):
+        """Handle incoming WebSocket commands."""
+        self.logger.info(f"Processing WS Command: {command.command}")
+        
+        if command.command in ('REFRESH_RULES', 'LOCK_NOW', 'UNLOCK_NOW'):
+            # Trigger immediate fetch - Enforcer will see the LOCK/UNLOCK flags in the rules response
+            # Or if payload has explicit override, we should handle it.
+            # Currently backend updates DB then sends command, so fetch is correct.
+            self.enforcer.trigger_immediate_fetch()
+            
+        elif command.command == 'SCREENSHOT_NOW':
+            # Trigger screenshot via IPC to ChildAgent (if user session active)
+            try:
+                if self.ipc_server:
+                    # Request screenshot from ChildAgent
+                    # The ChildAgent will capture and send back via screenshot_ready callback
+                    self.logger.info("Requesting immediate screenshot from UI Agent")
+                    # We need a new IPC message type for this, or reuse existing mechanisms
+                    # For now, let's assume Enforcer/Reporter handles this if triggered
+                    # Or simpler: Rely on reporter's logic
+                    self.reporter.capture_screenshot_now()
+            except Exception as e:
+                self.logger.error(f"Failed to handle SCREENSHOT_NOW: {e}")
+
     def stop(self):
         """Stop agent."""
         self.logger.info("Stopping agent...")
         self.running = False
         
+        # Stop WebSocket
+        if self.ws_client:
+            self.ws_client.stop()
+        
         # Stop process monitor
         if self.process_monitor:
-            try:
-                self.process_monitor.stop()
-            except:
-                pass
+            try: self.process_monitor.stop()
+            except: pass
             self.process_monitor = None
         
         # Stop IPC server
         if self.ipc_server:
-            try:
-                self.ipc_server.stop()
-            except:
-                pass
+            try: self.ipc_server.stop()
+            except: pass
             self.ipc_server = None
         
         # Stop boot protection
         if self.boot_protection:
-            try:
-                self.boot_protection.stop()
-            except:
-                pass
+            try: self.boot_protection.stop()
+            except: pass
             self.boot_protection = None
         
         self.reporter.stop()
@@ -306,8 +343,6 @@ class FamilyEyeAgent:
                 time.sleep(interval)
             except Exception as e:
                 monitor_logger.error("Monitor error", error_type=type(e).__name__, error_message=str(e)[:50])
-                import traceback
-                traceback.print_exc()
                 time.sleep(5)
     
     def _enforcer_loop(self):
@@ -321,8 +356,6 @@ class FamilyEyeAgent:
                 time.sleep(2) 
             except Exception as e:
                 enforcer_logger.error("Enforcer error", error_type=type(e).__name__, error_message=str(e)[:50])
-                import traceback
-                traceback.print_exc()
                 time.sleep(5)
     
     def _reporter_loop(self):
@@ -341,10 +374,7 @@ class FamilyEyeAgent:
                     continue  # Skip normal interval, send again immediately
                 
                 interval = config.get("reporting_interval", 60)
-                reporter_logger.debug("Next report scheduled", interval_seconds=interval)
                 time.sleep(interval)
             except Exception as e:
                 reporter_logger.error("Reporter error", error_type=type(e).__name__, error_message=str(e)[:50])
-                import traceback
-                traceback.print_exc()
                 time.sleep(60)
