@@ -5,6 +5,72 @@ import DynamicIcon from './DynamicIcon'
 import { webSocketService } from '../services/websocket'
 import './NotificationDropdown.css'
 
+/**
+ * Translate technical alert keywords into friendly parent messages
+ */
+const formatAlertMessage = (keyword, deviceName, appName) => {
+    // Map of technical keywords to friendly Czech messages
+    const friendlyMessages = {
+        // Tampering alerts
+        'TAMPERING:ADB_DEBUGGING_ENABLED': {
+            title: 'Pokus o obejití',
+            message: 'aktivováno USB ladění (vývojářský režim)'
+        },
+        'TAMPERING:DEVELOPER_OPTIONS_ENABLED': {
+            title: 'Pokus o obejití',
+            message: 'aktivovány vývojářské možnosti'
+        },
+        'TAMPERING:SETTINGS_ACCESS': {
+            title: 'Přístup do nastavení',
+            message: 'pokus o vstup do blokovaného nastavení'
+        },
+        'TAMPERING:UNINSTALL_ATTEMPT': {
+            title: 'Pokus o odinstalaci',
+            message: 'pokus o odebrání aplikace FamilyEye'
+        },
+        'TAMPERING:ACCESSIBILITY_DISABLED': {
+            title: 'Ochrana vypnuta',
+            message: 'služba usnadnění byla deaktivována'
+        },
+        'TAMPERING:DEVICE_ADMIN_REMOVAL': {
+            title: 'Pokus o obejití',
+            message: 'pokus o odebrání administrátorských práv'
+        },
+        // Content alerts (Smart Shield words)
+        'WORD_DETECTED': {
+            title: 'Nevhodný obsah',
+            message: 'detekován zakázaný výraz'
+        }
+    }
+
+    // Find matching pattern (exact or prefix match)
+    let match = friendlyMessages[keyword]
+    if (!match) {
+        // Try prefix matching for keywords like "TAMPERING:..."
+        for (const [key, value] of Object.entries(friendlyMessages)) {
+            if (keyword?.startsWith(key.split(':')[0])) {
+                match = value
+                break
+            }
+        }
+    }
+
+    // Build the friendly message
+    if (match) {
+        return {
+            title: `🛡️ ${match.title}`,
+            message: `${deviceName}: ${match.message}`
+        }
+    }
+
+    // Fallback for unknown keywords - still make it friendly
+    const cleanKeyword = keyword?.replace(/_/g, ' ').replace(/TAMPERING:/gi, '').toLowerCase() || 'neznámá aktivita'
+    return {
+        title: '🛡️ Bezpečnostní upozornění',
+        message: `${deviceName}: ${cleanKeyword}${appName ? ` v ${appName}` : ''}`
+    }
+}
+
 const NotificationDropdown = () => {
     const [isOpen, setIsOpen] = useState(false)
     const [notifications, setNotifications] = useState([])
@@ -47,16 +113,18 @@ const NotificationDropdown = () => {
 
                 // Add new alert immediately
                 setNotifications(prev => {
+                    const friendly = formatAlertMessage(data.keyword, data.device_name, data.app_name)
                     const newAlert = {
                         id: `shield-${Date.now()}`, // Unique ID for instant alert
                         type: 'error',
                         iconName: 'shield-alert',
-                        title: 'Smart Shield Alert! (Nové)',
-                        message: `${data.device_name}: Detekováno "${data.keyword}" (${data.app_name || 'Neznámá aplikace'})`,
+                        title: friendly.title,
+                        message: friendly.message,
                         deviceId: data.device_id,
                         deviceName: data.device_name,
-                        priority: -1, // Verify Highest priority
-                        isRealTime: true
+                        priority: -1, // Highest priority
+                        isRealTime: true,
+                        timestamp: new Date().toISOString()
                     }
 
                     // User said: "always appear even if delete all"
@@ -115,7 +183,8 @@ const NotificationDropdown = () => {
                                     message: `${device.name}: Použito ${Math.round(app.usage_minutes)}/${app.limit_minutes} min`,
                                     deviceId: device.id,
                                     deviceName: device.name,
-                                    priority: 1
+                                    priority: 1,
+                                    timestamp: new Date().toISOString()
                                 })
                             } else if (app.percentage_used >= 80) {
                                 const idWarn = `${device.id}-${app.app_name}-warning-${todayStr}`
@@ -127,7 +196,8 @@ const NotificationDropdown = () => {
                                     message: `${device.name}: Zbývá ${Math.round(app.remaining_minutes)} min`,
                                     deviceId: device.id,
                                     deviceName: device.name,
-                                    priority: 2
+                                    priority: 2,
+                                    timestamp: new Date().toISOString()
                                 })
                             }
                         })
@@ -148,7 +218,8 @@ const NotificationDropdown = () => {
                                 message: `${device.name}: ${usedMinutes}/${limitMinutes} min`,
                                 deviceId: device.id,
                                 name: device.name,
-                                priority: 0
+                                priority: 0,
+                                timestamp: new Date().toISOString()
                             })
                         } else if (percentage >= 80) {
                             allNotifications.push({
@@ -159,7 +230,8 @@ const NotificationDropdown = () => {
                                 message: `${device.name}: Zbývá ${limitMinutes - usedMinutes} min`,
                                 deviceId: device.id,
                                 deviceName: device.name,
-                                priority: 1
+                                priority: 1,
+                                timestamp: new Date().toISOString()
                             })
                         }
                     }
@@ -182,7 +254,8 @@ const NotificationDropdown = () => {
                                 message: `${device.name}: Neaktivní ${Math.round(diffMinutes)} min`,
                                 deviceId: device.id,
                                 deviceName: device.name,
-                                priority: 3
+                                priority: 3,
+                                timestamp: new Date().toISOString()
                             })
                         }
                     }
@@ -197,15 +270,17 @@ const NotificationDropdown = () => {
                             // Only show alerts from today (or very recent unread)
                             const alertDate = new Date(alert.timestamp)
                             if (alertDate >= today && !alert.is_read) {
+                                const friendly = formatAlertMessage(alert.keyword, device.name, alert.app_name)
                                 allNotifications.push({
                                     id: `shield-${alert.id}-${todayStr}`,
                                     type: 'error',
-                                    iconName: 'shield-alert', // DynamicIcon must support this or fallback
-                                    title: 'Smart Shield Alert!',
-                                    message: `${device.name}: Detekováno "${alert.keyword}" (${alert.app_name || 'Neznámá aplikace'})`,
+                                    iconName: 'shield-alert',
+                                    title: friendly.title,
+                                    message: friendly.message,
                                     deviceId: device.id,
                                     deviceName: device.name,
-                                    priority: 0 // Highest priority
+                                    priority: 0, // Highest priority
+                                    timestamp: alert.timestamp
                                 })
                             }
                         })
@@ -299,7 +374,14 @@ const NotificationDropdown = () => {
                                 >
                                     <span className="notification-icon"><DynamicIcon name={notification.iconName} size={18} /></span>
                                     <div className="notification-content">
-                                        <span className="notification-title">{notification.title}</span>
+                                        <div className="notification-header-row">
+                                            <span className="notification-title">{notification.title}</span>
+                                            {notification.timestamp && (
+                                                <span className="notification-time">
+                                                    {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                        </div>
                                         <span className="notification-message">{notification.message}</span>
                                     </div>
                                     <button

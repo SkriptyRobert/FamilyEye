@@ -236,12 +236,26 @@
     padding-right: 20px;
 }
 
+.notification-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
 .notification-title {
-    display: block;
     font-weight: 700;
     color: #fff;
     font-size: 0.95rem;
-    margin-bottom: 2px;
+    flex: 1;
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 .notification-message {
