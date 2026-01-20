@@ -35,6 +35,16 @@ class RuleEnforcer @Inject constructor(
         CoroutineScope(Dispatchers.IO).launch {
             ruleRepository.getRules().collect { newRules ->
                 Timber.d("RuleEnforcer: Rules updated from DB: ${newRules.size}")
+                // Debug: Log all time_limit rules for troubleshooting
+                val timeLimitRules = newRules.filter { it.ruleType == "time_limit" }
+                if (timeLimitRules.isNotEmpty()) {
+                    Timber.i("TIME_LIMIT rules received: ${timeLimitRules.size}")
+                    timeLimitRules.forEach { rule ->
+                        Timber.i("  - app=${rule.appName}, limit=${rule.timeLimit} min, enabled=${rule.enabled}")
+                    }
+                } else {
+                    Timber.w("No TIME_LIMIT rules received from backend")
+                }
                 cachedRules = newRules
             }
         }
@@ -114,7 +124,13 @@ class RuleEnforcer @Inject constructor(
      */
     fun isAppTimeLimitExceeded(packageName: String, usageSeconds: Int): Boolean {
         val appLabel = getAppName(packageName)
-        val exceeded = LimitPolicy.isAppTimeLimitExceeded(packageName, appLabel, usageSeconds, getRules())
+        val rules = getRules()
+        val timeLimitRules = rules.filter { it.ruleType == "time_limit" }
+        
+        // Debug: Log check attempt with all relevant data
+        Timber.d("TIME_LIMIT check: pkg=$packageName, label=$appLabel, usage=${usageSeconds}s, timeLimitRules=${timeLimitRules.size}")
+        
+        val exceeded = LimitPolicy.isAppTimeLimitExceeded(packageName, appLabel, usageSeconds, rules)
         if (exceeded) {
             Timber.w("App time limit exceeded: $packageName ($usageSeconds seconds)")
         }

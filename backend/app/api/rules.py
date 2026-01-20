@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 from ..database import get_db
 from ..models import Rule, Device, User
 from ..schemas import RuleCreate, RuleResponse, AgentRulesRequest, AgentRulesResponse
@@ -9,6 +10,7 @@ from ..api.auth import get_current_parent
 from ..api.devices import verify_device_api_key
 
 router = APIRouter()
+logger = logging.getLogger("rules")
 
 
 @router.post("/", response_model=RuleResponse, status_code=status.HTTP_201_CREATED)
@@ -68,11 +70,13 @@ async def create_rule(
     
     if existing_rule:
         # Update existing rule
+        logger.info(f"Updating existing rule id={existing_rule.id}: type={rule_data.rule_type}, app={rule_data.app_name}, time_limit={rule_data.time_limit}")
         for key, value in rule_data.dict().items():
             setattr(existing_rule, key, value)
         
         db.commit()
         db.refresh(existing_rule)
+        logger.info(f"Rule updated successfully: id={existing_rule.id}")
         return existing_rule
 
     new_rule = Rule(**rule_data.dict())
@@ -80,6 +84,7 @@ async def create_rule(
     db.commit()
     db.refresh(new_rule)
     
+    logger.info(f"Created new rule: id={new_rule.id}, type={new_rule.rule_type}, device_id={new_rule.device_id}, app={new_rule.app_name}, time_limit={new_rule.time_limit}")
     return new_rule
 
 
@@ -197,6 +202,12 @@ async def agent_fetch_rules(
         Rule.device_id == device.id,
         Rule.enabled == True
     ).all()
+    
+    # Debug: Log what rules are returned to agent
+    time_limit_rules = [r for r in rules_db if r.rule_type == "time_limit"]
+    logger.info(f"Agent fetch for device_id={device.device_id} (db_id={device.id}): {len(rules_db)} total rules, {len(time_limit_rules)} time_limit rules")
+    for r in time_limit_rules:
+        logger.info(f"  - TIME_LIMIT: app={r.app_name}, limit={r.time_limit}min, enabled={r.enabled}")
 
     # Pre-process rules to fix schedule format for agent (expand '0-6' to '0,1,2...')
     rules = []

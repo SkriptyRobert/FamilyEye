@@ -45,6 +45,7 @@ class Reporter @Inject constructor(
     private val keywordManager: com.familyeye.agent.scanner.KeywordManager,
     private val secureTimeProvider: SecureTimeProvider,
     private val webSocketClient: com.familyeye.agent.data.api.WebSocketClient, // Phase 1 Optimization
+    private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository, // Rule sync fix
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     private val reporterScope = CoroutineScope(Dispatchers.IO)
@@ -75,6 +76,8 @@ class Reporter @Inject constructor(
                     doSync()
                     // Sync keywords periodically
                     keywordManager.syncKeywords()
+                    // Sync rules periodically (fix for startRuleFetching Flow issue)
+                    ruleRepository.refreshRules()
                 } catch (e: Exception) {
                     Timber.e(e, "Error in Reporter loop")
                 }

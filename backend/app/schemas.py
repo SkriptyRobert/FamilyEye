@@ -229,9 +229,9 @@ class ShieldKeywordResponse(BaseModel):
 class ShieldAlertCreate(BaseModel):
     device_id: str # String GUID
     keyword: str
-    app_name: Optional[str]
-    detected_text: Optional[str]
-    screenshot_url: Optional[str]
+    app_name: Optional[str] = None
+    detected_text: Optional[str] = None
+    screenshot_url: Optional[str] = None
     severity: str
 
 
