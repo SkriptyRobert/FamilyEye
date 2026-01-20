@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 from ..database import get_db
 from ..models import Device, User, PairingToken, UsageLog, Rule
-from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, PairingTokenResponse, PairingRequest, PairingResponse, PairingStatusResponse
+from ..schemas import DeviceCreate, DeviceUpdate, DeviceResponse, DeviceSettingsProtectionUpdate, PairingTokenResponse, PairingRequest, PairingResponse, PairingStatusResponse
 from ..api.auth import get_current_parent
 from ..services.pairing_service import (
     generate_pairing_token,
@@ -473,4 +473,54 @@ async def reset_pin(
     return {
         "status": "success", 
         "message": f"PIN reset command sent to device. New PIN: {new_pin}"
+    }
+
+
+@router.put("/{device_id}/settings-protection", status_code=status.HTTP_200_OK)
+async def update_settings_protection(
+    device_id: int,
+    data: DeviceSettingsProtectionUpdate,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """
+    Update device settings protection level.
+    
+    Levels:
+    - 'full': Block entire Settings app (maximum security)
+    - 'full_with_exceptions': Block Settings except whitelisted areas (wifi, bluetooth, etc)
+    - 'standard': Block only dangerous activities (legacy behavior)
+    """
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    # Validate protection level
+    valid_levels = {"full", "off"}
+    if data.settings_protection not in valid_levels:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid protection level. Must be one of: {valid_levels}"
+        )
+    
+    # Update device
+    device.settings_protection = data.settings_protection
+    device.settings_exceptions = data.settings_exceptions
+    db.commit()
+    
+    # Notify agent to refresh rules
+    from ..api.websocket import send_command_to_device
+    await send_command_to_device(device.device_id, "REFRESH_RULES")
+    
+    return {
+        "status": "success",
+        "settings_protection": device.settings_protection,
+        "settings_exceptions": device.settings_exceptions
     }

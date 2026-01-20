@@ -277,6 +277,8 @@ async def agent_fetch_rules(
         "rules": rules,
         "daily_usage": int(total_usage),
         "usage_by_app": usage_by_app,
-        "server_time": datetime.now(timezone.utc)
+        "server_time": datetime.now(timezone.utc),
+        "settings_protection": device.settings_protection or "full",
+        "settings_exceptions": device.settings_exceptions
     }
 

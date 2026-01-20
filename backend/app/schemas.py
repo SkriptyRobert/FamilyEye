@@ -45,6 +45,12 @@ class DeviceUpdate(BaseModel):
     name: Optional[str] = None
 
 
+class DeviceSettingsProtectionUpdate(BaseModel):
+    """Schema for updating device settings protection level."""
+    settings_protection: str  # 'full' or 'off'
+    settings_exceptions: Optional[str] = None  # Reserved for future use
+
+
 class DeviceResponse(BaseModel):
     id: int
     name: str
@@ -65,6 +71,9 @@ class DeviceResponse(BaseModel):
     # Screenshot support
     screenshot_requested: bool = False
     last_screenshot: Optional[str] = None  # Base64 data URI
+    # Settings protection (Android)
+    settings_protection: str = "full"  # 'full' or 'off'
+    settings_exceptions: Optional[str] = None  # Reserved for future use
 
     @validator("last_screenshot", pre=True)
     def ensure_full_url(cls, v):
@@ -172,6 +181,8 @@ class AgentRulesResponse(BaseModel):
     daily_usage: int  # Total seconds used today
     usage_by_app: Dict[str, int] = {}  # App name -> duration seconds
     server_time: Optional[datetime] = None  # Server UTC time
+    settings_protection: str = "full"  # Settings protection level for Android
+    settings_exceptions: Optional[str] = None
 
 
 class AgentUsageLogCreate(BaseModel):

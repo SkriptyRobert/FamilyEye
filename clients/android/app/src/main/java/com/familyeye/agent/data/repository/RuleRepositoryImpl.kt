@@ -47,7 +47,11 @@ class RuleRepositoryImpl @Inject constructor(
                     val entities = rulesResponse.rules.map { it.toEntity() }
                     ruleDao.clearAndInsert(entities)
                     
-                    // Note: We could also update usage stats if needed, but that's handled separately usually
+                    // Save settings protection level
+                    configRepository.saveSettingsProtection(
+                        rulesResponse.settingsProtection ?: "full",
+                        rulesResponse.settingsExceptions
+                    )
                 }
             } else {
                 Timber.e("Failed to fetch rules: ${response.code()}")

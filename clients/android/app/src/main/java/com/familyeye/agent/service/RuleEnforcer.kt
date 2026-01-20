@@ -5,6 +5,7 @@ import com.familyeye.agent.policy.AppBlockPolicy
 import com.familyeye.agent.policy.DeviceLockPolicy
 import com.familyeye.agent.policy.LimitPolicy
 import com.familyeye.agent.policy.SchedulePolicy
+import com.familyeye.agent.policy.SettingsProtectionPolicy
 import com.familyeye.agent.policy.UnlockPolicy
 import com.familyeye.agent.utils.AppInfoResolver
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class RuleEnforcer @Inject constructor(
     @ApplicationContext private val context: android.content.Context,
-    private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository
+    private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository,
+    private val configRepository: com.familyeye.agent.data.repository.AgentConfigRepository
 ) {
     // Cache rules in memory for synchronous access (volatile for thread safety)
     @Volatile
@@ -35,16 +37,6 @@ class RuleEnforcer @Inject constructor(
         CoroutineScope(Dispatchers.IO).launch {
             ruleRepository.getRules().collect { newRules ->
                 Timber.d("RuleEnforcer: Rules updated from DB: ${newRules.size}")
-                // Debug: Log all time_limit rules for troubleshooting
-                val timeLimitRules = newRules.filter { it.ruleType == "time_limit" }
-                if (timeLimitRules.isNotEmpty()) {
-                    Timber.i("TIME_LIMIT rules received: ${timeLimitRules.size}")
-                    timeLimitRules.forEach { rule ->
-                        Timber.i("  - app=${rule.appName}, limit=${rule.timeLimit} min, enabled=${rule.enabled}")
-                    }
-                } else {
-                    Timber.w("No TIME_LIMIT rules received from backend")
-                }
                 cachedRules = newRules
             }
         }
@@ -125,10 +117,6 @@ class RuleEnforcer @Inject constructor(
     fun isAppTimeLimitExceeded(packageName: String, usageSeconds: Int): Boolean {
         val appLabel = getAppName(packageName)
         val rules = getRules()
-        val timeLimitRules = rules.filter { it.ruleType == "time_limit" }
-        
-        // Debug: Log check attempt with all relevant data
-        Timber.d("TIME_LIMIT check: pkg=$packageName, label=$appLabel, usage=${usageSeconds}s, timeLimitRules=${timeLimitRules.size}")
         
         val exceeded = LimitPolicy.isAppTimeLimitExceeded(packageName, appLabel, usageSeconds, rules)
         if (exceeded) {
@@ -178,7 +166,19 @@ class RuleEnforcer @Inject constructor(
             "ruleCount" to cachedRules.size,
             "deviceLocked" to isDeviceLocked(),
             "deviceScheduleBlocked" to isDeviceScheduleBlocked(),
-            "unlockActive" to isUnlockSettingsActive()
+            "unlockActive" to isUnlockSettingsActive(),
+            "settingsProtection" to getSettingsProtectionLevel().name
         )
+    }
+    
+    /**
+     * Get the current settings protection level.
+     * Reads directly from configRepository to ensure latest value.
+     * Default is FULL for maximum security.
+     */
+    fun getSettingsProtectionLevel(): SettingsProtectionPolicy.ProtectionLevel {
+        // Always read fresh from config to ensure immediate updates
+        val level = configRepository.getSettingsProtection()
+        return SettingsProtectionPolicy.fromString(level)
     }
 }

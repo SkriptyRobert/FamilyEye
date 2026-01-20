@@ -49,7 +49,9 @@ data class AgentRulesResponse(
     @Json(name = "rules") val rules: List<RuleDTO>,
     @Json(name = "daily_usage") val dailyUsageSeconds: Int,
     @Json(name = "usage_by_app") val usageByApp: Map<String, Int> = emptyMap(),
-    @Json(name = "server_time") val serverTime: String?
+    @Json(name = "server_time") val serverTime: String?,
+    @Json(name = "settings_protection") val settingsProtection: String? = "full",
+    @Json(name = "settings_exceptions") val settingsExceptions: String? = null
 )
 
 @JsonClass(generateAdapter = true)

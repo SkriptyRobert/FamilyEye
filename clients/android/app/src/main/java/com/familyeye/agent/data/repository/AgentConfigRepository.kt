@@ -23,4 +23,9 @@ interface AgentConfigRepository {
     suspend fun savePin(pin: String)
     suspend fun verifyPin(pin: String): Boolean
     suspend fun hasPin(): Boolean
+    
+    // Settings Protection
+    suspend fun saveSettingsProtection(level: String, exceptions: String?)
+    fun getSettingsProtection(): String  // Synchronous - SharedPreferences read
+    fun getSettingsExceptions(): String?  // Synchronous - SharedPreferences read
 }

@@ -43,6 +43,10 @@ class Device(Base):
     first_report_today_utc = Column(DateTime(timezone=True), nullable=True)  # First report of current day (for elapsed time calc)
     daily_usage_seconds = Column(Integer, default=0) # Total active time today (from Agent)
     
+    # Settings protection for Android devices
+    settings_protection = Column(String, default="full")  # 'full' or 'off'
+    settings_exceptions = Column(String, nullable=True)   # Reserved for future use
+    
     # Relationships
     parent = relationship("User", foreign_keys=[parent_id], back_populates="parent_devices")
     child = relationship("User", foreign_keys=[child_id], back_populates="child_devices")

@@ -25,7 +25,7 @@ export function useQuickActions(onSuccess = null) {
     /**
      * Handle device-level quick actions (lock, unlock, pause-internet, etc.)
      */
-    const handleDeviceAction = useCallback(async (deviceId, action) => {
+    const handleDeviceAction = useCallback(async (deviceId, action, payload = null) => {
         const actionKey = `${deviceId}-${action}`
         setPending(prev => ({ ...prev, [actionKey]: true }))
         setFeedback(prev => ({ ...prev, [actionKey]: { status: 'sending', message: 'Odesílám příkaz...' } }))
@@ -33,6 +33,8 @@ export function useQuickActions(onSuccess = null) {
         try {
             let endpoint = ''
             let successMessage = ''
+            let method = 'post'
+            let data = null
 
             switch (action) {
                 case 'lock':
@@ -59,11 +61,33 @@ export function useQuickActions(onSuccess = null) {
                     endpoint = `/api/devices/${deviceId}/unlock-settings`
                     successMessage = 'Nastavení povoleno na 5 minut'
                     break
+                case 'reset-pin':
+                    endpoint = `/api/devices/${deviceId}/reset-pin`
+                    successMessage = 'PIN resetován'
+                    data = payload
+                    break
+                case 'set-protection':
+                    endpoint = `/api/devices/${deviceId}/settings-protection`
+                    method = 'put'
+                    data = {
+                        settings_protection: payload?.level || 'full',
+                        settings_exceptions: null
+                    }
+                    successMessage = payload?.level === 'full'
+                        ? 'Ochrana nastavení aktivována'
+                        : 'Ochrana nastavení vypnuta'
+                    break
                 default:
                     return
             }
 
-            await api.post(endpoint)
+            if (method === 'put') {
+                await api.put(endpoint, data)
+            } else if (data) {
+                await api.post(endpoint, data)
+            } else {
+                await api.post(endpoint)
+            }
             setFeedbackWithTimeout(actionKey, { status: 'success', message: successMessage })
 
             if (onSuccess) {

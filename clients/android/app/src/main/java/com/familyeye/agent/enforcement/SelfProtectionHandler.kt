@@ -2,6 +2,7 @@ package com.familyeye.agent.enforcement
 
 import android.content.Context
 import android.provider.Settings
+import com.familyeye.agent.policy.SettingsProtectionPolicy
 import com.familyeye.agent.service.RuleEnforcer
 import com.familyeye.agent.utils.PackageMatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,26 +28,6 @@ class SelfProtectionHandler @Inject constructor(
     private val ruleEnforcer: RuleEnforcer
 ) {
     companion object {
-        // Dangerous activity class names that should be blocked
-        private val DANGEROUS_ACTIVITIES = setOf(
-            // Device Admin
-            "deviceadminadd",
-            "deviceadminsettings",
-            "deviceadministratorsettings",
-            // User Management
-            "usersettings",
-            "usermanagement",
-            "multiusersetup",
-            // Accessibility (can disable our service)
-            "accessibilitysettings",
-            "accessibilityservice",
-            "installedaccessibility",
-            // App Info (can force stop/disable)
-            "applicationdetailsettings",
-            "installedappdetails",
-            "appinfo"
-        )
-        
         // Package installer patterns (uninstall detection)
         private val UNINSTALL_PATTERNS = setOf(
             "uninstall",
@@ -63,23 +44,27 @@ class SelfProtectionHandler @Inject constructor(
      * @return true if this appears to be a tampering attempt
      */
     fun isTamperingAttempt(packageName: String, className: String?): Boolean {
-        // Check if this is a settings app accessing dangerous screens
+        val isUnlockActive = ruleEnforcer.isUnlockSettingsActive()
+        
+        // ========== Settings Protection ==========
+        // Binary logic: FULL blocks everything, OFF allows everything
         if (PackageMatcher.isSettings(packageName)) {
-            if (className != null && isDangerousActivity(className)) {
-                // Check if parent has unlocked access
-                if (ruleEnforcer.isUnlockSettingsActive()) {
-                    Timber.v("Settings access allowed - unlock active")
-                    return false
-                }
-                Timber.w("Tampering detected: Settings accessing $className")
+            val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
+            val shouldBlock = SettingsProtectionPolicy.shouldBlockSettings(
+                protectionLevel, isUnlockActive
+            )
+            if (shouldBlock) {
+                Timber.w("Settings blocked: level=$protectionLevel")
                 return true
             }
+            // Protection is OFF or parent unlocked - allow access
+            return false
         }
 
         // Check if this is a package installer (uninstall attempt)
+        // This is ALWAYS blocked regardless of Settings protection level
         if (PackageMatcher.isPackageInstaller(packageName) || isUninstallActivity(className)) {
-            // Check if parent has unlocked access
-            if (ruleEnforcer.isUnlockSettingsActive()) {
+            if (isUnlockActive) {
                 Timber.v("Package installer access allowed - unlock active")
                 return false
             }
@@ -88,14 +73,6 @@ class SelfProtectionHandler @Inject constructor(
         }
 
         return false
-    }
-
-    /**
-     * Check if a class name matches any dangerous activity patterns.
-     */
-    private fun isDangerousActivity(className: String): Boolean {
-        val lowerClassName = className.lowercase()
-        return DANGEROUS_ACTIVITIES.any { lowerClassName.contains(it) }
     }
     
     /**

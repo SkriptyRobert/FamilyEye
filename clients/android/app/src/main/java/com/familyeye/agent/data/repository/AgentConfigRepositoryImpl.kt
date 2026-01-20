@@ -58,6 +58,8 @@ class AgentConfigRepositoryImpl @Inject constructor(
         const val BACKEND_URL = "backend_url"  // Moved here for consistency
         const val PIN_HASH = "pin_hash"
         const val PIN_SALT = "pin_salt"
+        const val SETTINGS_PROTECTION = "settings_protection"
+        const val SETTINGS_EXCEPTIONS = "settings_exceptions"
     }
 
     init {
@@ -274,5 +276,29 @@ class AgentConfigRepositoryImpl @Inject constructor(
 
     private fun String.hexToByteArray(): ByteArray {
         return chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    }
+    
+    // ==================== Settings Protection ====================
+    
+    override suspend fun saveSettingsProtection(level: String, exceptions: String?) {
+        encryptedPrefs.edit()
+            .putString(EncKeys.SETTINGS_PROTECTION, level)
+            .apply {
+                if (exceptions != null) {
+                    putString(EncKeys.SETTINGS_EXCEPTIONS, exceptions)
+                } else {
+                    remove(EncKeys.SETTINGS_EXCEPTIONS)
+                }
+            }
+            .apply()
+        Timber.i("Settings protection saved: level=$level, exceptions=$exceptions")
+    }
+    
+    override fun getSettingsProtection(): String {
+        return encryptedPrefs.getString(EncKeys.SETTINGS_PROTECTION, "full") ?: "full"
+    }
+    
+    override fun getSettingsExceptions(): String? {
+        return encryptedPrefs.getString(EncKeys.SETTINGS_EXCEPTIONS, null)
     }
 }

@@ -8,8 +8,12 @@ import {
     RefreshCw,
     XCircle,
     EyeOff,
-    Check
+    Check,
+    Shield,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react'
+import { useState } from 'react'
 import DynamicIcon from '../../DynamicIcon'
 import { LimitChip } from '../../limits'
 import QuickActionsBar from '../QuickActionsBar'
@@ -319,6 +323,15 @@ const AndroidDeviceCard = ({
                         </div>
                     )}
 
+                    {/* Settings Protection */}
+                    {/* Settings Protection */}
+                    <ProtectionAccordion
+                        device={device}
+                        actionPending={actionPending}
+                        onDeviceAction={onDeviceAction}
+                        actionFeedback={actionFeedback}
+                    />
+
                     {/* Extended actions */}
                     <div className="detail-section actions-section">
                         <button
@@ -359,3 +372,72 @@ const AndroidDeviceCard = ({
 }
 
 export default AndroidDeviceCard
+
+// Helper Component for Collapsible Protection Section
+function ProtectionAccordion({ device, actionPending, onDeviceAction, actionFeedback }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="detail-section protection-section">
+            <div
+                className="section-title collapsible-header"
+                onClick={() => setIsOpen(!isOpen)}
+                style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', marginBottom: isOpen ? '12px' : '0' }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} />
+                    <span>Ochrana nastavení</span>
+                    <span className={`status-badge ${device.settings_protection === 'off' ? 'warning' : 'success'}`} style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px', background: device.settings_protection === 'off' ? '#fee2e2' : '#dcfce7', color: device.settings_protection === 'off' ? '#dc2626' : '#166534' }}>
+                        {device.settings_protection === 'off' ? 'VYPNUTO' : 'AKTIVNÍ'}
+                    </span>
+                </div>
+                {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </div>
+
+            {isOpen && (
+                <>
+                    <div className="protection-options">
+                        <label
+                            className={`protection-option ${device.settings_protection === 'full' || !device.settings_protection ? 'active' : ''}`}
+                        >
+                            <input
+                                type="radio"
+                                name={`protection-${device.id}`}
+                                value="full"
+                                checked={device.settings_protection === 'full' || !device.settings_protection}
+                                onChange={() => onDeviceAction(device.id, 'set-protection', { level: 'full' })}
+                                disabled={actionPending[`${device.id}-set-protection`]}
+                            />
+                            <div className="option-content">
+                                <strong>Úplná ochrana</strong>
+                                <span>Blokuje celé Nastavení (doporučeno)</span>
+                            </div>
+                        </label>
+
+                        <label
+                            className={`protection-option ${device.settings_protection === 'off' ? 'active' : ''}`}
+                        >
+                            <input
+                                type="radio"
+                                name={`protection-${device.id}`}
+                                value="off"
+                                checked={device.settings_protection === 'off'}
+                                onChange={() => onDeviceAction(device.id, 'set-protection', { level: 'off' })}
+                                disabled={actionPending[`${device.id}-set-protection`]}
+                            />
+                            <div className="option-content">
+                                <strong>Ochrana vypnuta</strong>
+                                <span>Přístup do Nastavení povolen</span>
+                            </div>
+                        </label>
+                    </div>
+                    {actionFeedback[`${device.id}-set-protection`] && (
+                        <div className={`protection-feedback ${actionFeedback[`${device.id}-set-protection`].status}`}>
+                            {actionFeedback[`${device.id}-set-protection`].message}
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
