@@ -68,6 +68,13 @@ class UsageCache:
             with open(cache_path, 'r') as f:
                 cache_data = json.load(f)
                 
+            # Load pending FIRST (persists across reboots)
+            cached_pending = cache_data.get("usage_pending", {})
+            for app, duration in cached_pending.items():
+                usage_pending[app] = duration
+            
+            device_usage_pending = cache_data.get("device_usage_pending", 0.0)
+            
             # CACHE VALIDATION (Strict Mode)
             cache_boot = cache_data.get("boot_time", 0)
             cache_mono = cache_data.get("monotonic_timestamp", 0)
@@ -75,35 +82,28 @@ class UsageCache:
             current_boot = psutil.boot_time() # Fresh boot time
             current_mono = time.monotonic()
             
-            # 1. REBOOT CHECK
+            # 1. REBOOT CHECK - Return Pending ONLY
             if abs(cache_boot - current_boot) > 5:
-                self.logger.info(f"System reboot detected (Boot delta: {abs(cache_boot - current_boot):.1f}s). Starting fresh.")
-                return 0.0, 0.0
+                self.logger.info(f"System reboot detected (Boot delta: {abs(cache_boot - current_boot):.1f}s). Starting fresh session, but keeping pending reports.")
+                return 0.0, device_usage_pending
 
             # 2. MONOTONIC AGE CHECK
             age = current_mono - cache_mono
             if age > 3600:
                 self.logger.info(f"Cache expired (Age: {age:.0f}s > 3600s). Starting fresh.")
-                return 0.0, 0.0
+                return 0.0, device_usage_pending
             
             # 3. FUTURE CHECK
             if age < -10:
                 self.logger.warning(f"Cache from future detected ({age:.0f}s). Discarding.")
                 return 0.0, 0.0
             
-            # Load today's cumulative stats
+            # Load today's cumulative stats (Session persistence)
             cached_today = cache_data.get("usage_today", cache_data.get("app_usage", {}))
             for app, duration in cached_today.items():
                 usage_today[app] = duration
             
             device_usage_today = cache_data.get("device_usage_today", 0.0)
-                
-            # Load pending stats
-            cached_pending = cache_data.get("usage_pending", {})
-            for app, duration in cached_pending.items():
-                usage_pending[app] = duration
-            
-            device_usage_pending = cache_data.get("device_usage_pending", 0.0)
                 
             self.logger.info(f"Loaded usage stats (Apps: {len(usage_today)}, Active: {int(device_usage_today)}s, Cache Age: {int(age)}s)")
             

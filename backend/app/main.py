@@ -141,6 +141,21 @@ os.makedirs(uploads_path, exist_ok=True)
 # NOTE: Screenshots are NOT served as public static files for security.
 # Use /api/files/screenshots/{device_id}/{filename} with authentication instead.
 
+@app.get("/api/download/android-agent")
+async def download_android_agent():
+    """Download the latest Android Agent APK."""
+    # Build path relative to backend/app/main.py -> backend -> root -> clients...
+    apk_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 
+                           "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
+    
+    if os.path.exists(apk_path):
+        return FileResponse(
+            path=apk_path, 
+            filename="FamilyEye-Agent-v1.0.0.apk", 
+            media_type="application/vnd.android.package-archive"
+        )
+    return {"error": "APK file not found. Please build the Android project first."}
+
 # Serve Installers (Public)
 installers_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "installer", "agent", "output")
 if os.path.exists(installers_path):

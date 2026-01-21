@@ -96,8 +96,8 @@ class ParentalControlAgentService:
         self.is_running = True
         
         try:
-            from agent.main import ParentalControlAgent
-            self.agent = ParentalControlAgent()
+            from agent.main import FamilyEyeAgent
+            self.agent = FamilyEyeAgent()
             self.agent.start()
             
             # Run main loop
@@ -208,6 +208,7 @@ def build_executable():
         '--hidden-import', 'requests',
         '--hidden-import', 'urllib3',
         '--hidden-import', 'colorama',
+        '--hidden-import', 'websockets',
         # Win32 API for process/session management
         '--hidden-import', 'win32gui',
         '--hidden-import', 'win32process',

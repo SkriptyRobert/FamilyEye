@@ -60,6 +60,15 @@
             </intent-filter>
         </activity>
 
+        <!-- KeepAlive Activity for process revival -->
+        <activity
+            android:name=".ui.KeepAliveActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" 
+            android:launchMode="singleInstance" />
+
         <!-- Foreground Service for monitoring -->
         <service
             android:name=".service.FamilyEyeService"

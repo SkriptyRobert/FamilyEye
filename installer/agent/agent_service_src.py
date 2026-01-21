@@ -66,8 +66,8 @@ class ParentalControlAgentService:
         self.is_running = True
         
         try:
-            from agent.main import ParentalControlAgent
-            self.agent = ParentalControlAgent()
+            from agent.main import FamilyEyeAgent
+            self.agent = FamilyEyeAgent()
             self.agent.start()
             
             # Run main loop

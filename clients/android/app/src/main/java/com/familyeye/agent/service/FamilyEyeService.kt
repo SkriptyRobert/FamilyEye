@@ -30,13 +30,16 @@ import kotlinx.coroutines.isActive
 import javax.inject.Inject
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
+import com.familyeye.agent.ui.KeepAliveActivity
+import kotlin.system.exitProcess
+
 
 /**
  * Core Foreground Service for FamilyEye Agent.
  * This service keeps the app alive and orchestrates monitoring tasks.
  */
 @AndroidEntryPoint
-class FamilyEyeService : Service() {
+class FamilyEyeService : Service(), ScreenStateListener {
 
     @Inject
     lateinit var configRepository: AgentConfigRepository
@@ -94,6 +97,50 @@ class FamilyEyeService : Service() {
         
         // Start monitoring tasks
         startMonitoring()
+        
+        // Register screen state receiver for immediate sync on wake
+        registerScreenStateReceiver()
+    }
+
+    private fun registerScreenStateReceiver() {
+        try {
+            val filter = android.content.IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(screenReceiver, filter)
+            Timber.d("Screen state receiver registered")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to register screen receiver")
+        }
+    }
+
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_ON -> onScreenOn()
+                Intent.ACTION_SCREEN_OFF -> onScreenOff()
+            }
+        }
+    }
+
+    override fun onScreenOn() {
+        Timber.i("Screen ON - triggering immediate sync and WebSocket reconnect")
+        serviceScope.launch {
+            try {
+                // Force WebSocket reconnect
+                webSocketClient.stop()
+                webSocketClient.start()
+                // Force immediate sync
+                reporter.forceSync()
+            } catch (e: Exception) {
+                Timber.e(e, "Error during screen-on sync")
+            }
+        }
+    }
+
+    override fun onScreenOff() {
+        Timber.d("Screen OFF - monitoring continues in background")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -108,8 +155,45 @@ class FamilyEyeService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Timber.d("FamilyEyeService destroyed")
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to unregister screen receiver")
+        }
         webSocketClient.stop()
         serviceScope.cancel()
+    }
+
+    /**
+     * Called when user swipes away the app from recent apps.
+     * Restart the service to ensure continuous monitoring.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Timber.w("FamilyEyeService task removed - performing HARD RESTART")
+        
+        // Schedule restart via KeepAliveActivity to force process priority upgrade
+        // and trigger Accessibility re-bind
+        val restartIntent = Intent(applicationContext, KeepAliveActivity::class.java)
+        restartIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            1,
+            restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        alarmManager.set(
+            android.app.AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() + 500, // 500ms delay
+            pendingIntent
+        )
+        
+        // Suicide to ensure fresh start
+        stopSelf()
+        exitProcess(0)
     }
 
     private fun startMonitoring() {
@@ -259,6 +343,18 @@ class FamilyEyeService : Service() {
         serviceScope.launch {
             while (isActive) {
                 try {
+                    // --- Watchdog Checks ---
+                    val isAccessibilityRunning = AppDetectorService.instance != null
+                    val isWebSocketConnected = webSocketClient.isConnected.value
+                    
+                    if (!isAccessibilityRunning) {
+                         Timber.e("CRITICAL: Accessibility Service (AppDetector) is NOT running! Attempting Self-Repair.")
+                         triggerSelfRepair()
+                    }
+                    
+                    Timber.d("Watchdog: AC=$isAccessibilityRunning, WS=$isWebSocketConnected")
+                    
+                    // --- Security Checks ---
                     val issues = selfProtectionHandler.checkSystemTampering()
                     
                     for ((issueType, _) in issues) {
@@ -271,6 +367,21 @@ class FamilyEyeService : Service() {
                 }
                 delay(60_000) // Check every 60 seconds
             }
+        }
+    }
+
+    /**
+     * Attempts to repair broken service bindings by launching a transparent activity.
+     * This moves the app to the foreground, prompting the system to re-evaluate bindings.
+     */
+    private fun triggerSelfRepair() {
+        try {
+            val intent = Intent(this, KeepAliveActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            Timber.i("Self-Repair triggered: KeepAliveActivity launched")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to trigger self-repair")
         }
     }
 

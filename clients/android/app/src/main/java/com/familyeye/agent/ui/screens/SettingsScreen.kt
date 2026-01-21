@@ -90,12 +90,30 @@ fun SettingsScreen(
                         label = "Správce zařízení", 
                         isGranted = hasDeviceAdmin,
                         onClick = {
-                            val componentName = android.content.ComponentName(context, com.familyeye.agent.receiver.FamilyEyeDeviceAdmin::class.java)
-                            val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                                putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                                putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Potřebné pro prevenci odinstalace aplikace dítětem.")
+                            if (hasDeviceAdmin) {
+                                // Already granted - open Device Admin list so user can remove it
+                                val intent = Intent().apply {
+                                    component = android.content.ComponentName(
+                                        "com.android.settings",
+                                        "com.android.settings.DeviceAdminSettings"
+                                    )
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // Fallback for devices with different settings package
+                                    val fallbackIntent = Intent(Settings.ACTION_SECURITY_SETTINGS)
+                                    context.startActivity(fallbackIntent)
+                                }
+                            } else {
+                                // Not granted - open ADD dialog
+                                val componentName = android.content.ComponentName(context, com.familyeye.agent.receiver.FamilyEyeDeviceAdmin::class.java)
+                                val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                                    putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                                    putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Potřebné pro prevenci odinstalace aplikace dítětem.")
+                                }
+                                context.startActivity(intent)
                             }
-                            context.startActivity(intent)
                         }
                     )
                     PermissionItem(
