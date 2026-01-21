@@ -127,13 +127,13 @@ class WebSocketClient:
                 if ws_url.startswith("wss://"):
                     ssl_context = ssl.create_default_context()
                     # Disable hostname check if needed (e.g. self-signed dev) or standard check
-                    if "localhost" in ws_url or "127.0.0.1" in ws_url:
+                    if not config.get_ssl_verify() or "localhost" in ws_url or "127.0.0.1" in ws_url or "192.168." in ws_url:
                         ssl_context.check_hostname = False
                         ssl_context.verify_mode = ssl.CERT_NONE
 
                 async with websockets.connect(
                     ws_url, 
-                    extra_headers=headers, 
+                    additional_headers=headers, 
                     ssl=ssl_context,
                     ping_interval=None, # We enforce our own heartbeat
                     ping_timeout=None

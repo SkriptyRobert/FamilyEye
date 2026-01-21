@@ -77,6 +77,8 @@ class DeviceResponse(BaseModel):
 
     @validator("last_screenshot", pre=True)
     def ensure_full_url(cls, v):
+        if v and v.startswith("data:"):
+            return v
         if v and not v.startswith("http"):
             return f"{settings.BACKEND_URL}/api/files/{v}"
         return v

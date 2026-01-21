@@ -204,7 +204,7 @@ class UsageReporter:
             cmd_type = cmd.get("type")
             if cmd_type == "screenshot":
                 self.logger.info("Backend requested screenshot")
-                self._trigger_screenshot()
+                self.capture_screenshot_now()
             elif cmd_type == "message":
                 msg = cmd.get("message", "")
                 self.logger.info(f"Backend sent message: {msg}")
