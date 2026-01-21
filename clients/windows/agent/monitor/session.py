@@ -84,3 +84,25 @@ class SessionTracker:
         # Keep process_start_times? Yes, usually relevant for "first seen today". 
         # But if it's a new day, we should probably clear it.
         self.process_start_times.clear()
+
+    @staticmethod
+    def is_screen_locked() -> bool:
+        """Check if screen is currently locked or on secure desktop (UAC/Login)."""
+        import ctypes
+        
+        try:
+            user32 = ctypes.windll.user32
+            # DESKTOP_SWITCHDESKTOP = 0x0100
+            # If we fail to open desktop with this right, it usually means it's locked/UAC
+            hDesktop = user32.OpenInputDesktop(0, False, 0x0100)
+            
+            if hDesktop == 0:
+                # Could not open input desktop - assume locked
+                return True
+                
+            user32.CloseDesktop(hDesktop)
+            return False
+            
+        except Exception:
+            # Fallback safe assumption
+            return False

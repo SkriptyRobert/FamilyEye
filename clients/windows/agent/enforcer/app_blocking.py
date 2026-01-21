@@ -128,6 +128,14 @@ class AppBlockingEnforcer:
                 
     def _handle_device_lock(self) -> None:
         """Handle device lock via Windows API."""
+        # Prevent flickering: Check if already locked
+        try:
+            from ..monitor.session import SessionTracker
+            if SessionTracker.is_screen_locked():
+                return
+        except ImportError:
+            pass
+
         try:
             import ctypes
             ctypes.windll.user32.LockWorkStation()
