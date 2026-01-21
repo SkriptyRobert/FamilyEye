@@ -8,6 +8,7 @@ from ..models import Rule, Device, User
 from ..schemas import RuleCreate, RuleResponse, AgentRulesRequest, AgentRulesResponse
 from ..api.auth import get_current_parent
 from ..api.devices import verify_device_api_key
+from ..api.websocket import send_command_to_device
 
 router = APIRouter()
 logger = logging.getLogger("rules")
@@ -77,6 +78,8 @@ async def create_rule(
         db.commit()
         db.refresh(existing_rule)
         logger.info(f"Rule updated successfully: id={existing_rule.id}")
+        # Notify agent
+        await send_command_to_device(device.device_id, "REFRESH_RULES")
         return existing_rule
 
     new_rule = Rule(**rule_data.dict())
@@ -85,6 +88,8 @@ async def create_rule(
     db.refresh(new_rule)
     
     logger.info(f"Created new rule: id={new_rule.id}, type={new_rule.rule_type}, device_id={new_rule.device_id}, app={new_rule.app_name}, time_limit={new_rule.time_limit}")
+    # Notify agent
+    await send_command_to_device(device.device_id, "REFRESH_RULES")
     return new_rule
 
 
@@ -161,6 +166,10 @@ async def update_rule(
     db.commit()
     db.refresh(rule)
     
+    # Notify agent
+    if rule.device:
+        await send_command_to_device(rule.device.device_id, "REFRESH_RULES")
+
     return rule
 
 
@@ -185,6 +194,12 @@ async def delete_rule(
     db.delete(rule)
     db.commit()
     
+    # Notify agent (using loaded rule object before session closed? No, rule is detached but attrs might be there.
+    # Better to save device_id before delete)
+    # The rule object is still in memory.
+    if rule.device:
+        await send_command_to_device(rule.device.device_id, "REFRESH_RULES")
+
     return None
 
 
