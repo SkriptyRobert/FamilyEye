@@ -127,7 +127,7 @@ class WebSocketClient:
                 if ws_url.startswith("wss://"):
                     ssl_context = ssl.create_default_context()
                     # Disable hostname check if needed (e.g. self-signed dev) or standard check
-                    if not config.get_ssl_verify() or "localhost" in ws_url or "127.0.0.1" in ws_url or "192.168." in ws_url:
+                    if not config.get_ssl_verify() or "localhost" in ws_url or "127.0.0.1" in ws_url or "192.168." in ws_url or "10." in ws_url or "172." in ws_url:
                         ssl_context.check_hostname = False
                         ssl_context.verify_mode = ssl.CERT_NONE
 
