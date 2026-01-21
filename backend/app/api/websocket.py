@@ -6,6 +6,7 @@ from ..models import User
 from ..database import get_db
 from sqlalchemy.orm import Session
 import logging
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,16 @@ async def websocket_device_endpoint(
             try:
                 msg = json.loads(data)
                 if msg.get("type") == "ping":
+                    # Update Last Seen (Real-time Online Status)
+                    try:
+                        device.last_seen = datetime.now(timezone.utc)
+                        db.add(device)
+                        db.commit()
+                    except Exception as db_err:
+                        # Log but don't crash connection
+                        logger.error(f"Failed to update last_seen: {db_err}")
+                        db.rollback()
+                        
                     await websocket.send_json({"type": "pong"})
             except:
                 pass
