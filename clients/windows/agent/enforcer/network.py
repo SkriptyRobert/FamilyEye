@@ -102,7 +102,8 @@ class NetworkEnforcer:
             Cleaned domain name
         """
         # Remove protocol
-        url = re.sub(r'^https?://', '', url)
+        # Remove protocol (http, https, ws, wss)
+        url = re.sub(r'^(https?|wss?)://', '', url)
         # Remove path
         url = url.split('/')[0]
         # Remove port

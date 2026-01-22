@@ -270,8 +270,9 @@ class NetworkController:
     def _resolve_domain(self, url_or_domain: str) -> Optional[str]:
         """Resolve domain name to IP address."""
         try:
-            # Strip protocol and path
-            domain = url_or_domain.replace('https://', '').replace('http://', '').split('/')[0].split(':')[0]
+            # Strip protocol and path (support http, https, ws, wss)
+            domain = url_or_domain.replace('https://', '').replace('http://', '').replace('wss://', '').replace('ws://', '')
+            domain = domain.split('/')[0].split(':')[0]
             if not domain:
                 return None
                 
