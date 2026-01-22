@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models import Rule, Device, User
 from ..schemas import RuleCreate, RuleResponse, AgentRulesRequest, AgentRulesResponse
 from ..api.auth import get_current_parent
-from ..api.devices import verify_device_api_key
+from ..api.devices.utils import verify_device_api_key
 from ..api.websocket import send_command_to_device
 
 router = APIRouter()

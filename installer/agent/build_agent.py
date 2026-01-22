@@ -270,10 +270,10 @@ def build_executable():
     result = subprocess.run(cmd, cwd=str(INSTALLER_DIR))
     
     if result.returncode == 0:
-        print(f"\n✅ agent_service.exe build successful!")
+        print(f"\n[SUCCESS] agent_service.exe build successful!")
         print(f"Output: {OUTPUT_DIR / 'agent_service.exe'}")
     else:
-        print(f"\n❌ Build failed with code {result.returncode}")
+        print(f"\n[ERROR] Build failed with code {result.returncode}")
         sys.exit(1)
 
 
@@ -282,7 +282,7 @@ def build_child_agent():
     child_agent_path = CLIENTS_DIR / "child_agent.py"
     
     if not child_agent_path.exists():
-        print(f"⚠️ ChildAgent source not found at {child_agent_path}, skipping...")
+        print(f"[WARNING] ChildAgent source not found at {child_agent_path}, skipping...")
         return
     
     # Check for icon - prefer eye icon for user-facing agent
@@ -332,10 +332,10 @@ def build_child_agent():
     result = subprocess.run(cmd, cwd=str(INSTALLER_DIR))
     
     if result.returncode == 0:
-        print(f"\n✅ FamilyEyeAgent.exe build successful!")
+        print(f"\n[SUCCESS] FamilyEyeAgent.exe build successful!")
         print(f"Output: {OUTPUT_DIR / 'FamilyEyeAgent.exe'}")
     else:
-        print(f"\n❌ ChildAgent build failed with code {result.returncode}")
+        print(f"\n[ERROR] ChildAgent build failed with code {result.returncode}")
         sys.exit(1)
 
 
@@ -347,9 +347,9 @@ def main():
     # Check requirements
     try:
         import PyInstaller
-        print(f"✓ PyInstaller found: {PyInstaller.__version__}")
+        print(f"[OK] PyInstaller found: {PyInstaller.__version__}")
     except ImportError:
-        print("❌ PyInstaller not found. Installing...")
+        print("[ERROR] PyInstaller not found. Installing...")
         subprocess.run([sys.executable, '-m', 'pip', 'install', 'pyinstaller'])
     
     try:

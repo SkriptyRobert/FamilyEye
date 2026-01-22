@@ -15,7 +15,7 @@ import json
 from ...database import get_db
 from ...models import UsageLog, Device, Rule
 from ...schemas import AgentReportRequest, CriticalEventRequest
-from ..devices import verify_device_api_key
+from ..devices.utils import verify_device_api_key
 from ...services.app_filter import app_filter
 from .device_endpoints import running_processes_cache
 

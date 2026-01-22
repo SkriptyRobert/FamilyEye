@@ -5,7 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Device, User
-from ..api.devices import verify_device_api_key
+from ..api.devices.utils import verify_device_api_key
 from ..api.auth import get_current_parent, get_user_from_token_string, get_current_user
 import shutil
 import os
