@@ -8,12 +8,17 @@ import time
 import logging
 
 # Add agent directory to path
-script_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
-agent_path = os.path.join(script_dir, 'agent')
+if getattr(sys, 'frozen', False):
+    bundle_dir = os.path.dirname(sys.executable)
+    agent_path = os.path.join(bundle_dir, 'agent')
+else:
+    bundle_dir = os.path.dirname(os.path.abspath(__file__))
+    agent_path = os.path.join(bundle_dir, 'agent')
+
 if agent_path not in sys.path:
     sys.path.insert(0, agent_path)
-if script_dir not in sys.path:
-    sys.path.insert(0, script_dir)
+if bundle_dir not in sys.path:
+    sys.path.insert(0, bundle_dir)
 
 # Setup logging to ProgramData
 program_data = os.environ.get('ProgramData', 'C:\ProgramData')

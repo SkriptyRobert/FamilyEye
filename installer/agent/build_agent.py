@@ -16,15 +16,28 @@ INSTALLER_DIR = PROJECT_ROOT / "installer" / "agent"
 OUTPUT_DIR = INSTALLER_DIR / "dist"
 
 def clean_build():
-    """Clean previous build artifacts."""
-    for folder in ["build", "dist", "__pycache__"]:
+    """Clean previous build artifacts and stop running processes."""
+    print("Stopping running agent processes...")
+    try:
+        # Try to stop service if it exists/runs
+        subprocess.run(["net", "stop", "FamilyEyeAgent"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        # Kill any zombie processes
+        subprocess.run(["taskkill", "/F", "/IM", "agent_service.exe", "/IM", "FamilyEyeAgent.exe", "/T"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+    except:
+        pass
+
+    for folder in ["build", "dist", "dist_debug", "__pycache__"]:
         path = INSTALLER_DIR / folder
         if path.exists():
-            shutil.rmtree(path)
+            try:
+                shutil.rmtree(path)
+            except Exception as e:
+                print(f"Warning: Could not remove {folder}: {e}")
     
-    spec_file = INSTALLER_DIR / "agent_service.spec"
-    if spec_file.exists():
-        spec_file.unlink()
+    for spec in ["agent_service.spec", "FamilyEyeAgent.spec", "ChildAgent.spec"]:
+        spec_file = INSTALLER_DIR / spec
+        if spec_file.exists():
+            spec_file.unlink()
 
 def create_service_wrapper():
     """Create the service wrapper script that will be compiled."""
@@ -38,12 +51,17 @@ import time
 import logging
 
 # Add agent directory to path
-script_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
-agent_path = os.path.join(script_dir, 'agent')
+if getattr(sys, 'frozen', False):
+    bundle_dir = os.path.dirname(sys.executable)
+    agent_path = os.path.join(bundle_dir, 'agent')
+else:
+    bundle_dir = os.path.dirname(os.path.abspath(__file__))
+    agent_path = os.path.join(bundle_dir, 'agent')
+
 if agent_path not in sys.path:
     sys.path.insert(0, agent_path)
-if script_dir not in sys.path:
-    sys.path.insert(0, script_dir)
+if bundle_dir not in sys.path:
+    sys.path.insert(0, bundle_dir)
 
 # Setup logging to ProgramData
 program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
@@ -192,6 +210,7 @@ def build_executable():
     # PyInstaller command - build arguments list properly
     cmd = [
         sys.executable, '-m', 'PyInstaller',
+        '--clean',
         '--onefile',
         '--name', 'agent_service',
         '--distpath', str(OUTPUT_DIR),
@@ -353,7 +372,7 @@ def main():
     print("Build complete!")
     print("Outputs:")
     print(f"  - {OUTPUT_DIR / 'agent_service.exe'}")
-    print(f"  - {OUTPUT_DIR / 'ChildAgent.exe'}")
+    print(f"  - {OUTPUT_DIR / 'FamilyEyeAgent.exe'}")
     print("=" * 60)
 
 if __name__ == '__main__':

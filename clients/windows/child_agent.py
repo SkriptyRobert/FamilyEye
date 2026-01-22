@@ -19,21 +19,20 @@ import time
 import threading
 import argparse
 from datetime import datetime
+from pathlib import Path
 
 # Fix imports when running as standalone
 # Fix paths when running as standalone or frozen
 if getattr(sys, 'frozen', False):
-    _script_dir = os.path.dirname(sys.executable)
     # Inside _MEIPASS when frozen
-    _bundle_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    _agent_dir = os.path.join(_bundle_dir, "agent")
+    _bundle_dir = Path(getattr(sys, '_MEIPASS', os.path.dirname(sys.executable)))
+    _agent_dir = _bundle_dir / "agent"
 else:
-    _script_dir = os.path.dirname(os.path.abspath(__file__))
-    _bundle_dir = _script_dir
-    _agent_dir = os.path.join(_script_dir, "agent")
+    _bundle_dir = Path(__file__).parent
+    _agent_dir = _bundle_dir / "agent"
 
-if _bundle_dir not in sys.path:
-    sys.path.insert(0, _bundle_dir)
+if str(_bundle_dir) not in sys.path:
+    sys.path.insert(0, str(_bundle_dir))
 
 # Imports from agent package
 try:

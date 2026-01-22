@@ -1,6 +1,6 @@
 """Session tracking logic."""
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime
 from ..logger import get_logger
 
