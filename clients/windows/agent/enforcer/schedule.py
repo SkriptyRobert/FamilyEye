@@ -129,18 +129,23 @@ class ScheduleEnforcer:
         self.shutdown_manager.reset_shutdown_flag()
         
         # Show warning if approaching end
-        # Fix: Only show "Bedtime" (Večerka) warning between 22:00 and 06:00
         if minutes_until_end is not None and minutes_until_end <= 10:
-            is_night_hours = now.hour >= 22 or now.hour < 6
+            # Bedtime (Večerka) is now 21:00 - 06:00
+            is_night_hours = now.hour >= 21 or now.hour < 6
             
-            if is_night_hours:
-                if not self._schedule_warning_shown:
-                    self.logger.warning(f"Schedule ending soon: {minutes_until_end} minutes remaining")
+            if not self._schedule_warning_shown:
+                if is_night_hours:
+                    # Specific "Bedtime" branding
+                    self.logger.warning(f"Bedtime approaching: {minutes_until_end} minutes remaining")
                     self.notification_manager.show_schedule_warning(minutes_until_end)
-                    self._schedule_warning_shown = True
-            else:
-                 # Outside night hours - suppress warning to avoid confusion (e.g. morning school blocks)
-                 self._schedule_warning_shown = False
+                else:
+                    # Daytime - show generic schedule warning
+                    self.logger.warning(f"Schedule ending soon: {minutes_until_end} minutes remaining")
+                    self.notification_manager.show_warning(
+                        "Konec povoleného času",
+                        f"Váš vymezený čas brzy vyprší (zbývá {minutes_until_end} min)."
+                    )
+                self._schedule_warning_shown = True
         else:
             self._schedule_warning_shown = False
             
