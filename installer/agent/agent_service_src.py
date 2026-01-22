@@ -20,29 +20,44 @@ if agent_path not in sys.path:
 if bundle_dir not in sys.path:
     sys.path.insert(0, bundle_dir)
 
-# Setup logging to ProgramData
-program_data = os.environ.get('ProgramData', 'C:\ProgramData')
-log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
-if not os.path.exists(log_dir):
+# Setup minimal file logging for critical startup errors
+# This logger captures errors BEFORE agent logger is initialized.
+# After agent starts successfully, all logging goes to service_core.log.
+def _setup_wrapper_logging():
+    """Setup minimal file logging for critical startup errors.
+    
+    This logger captures errors BEFORE agent logger is initialized.
+    After agent starts successfully, all logging goes to service_core.log.
+    """
+    program_data = os.environ.get('ProgramData', 'C:\ProgramData')
+    log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+    
     try:
         os.makedirs(log_dir, exist_ok=True)
-    except:
-        pass
+        log_path = os.path.join(log_dir, 'service_wrapper.log')
         
-log_file = os.path.join(log_dir, 'service_wrapper.log')
+        # Simple file handler for critical errors only
+        file_handler = logging.FileHandler(log_path, encoding='utf-8')
+        file_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        )
+        
+        # Setup logger
+        logger = logging.getLogger('AgentService')
+        logger.setLevel(logging.ERROR)
+        logger.addHandler(file_handler)
+        
+        # Prevent propagation to root logger
+        logger.propagate = False
+        
+        return logger
+    except Exception:
+        # If logging setup fails, return None (fallback to Windows Event Log)
+        return None
 
-# Fallback to local dir if ProgramData fails
-try:
-    with open(log_file, 'a') as f: pass
-except:
-    log_file = os.path.join(script_dir, 'service_wrapper.log')
-
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('AgentService')
+# Setup wrapper logging BEFORE any agent imports
+_wrapper_logger = _setup_wrapper_logging()
 
 try:
     import win32serviceutil
@@ -52,7 +67,7 @@ try:
     HAS_WIN32 = True
 except ImportError:
     HAS_WIN32 = False
-    logger.warning("win32service not available, running in console mode")
+    # Don't log - this is expected in dev mode
 
 class ParentalControlAgentService:
     """Windows Service for Parental Control Agent."""
@@ -67,7 +82,6 @@ class ParentalControlAgentService:
     
     def start(self):
         """Start the agent."""
-        logger.info("Starting Parental Control Agent Service...")
         self.is_running = True
         
         try:
@@ -75,19 +89,27 @@ class ParentalControlAgentService:
             self.agent = FamilyEyeAgent()
             self.agent.start()
             
+            # Agent started successfully - wrapper logging no longer needed
+            # All further logging goes to service_core.log via agent logger
+            
             # Run main loop
             while self.is_running:
                 time.sleep(1)
                 
         except Exception as e:
-            logger.error(f"Error in agent: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            # Log critical errors that prevent agent from starting
+            if _wrapper_logger:
+                _wrapper_logger.error(f"CRITICAL: Failed to start agent: {e}")
+                import traceback
+                _wrapper_logger.error(traceback.format_exc())
+            
+            # Also log to Windows Event Log
+            # (servicemanager.LogMsg will be called in SvcDoRun)
             raise
     
     def stop(self):
         """Stop the agent."""
-        logger.info("Stopping Parental Control Agent Service...")
+        # Don't log here - agent has its own logger (service_core.log)
         self.is_running = False
         if self.agent:
             self.agent.stop()
@@ -109,12 +131,22 @@ if HAS_WIN32:
             win32event.SetEvent(self.stop_event)
         
         def SvcDoRun(self):
+            # Log to Windows Event Log (not to file)
             servicemanager.LogMsg(
                 servicemanager.EVENTLOG_INFORMATION_TYPE,
                 servicemanager.PYS_SERVICE_STARTED,
                 (self._svc_name_, '')
             )
-            self.service.start()
+            try:
+                self.service.start()
+            except Exception as e:
+                # Log critical errors to Windows Event Log
+                servicemanager.LogMsg(
+                    servicemanager.EVENTLOG_ERROR_TYPE,
+                    servicemanager.PYS_SERVICE_STOPPED,
+                    (f"CRITICAL: Failed to start agent: {e}",)
+                )
+                raise
 
 def run_console():
     """Run agent in console mode (for testing)."""

@@ -63,15 +63,44 @@ if agent_path not in sys.path:
 if bundle_dir not in sys.path:
     sys.path.insert(0, bundle_dir)
 
-# Service wrapper does NOT create its own log file
-# All logging goes to service_core.log via agent's EnterpriseLogger
-# Only critical startup errors are logged to Windows Event Log
-logging.basicConfig(
-    level=logging.CRITICAL,  # Only critical errors
-    format='%(message)s',
-    handlers=[logging.NullHandler()]  # No file logging - agent handles it
-)
-logger = logging.getLogger('AgentService')
+# Setup minimal file logging for critical startup errors
+# This logger captures errors BEFORE agent logger is initialized.
+# After agent starts successfully, all logging goes to service_core.log.
+def _setup_wrapper_logging():
+    """Setup minimal file logging for critical startup errors.
+    
+    This logger captures errors BEFORE agent logger is initialized.
+    After agent starts successfully, all logging goes to service_core.log.
+    """
+    program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+    log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+    
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, 'service_wrapper.log')
+        
+        # Simple file handler for critical errors only
+        file_handler = logging.FileHandler(log_path, encoding='utf-8')
+        file_handler.setLevel(logging.ERROR)  # Only ERROR and CRITICAL
+        file_handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        )
+        
+        # Setup logger
+        logger = logging.getLogger('AgentService')
+        logger.setLevel(logging.ERROR)
+        logger.addHandler(file_handler)
+        
+        # Prevent propagation to root logger
+        logger.propagate = False
+        
+        return logger
+    except Exception:
+        # If logging setup fails, return None (fallback to Windows Event Log)
+        return None
+
+# Setup wrapper logging BEFORE any agent imports
+_wrapper_logger = _setup_wrapper_logging()
 
 try:
     import win32serviceutil
@@ -96,7 +125,6 @@ class ParentalControlAgentService:
     
     def start(self):
         """Start the agent."""
-        # Don't log here - agent has its own logger (service_core.log)
         self.is_running = True
         
         try:
@@ -104,15 +132,22 @@ class ParentalControlAgentService:
             self.agent = FamilyEyeAgent()
             self.agent.start()
             
+            # Agent started successfully - wrapper logging no longer needed
+            # All further logging goes to service_core.log via agent logger
+            
             # Run main loop
             while self.is_running:
                 time.sleep(1)
                 
         except Exception as e:
-            # Only log critical errors that prevent agent from starting
-            logger.error(f"CRITICAL: Failed to start agent: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
+            # Log critical errors that prevent agent from starting
+            if _wrapper_logger:
+                _wrapper_logger.error(f"CRITICAL: Failed to start agent: {e}")
+                import traceback
+                _wrapper_logger.error(traceback.format_exc())
+            
+            # Also log to Windows Event Log
+            # (servicemanager.LogMsg will be called in SvcDoRun)
             raise
     
     def stop(self):
