@@ -72,7 +72,7 @@ class ScheduleEnforcer:
         )
         
         if is_within_schedule:
-            self._handle_within_schedule(minutes_until_end)
+            self._handle_within_schedule(minutes_until_end, now)
         else:
             self._handle_outside_schedule()
             
@@ -123,17 +123,24 @@ class ScheduleEnforcer:
                     
         return False, None
         
-    def _handle_within_schedule(self, minutes_until_end: Optional[int]) -> None:
+    def _handle_within_schedule(self, minutes_until_end: Optional[int], now) -> None:
         """Handle when we're within allowed time."""
         self._schedule_shutdown_initiated = False
         self.shutdown_manager.reset_shutdown_flag()
         
         # Show warning if approaching end
+        # Fix: Only show "Bedtime" (Večerka) warning between 22:00 and 06:00
         if minutes_until_end is not None and minutes_until_end <= 10:
-            if not self._schedule_warning_shown:
-                self.logger.warning(f"Schedule ending soon: {minutes_until_end} minutes remaining")
-                self.notification_manager.show_schedule_warning(minutes_until_end)
-                self._schedule_warning_shown = True
+            is_night_hours = now.hour >= 22 or now.hour < 6
+            
+            if is_night_hours:
+                if not self._schedule_warning_shown:
+                    self.logger.warning(f"Schedule ending soon: {minutes_until_end} minutes remaining")
+                    self.notification_manager.show_schedule_warning(minutes_until_end)
+                    self._schedule_warning_shown = True
+            else:
+                 # Outside night hours - suppress warning to avoid confusion (e.g. morning school blocks)
+                 self._schedule_warning_shown = False
         else:
             self._schedule_warning_shown = False
             

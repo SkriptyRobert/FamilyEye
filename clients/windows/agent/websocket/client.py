@@ -133,7 +133,7 @@ class WebSocketClient:
 
                 async with websockets.connect(
                     ws_url, 
-                    extra_headers=headers, 
+                    additional_headers=headers, 
                     ssl=ssl_context,
                     ping_interval=None, # We enforce our own heartbeat
                     ping_timeout=None
