@@ -1,5 +1,6 @@
 """Enterprise-grade logging system for FamilyEye Agent."""
 import logging
+import logging.handlers
 import sys
 from datetime import datetime
 from typing import Optional
@@ -41,9 +42,35 @@ class EnterpriseLogger:
         'SUCCESS': Fore.GREEN + Style.BRIGHT,
     }
     
-    def __init__(self, component: str = 'MAIN', level: int = logging.INFO):
+    @staticmethod
+    def _get_log_level_from_string(level_str: str) -> int:
+        """Convert string log level to logging constant."""
+        level_map = {
+            'DEBUG': logging.DEBUG,
+            'INFO': logging.INFO,
+            'WARNING': logging.WARNING,
+            'ERROR': logging.ERROR,
+            'CRITICAL': logging.CRITICAL,
+        }
+        return level_map.get(level_str.upper(), logging.INFO)
+    
+    @staticmethod
+    def _get_log_level_from_config() -> int:
+        """Get log level from config, with fallback to INFO."""
+        try:
+            from .config import config
+            level_str = config.get('log_level', 'INFO')
+            return EnterpriseLogger._get_log_level_from_string(level_str)
+        except Exception:
+            return logging.INFO
+    
+    def __init__(self, component: str = 'MAIN', level: int = None):
         self.component = component.upper()
         self.component_color = self.COMPONENT_COLORS.get(self.component, Fore.WHITE)
+        
+        # Get level from parameter, config, or default to INFO
+        if level is None:
+            level = self._get_log_level_from_config()
         self.level = level
         
         # Setup logging
@@ -59,7 +86,7 @@ class EnterpriseLogger:
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
             
-            # File logging
+            # File logging with rotation
             try:
                 import os
                 # Get root dir (next to the executable when frozen, or next to main.py when scripts)
@@ -73,9 +100,31 @@ class EnterpriseLogger:
                     log_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 
                 os.makedirs(log_dir, exist_ok=True)
-                os.makedirs(log_dir, exist_ok=True)
                 log_path = os.path.join(log_dir, 'service_core.log')
-                file_handler = logging.FileHandler(log_path, encoding='utf-8')
+                
+                # Get rotation settings from config
+                try:
+                    from .config import config
+                    rotation_enabled = config.get('log_rotation_enabled', True)
+                    rotation_when = config.get('log_rotation_when', 'midnight')
+                    rotation_backup_count = config.get('log_rotation_backup_count', 5)
+                except Exception:
+                    # Fallback to defaults if config not available
+                    rotation_enabled = True
+                    rotation_when = 'midnight'
+                    rotation_backup_count = 5
+                
+                # Use TimedRotatingFileHandler if rotation enabled, otherwise FileHandler
+                if rotation_enabled:
+                    file_handler = logging.handlers.TimedRotatingFileHandler(
+                        log_path,
+                        when=rotation_when,
+                        backupCount=rotation_backup_count,
+                        encoding='utf-8'
+                    )
+                else:
+                    file_handler = logging.FileHandler(log_path, encoding='utf-8')
+                
                 file_handler.setLevel(level)
                 file_formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s')
                 file_handler.setFormatter(file_formatter)
@@ -156,7 +205,12 @@ class EnterpriseLogger:
 
 
 # Global logger instances for each component
-def get_logger(component: str) -> EnterpriseLogger:
-    """Get logger instance for component."""
-    return EnterpriseLogger(component=component, level=logging.INFO)
+def get_logger(component: str, level: int = None) -> EnterpriseLogger:
+    """Get logger instance for component.
+    
+    Args:
+        component: Component name (MAIN, MONITOR, ENFORCER, etc.)
+        level: Optional log level override. If None, uses level from config.
+    """
+    return EnterpriseLogger(component=component, level=level)
 

@@ -5,6 +5,8 @@ import time
 import threading
 import subprocess
 import winreg
+import logging
+import logging.handlers
 from pathlib import Path
 
 # Fix for PyInstaller
@@ -37,21 +39,80 @@ class BootProtection:
         self.api_key = api_key
         self.running = False
         self.monitor_thread = None
-        # Log file in parent directory (clients/windows/)
-        if getattr(sys, 'frozen', False):
-            log_dir = os.path.dirname(sys.executable)
-        else:
-            log_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.log_file = os.path.join(log_dir, "boot_protection.log")
+        
+        # Setup logging with rotation
+        self.logger = logging.getLogger('FamilyEye.BootProtection')
+        
+        # Get log level from config or use INFO
+        log_level = logging.INFO
+        try:
+            from .config import config
+            level_str = config.get('log_level', 'INFO')
+            level_map = {
+                'DEBUG': logging.DEBUG,
+                'INFO': logging.INFO,
+                'WARNING': logging.WARNING,
+                'ERROR': logging.ERROR,
+                'CRITICAL': logging.CRITICAL,
+            }
+            log_level = level_map.get(level_str.upper(), logging.INFO)
+        except Exception:
+            pass
+        
+        self.logger.setLevel(log_level)
+        
+        # Only setup handlers if not already set
+        if not self.logger.handlers:
+            # Determine log directory
+            if getattr(sys, 'frozen', False):
+                # Running as compiled exe - use ProgramData
+                program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+                log_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+            else:
+                # Dev mode
+                log_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, "boot_protection.log")
+            
+            # Get rotation settings from config
+            try:
+                from .config import config
+                rotation_enabled = config.get('log_rotation_enabled', True)
+                rotation_when = config.get('log_rotation_when', 'midnight')
+                rotation_backup_count = config.get('log_rotation_backup_count', 5)
+            except Exception:
+                rotation_enabled = True
+                rotation_when = 'midnight'
+                rotation_backup_count = 5
+            
+            # Use TimedRotatingFileHandler if rotation enabled
+            if rotation_enabled:
+                file_handler = logging.handlers.TimedRotatingFileHandler(
+                    log_path,
+                    when=rotation_when,
+                    backupCount=rotation_backup_count,
+                    encoding='utf-8'
+                )
+            else:
+                file_handler = logging.FileHandler(log_path, encoding='utf-8')
+            
+            file_handler.setLevel(log_level)
+            file_formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+            file_handler.setFormatter(file_formatter)
+            self.logger.addHandler(file_handler)
         
     def log(self, msg, level="INFO"):
         """Zaznamenat událost do logu."""
-        try:
-            with open(self.log_file, "a", encoding="utf-8") as f:
-                timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-                f.write(f"[{timestamp}] [{level}] {msg}\n")
-        except:
-            pass
+        level_map = {
+            'DEBUG': self.logger.debug,
+            'INFO': self.logger.info,
+            'WARNING': self.logger.warning,
+            'ERROR': self.logger.error,
+            'CRITICAL': self.logger.critical,
+        }
+        log_func = level_map.get(level.upper(), self.logger.info)
+        log_func(msg)
     
     def check_safe_mode(self):
         """Zkontrolovat, zda systém běží v Safe Mode."""

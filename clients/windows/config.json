@@ -9,5 +9,10 @@
   "sync_max_age_seconds": 3600,
   "max_queue_size": 50,
   "window_enum_cache_ms": 200,
-  "shutdown_warning_countdown": 60
+  "shutdown_warning_countdown": 60,
+  "monitor_interval": 5,
+  "log_level": "DEBUG",
+  "log_rotation_enabled": true,
+  "log_rotation_when": "midnight",
+  "log_rotation_backup_count": 5
 }

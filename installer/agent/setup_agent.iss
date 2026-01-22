@@ -647,7 +647,11 @@ begin
           '  "polling_interval": 30,' + #13#10 +
           '  "reporting_interval": 60,' + #13#10 +
           '  "cache_duration": 300,' + #13#10 +
-          '  "ssl_verify": false' + #13#10 +
+          '  "ssl_verify": false,' + #13#10 +
+          '  "log_level": "INFO",' + #13#10 +
+          '  "log_rotation_enabled": true,' + #13#10 +
+          '  "log_rotation_when": "midnight",' + #13#10 +
+          '  "log_rotation_backup_count": 5' + #13#10 +
           '}', False);
           
         // SECURE THE FILE IMMEDIATELY

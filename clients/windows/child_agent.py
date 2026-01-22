@@ -68,32 +68,90 @@ class ChildAgent:
         self.running = False
         self.ipc_client: IPCClient = None
         self.ui_overlay: UIOverlay = None
-        # Log to ProgramData/FamilyEye/Agent/Logs
-        # This is created by Installer with Users:Modify permissions
-        log_dir = None
-        try:
-            if getattr(sys, 'frozen', False):
-                 program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
-                 target_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
-                 os.makedirs(target_dir, exist_ok=True)
-                 # Test write
-                 test_file = os.path.join(target_dir, '.write_test')
-                 with open(test_file, 'w') as f: f.write('test')
-                 os.remove(test_file)
-                 log_dir = target_dir
-            else:
-                 # Dev mode - current dir
-                 log_dir = os.path.dirname(os.path.abspath(__file__))
-        except Exception as e:
-            # Fallback to Temp if ProgramData is not writable (should not happen with correct installer)
-            print(f"Log path fallback due to: {e}")
-            log_dir = os.path.join(os.environ.get('TEMP', '.'), 'FamilyEye')
-            os.makedirs(log_dir, exist_ok=True)
         
-        if log_dir:
-            self.log_file = os.path.join(log_dir, "ui_agent.log")
-        else:
-            self.log_file = None
+        # Setup logging with rotation
+        import logging
+        import logging.handlers
+        self.logger = logging.getLogger('FamilyEye.ChildAgent')
+        
+        # Get log level from config or use INFO
+        log_level = logging.INFO
+        try:
+            from agent.config import config
+            level_str = config.get('log_level', 'INFO')
+            level_map = {
+                'DEBUG': logging.DEBUG,
+                'INFO': logging.INFO,
+                'WARNING': logging.WARNING,
+                'ERROR': logging.ERROR,
+                'CRITICAL': logging.CRITICAL,
+            }
+            log_level = level_map.get(level_str.upper(), logging.INFO)
+        except Exception:
+            pass
+        
+        self.logger.setLevel(log_level)
+        
+        # Only setup handlers if not already set
+        if not self.logger.handlers:
+            # Console handler (only if debug mode)
+            if self.debug:
+                console_handler = logging.StreamHandler(sys.stdout)
+                console_handler.setLevel(log_level)
+                console_formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+                console_handler.setFormatter(console_formatter)
+                self.logger.addHandler(console_handler)
+            
+            # File handler with rotation
+            log_dir = None
+            try:
+                if getattr(sys, 'frozen', False):
+                    program_data = os.environ.get('ProgramData', 'C:\\ProgramData')
+                    target_dir = os.path.join(program_data, 'FamilyEye', 'Agent', 'Logs')
+                    os.makedirs(target_dir, exist_ok=True)
+                    # Test write
+                    test_file = os.path.join(target_dir, '.write_test')
+                    with open(test_file, 'w') as f: f.write('test')
+                    os.remove(test_file)
+                    log_dir = target_dir
+                else:
+                    # Dev mode - current dir
+                    log_dir = os.path.dirname(os.path.abspath(__file__))
+            except Exception as e:
+                # Fallback to Temp if ProgramData is not writable
+                print(f"Log path fallback due to: {e}")
+                log_dir = os.path.join(os.environ.get('TEMP', '.'), 'FamilyEye')
+                os.makedirs(log_dir, exist_ok=True)
+            
+            if log_dir:
+                log_path = os.path.join(log_dir, "ui_agent.log")
+                
+                # Get rotation settings from config
+                try:
+                    from agent.config import config
+                    rotation_enabled = config.get('log_rotation_enabled', True)
+                    rotation_when = config.get('log_rotation_when', 'midnight')
+                    rotation_backup_count = config.get('log_rotation_backup_count', 5)
+                except Exception:
+                    rotation_enabled = True
+                    rotation_when = 'midnight'
+                    rotation_backup_count = 5
+                
+                # Use TimedRotatingFileHandler if rotation enabled
+                if rotation_enabled:
+                    file_handler = logging.handlers.TimedRotatingFileHandler(
+                        log_path,
+                        when=rotation_when,
+                        backupCount=rotation_backup_count,
+                        encoding='utf-8'
+                    )
+                else:
+                    file_handler = logging.FileHandler(log_path, encoding='utf-8')
+                
+                file_handler.setLevel(log_level)
+                file_formatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+                file_handler.setFormatter(file_formatter)
+                self.logger.addHandler(file_handler)
         
         # Command handlers
         self._handlers = {}
@@ -101,19 +159,15 @@ class ChildAgent:
     
     def _log(self, message: str, level: str = "INFO"):
         """Log message to file and optionally console."""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_line = f"[{timestamp}] [{level}] {message}"
-        
-        if self.debug:
-            print(log_line)
-        
-        if not self.log_file:
-            return
-        try:
-            with open(self.log_file, "a", encoding="utf-8") as f:
-                f.write(log_line + "\n")
-        except:
-            pass
+        level_map = {
+            'DEBUG': self.logger.debug,
+            'INFO': self.logger.info,
+            'WARNING': self.logger.warning,
+            'ERROR': self.logger.error,
+            'CRITICAL': self.logger.critical,
+        }
+        log_func = level_map.get(level.upper(), self.logger.info)
+        log_func(message)
     
     def _setup_handlers(self):
         """Setup command handlers mapping."""

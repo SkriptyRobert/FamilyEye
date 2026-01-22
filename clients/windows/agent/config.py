@@ -56,6 +56,12 @@ def get_default_config():
         "window_enum_cache_ms": int(os.getenv("AGENT_WINDOW_CACHE_MS", "500")),
         "shutdown_warning_countdown": int(os.getenv("AGENT_SHUTDOWN_WARNING", "60")),
         "monitor_interval": int(os.getenv("AGENT_MONITOR_INTERVAL", "5")), # Fast loop for usage counting
+        
+        # Logging configuration
+        "log_level": os.getenv("AGENT_LOG_LEVEL", "INFO"),  # INFO, DEBUG, WARNING, ERROR
+        "log_rotation_enabled": os.getenv("AGENT_LOG_ROTATION_ENABLED", "true").lower() == "true",
+        "log_rotation_when": os.getenv("AGENT_LOG_ROTATION_WHEN", "midnight"),  # midnight, H (hourly), D (daily)
+        "log_rotation_backup_count": int(os.getenv("AGENT_LOG_ROTATION_BACKUP_COUNT", "5")),
     }
 
 DEFAULT_CONFIG = get_default_config()
