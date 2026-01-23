@@ -185,6 +185,15 @@ async def unlock_settings(
     )
     db.add(unlock_rule)
     db.commit()
+    
+    # CRITICAL: Notify device to fetch new rules
+    await send_command_to_device(device.device_id, "REFRESH_RULES")
+    
+    return {
+        "status": "success",
+        "message": f"Settings unlocked for {duration_minutes} minutes",
+        "duration_minutes": duration_minutes
+    }
 
 
 @router.post("/{device_id}/reset-pin", status_code=status.HTTP_200_OK)

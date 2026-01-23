@@ -252,7 +252,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "verze 1.0.6 (rodičovský bypass)",
+            text = "verze 1.0.7 (AutoStart)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
@@ -526,6 +526,18 @@ private fun PermissionsStep(
 
 @Composable
 private fun CompleteStep(onFinish: () -> Unit) {
+    val context = LocalContext.current
+    var showAutoStartDialog by remember { mutableStateOf(false) }
+    var autoStartConfigured by remember { mutableStateOf(false) }
+    
+    // Check if this is an OEM phone that needs AutoStart configuration
+    val needsAutoStart = remember {
+        com.familyeye.agent.utils.OemCompatibility.isAggressiveBatteryManagement()
+    }
+    val manufacturer = remember {
+        android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
+    }
+    
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -554,13 +566,79 @@ private fun CompleteStep(onFinish: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
+        // AutoStart warning for OEM phones
+        if (needsAutoStart && !autoStartConfigured) {
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Důležité nastavení pro $manufacturer",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Telefony $manufacturer mohou ukončit FamilyEye na pozadí. Pro spolehlivou ochranu je nutné povolit AutoStart.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Button(
+                        onClick = { 
+                            com.familyeye.agent.utils.OemCompatibility.openAutoStartSettings(context)
+                            autoStartConfigured = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Otevřít nastavení AutoStart")
+                    }
+                }
+            }
+        }
+        
         Spacer(modifier = Modifier.weight(1f))
         
         Button(
             onClick = onFinish,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !needsAutoStart || autoStartConfigured
         ) {
-            Text("Dokončit")
+            Text(if (needsAutoStart && !autoStartConfigured) "Nejdříve povolte AutoStart" else "Dokončit")
+        }
+        
+        // Allow skipping if already configured
+        if (needsAutoStart && !autoStartConfigured) {
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = { autoStartConfigured = true }
+            ) {
+                Text("Přeskočit (nedoporučeno)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

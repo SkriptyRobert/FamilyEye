@@ -36,6 +36,11 @@ object OemCompatibility {
         val manufacturer = Build.MANUFACTURER.lowercase()
         return AGGRESSIVE_OEMS.any { manufacturer.contains(it) }
     }
+    
+    /**
+     * Alias for isAggressiveOem() - used by UI components.
+     */
+    fun isAggressiveBatteryManagement(): Boolean = isAggressiveOem()
 
     /**
      * Check if the app is already ignoring battery optimizations (whitelisted).
