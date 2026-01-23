@@ -66,3 +66,14 @@ installer/agent/test.iss
 # IDE and workspace
 .agent/
 .cursor/
+
+# Temporary Build & Test Logs
+clients/android/build_error*.txt
+clients/android/gradle_error*.txt
+clients/android/*_log.txt
+clients/android/*_logs.txt
+clients/android/device_log.txt
+
+# Database WAL files
+*.db-shm
+*.db-wal

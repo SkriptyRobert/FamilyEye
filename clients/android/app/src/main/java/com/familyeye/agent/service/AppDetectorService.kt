@@ -318,11 +318,63 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
-    override fun onInterrupt() {}
+    override fun onInterrupt() {
+        Timber.w("AppDetectorService interrupted")
+    }
+
+    /**
+     * Called when system unbinds the Accessibility Service.
+     * This can happen when:
+     * - User disables the service in Settings
+     * - System kills the service due to memory pressure
+     * - Process is killed via "Clear All" in Recent Apps
+     * 
+     * We trigger KeepAliveActivity to attempt recovery.
+     */
+    override fun onUnbind(intent: android.content.Intent?): Boolean {
+        Timber.e("AppDetectorService UNBOUND by system!")
+        
+        // Clear instance immediately
+        instance = null
+        currentPackage = null
+        
+        // Trigger emergency restart
+        try {
+            val restartIntent = android.content.Intent(this, com.familyeye.agent.ui.KeepAliveActivity::class.java).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("source", "accessibility_unbind")
+            }
+            startActivity(restartIntent)
+            Timber.i("Emergency restart triggered from onUnbind")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to trigger restart from onUnbind")
+        }
+        
+        return super.onUnbind(intent)
+    }
     
     override fun onDestroy() {
-        super.onDestroy()
+        Timber.e("AppDetectorService DESTROYED!")
+        
+        // Clear static references
+        instance = null
+        currentPackage = null
+        
+        // Cancel coroutines
         serviceScope.cancel()
+        
+        // Trigger emergency restart (redundant with onUnbind but safety net)
+        try {
+            val intent = android.content.Intent(this, com.familyeye.agent.ui.KeepAliveActivity::class.java).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("source", "accessibility_destroy")
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to trigger restart from onDestroy")
+        }
+        
+        super.onDestroy()
     }
 }
 

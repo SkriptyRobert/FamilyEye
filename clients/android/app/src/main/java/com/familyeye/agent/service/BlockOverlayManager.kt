@@ -19,6 +19,11 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.familyeye.agent.ui.screens.BlockOverlayScreen
 import com.familyeye.agent.ui.screens.BlockType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -129,11 +134,36 @@ class BlockOverlayManager @Inject constructor(
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
             overlayView = newOverlay
+            
+            // Start zombie detection - hide overlay if service dies
+            startZombieDetection()
         } catch (e: Exception) {
             Timber.e(e, "Failed to show overlay")
             overlayView = null
             currentBlockedPackage = null
             currentBlockType = null
+        }
+    }
+
+    private var zombieDetectionJob: Job? = null
+
+    /**
+     * Monitor if the backing service (AppDetectorService) is still alive.
+     * If it dies, we should hide the overlay to avoid zombie state where
+     * overlay is visible but nothing is actually being enforced.
+     */
+    private fun startZombieDetection() {
+        zombieDetectionJob?.cancel()
+        zombieDetectionJob = CoroutineScope(Dispatchers.Main).launch {
+            while (overlayView != null) {
+                delay(5_000) // Check every 5 seconds
+                
+                if (AppDetectorService.instance == null) {
+                    Timber.w("ZOMBIE DETECTION: Overlay showing but AppDetectorService is DEAD! Hiding zombie overlay.")
+                    hide()
+                    break
+                }
+            }
         }
     }
 

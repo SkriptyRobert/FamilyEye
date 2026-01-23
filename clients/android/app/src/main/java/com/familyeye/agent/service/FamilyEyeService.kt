@@ -12,8 +12,10 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.WorkManager
 import com.familyeye.agent.R
+import com.familyeye.agent.config.AgentConstants
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import com.familyeye.agent.ui.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -95,11 +97,35 @@ class FamilyEyeService : Service(), ScreenStateListener {
             }
         )
         
+        // Schedule WorkManager guardian as backup recovery mechanism
+        scheduleGuardianWorker()
+        
         // Start monitoring tasks
         startMonitoring()
         
         // Register screen state receiver for immediate sync on wake
         registerScreenStateReceiver()
+    }
+
+    /**
+     * Schedule periodic WorkManager task as backup recovery mechanism.
+     * This ensures the agent recovers even if AlarmManager fails (e.g., aggressive OEM battery management).
+     */
+    private fun scheduleGuardianWorker() {
+        try {
+            val guardianRequest = PeriodicWorkRequestBuilder<ProcessGuardianWorker>(
+                AgentConstants.GUARDIAN_WORKER_INTERVAL_MIN, TimeUnit.MINUTES
+            ).build()
+            
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                ProcessGuardianWorker.WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,  // Don't replace if already scheduled
+                guardianRequest
+            )
+            Timber.i("Guardian WorkManager scheduled (every ${AgentConstants.GUARDIAN_WORKER_INTERVAL_MIN} min)")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to schedule guardian worker")
+        }
     }
 
     private fun registerScreenStateReceiver() {
@@ -336,11 +362,18 @@ class FamilyEyeService : Service(), ScreenStateListener {
     }
 
     /**
-     * Phase 3: Periodic security monitoring.
-     * Checks for system-level tampering attempts like Developer Options or ADB.
+     * Phase 3: Periodic security monitoring and health watchdog.
+     * Checks for:
+     * - Accessibility Service binding (zombie state detection)
+     * - WebSocket connectivity
+     * - System-level tampering attempts (Developer Options, ADB)
+     * 
+     * IMPROVED: Now runs every 10 seconds (was 60s) for faster recovery.
      */
     private fun startSecurityMonitoring() {
         serviceScope.launch {
+            var selfRepairAttemptTime = 0L
+            
             while (isActive) {
                 try {
                     // --- Watchdog Checks ---
@@ -348,8 +381,27 @@ class FamilyEyeService : Service(), ScreenStateListener {
                     val isWebSocketConnected = webSocketClient.isConnected.value
                     
                     if (!isAccessibilityRunning) {
-                         Timber.e("CRITICAL: Accessibility Service (AppDetector) is NOT running! Attempting Self-Repair.")
-                         triggerSelfRepair()
+                        val currentTime = System.currentTimeMillis()
+                        
+                        if (selfRepairAttemptTime == 0L) {
+                            // First attempt - try soft repair
+                            Timber.e("CRITICAL: Accessibility NOT running! Attempting Self-Repair...")
+                            triggerSelfRepair()
+                            selfRepairAttemptTime = currentTime
+                        } else if (currentTime - selfRepairAttemptTime > AgentConstants.SELF_REPAIR_TIMEOUT_MS) {
+                            // Self-repair didn't work - escalate to nuclear restart
+                            Timber.e("Self-repair FAILED after ${AgentConstants.SELF_REPAIR_TIMEOUT_MS}ms! Forcing NUCLEAR RESTART!")
+                            forceNuclearRestart()
+                            selfRepairAttemptTime = 0L  // Reset for next cycle
+                        } else {
+                            Timber.w("Waiting for self-repair... (${currentTime - selfRepairAttemptTime}ms elapsed)")
+                        }
+                    } else {
+                        // Service recovered - reset timer
+                        if (selfRepairAttemptTime != 0L) {
+                            Timber.i("Self-repair SUCCESSFUL - Accessibility Service recovered!")
+                            selfRepairAttemptTime = 0L
+                        }
                     }
                     
                     Timber.d("Watchdog: AC=$isAccessibilityRunning, WS=$isWebSocketConnected")
@@ -358,16 +410,47 @@ class FamilyEyeService : Service(), ScreenStateListener {
                     val issues = selfProtectionHandler.checkSystemTampering()
                     
                     for ((issueType, _) in issues) {
-                        // Report each security issue to backend
                         Timber.w("Security issue detected: $issueType - reporting to backend")
                         reportSecurityAlert(issueType)
                     }
                 } catch (e: Exception) {
                     Timber.e(e, "Error in security monitoring")
                 }
-                delay(60_000) // Check every 60 seconds
+                delay(AgentConstants.SECURITY_CHECK_INTERVAL_MS) // 10 seconds (was 60s)
             }
         }
+    }
+
+    /**
+     * Nuclear restart - completely kills and restarts the process.
+     * Used when soft repair (KeepAliveActivity) fails.
+     */
+    private fun forceNuclearRestart() {
+        Timber.w("Executing NUCLEAR RESTART!")
+        
+        // Schedule restart via AlarmManager
+        val restartIntent = Intent(applicationContext, KeepAliveActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra("source", "nuclear_restart")
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            System.currentTimeMillis().toInt(),  // Unique request code
+            restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        alarmManager.setExactAndAllowWhileIdle(
+            android.app.AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() + 1000,
+            pendingIntent
+        )
+        
+        // Kill process to force fresh start
+        stopSelf()
+        exitProcess(0)
     }
 
     /**

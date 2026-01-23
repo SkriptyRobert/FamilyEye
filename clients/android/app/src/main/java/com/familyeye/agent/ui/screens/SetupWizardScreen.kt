@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.receiver.FamilyEyeDeviceAdmin
 import com.familyeye.agent.ui.viewmodel.SetupWizardViewModel
+import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.components.PermissionCard
+import com.familyeye.agent.ui.screens.OemSetupWarningCard
 import timber.log.Timber
 
 enum class SetupStep {
@@ -37,6 +39,7 @@ enum class SetupStep {
 @Composable
 fun SetupWizardScreen(
     viewModel: SetupWizardViewModel = hiltViewModel(),
+    oemViewModel: OemSetupViewModel = hiltViewModel(),
     onSetupComplete: () -> Unit
 ) {
     val context = LocalContext.current
@@ -149,6 +152,7 @@ fun SetupWizardScreen(
                         hasOverlay = hasOverlay,
                         hasDeviceAdmin = hasDeviceAdmin,
                         hasBatteryOpt = hasBatteryOpt,
+                        oemViewModel = oemViewModel,
                         onRequestAccessibility = {
                             val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                             context.startActivity(intent)
@@ -184,6 +188,7 @@ fun SetupWizardScreen(
                             hasOverlay = viewModel.checkOverlayPermission(context)
                             hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
                             hasBatteryOpt = viewModel.checkBatteryOptimizationPermission(context)
+                            oemViewModel.refreshStatus()
                         },
                         onNext = { currentStep = SetupStep.PAIRING },
                         onBack = { currentStep = SetupStep.PIN_SETUP }
@@ -242,6 +247,14 @@ private fun WelcomeStep(onNext: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = "verze 1.0.6 (rodičovský bypass)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
         
         Spacer(modifier = Modifier.height(32.dp))
@@ -391,6 +404,7 @@ private fun PermissionsStep(
     hasOverlay: Boolean,
     hasDeviceAdmin: Boolean,
     hasBatteryOpt: Boolean,
+    oemViewModel: OemSetupViewModel,
     onRequestAccessibility: () -> Unit,
     onRequestUsageStats: () -> Unit,
     onRequestOverlay: () -> Unit,
@@ -466,6 +480,9 @@ private fun PermissionsStep(
         )
         
         Spacer(modifier = Modifier.height(16.dp))
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
         
         TextButton(onClick = onRefresh) {
             Icon(Icons.Default.Refresh, contentDescription = null)

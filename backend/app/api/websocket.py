@@ -155,11 +155,34 @@ async def websocket_device_endpoint(
             try:
                 msg = json.loads(data)
                 if msg.get("type") == "ping":
-                    # Update Last Seen (Real-time Online Status)
+                    # Update Last Seen (Real-time Online Status) with retry
                     try:
                         device.last_seen = datetime.now(timezone.utc)
                         db.add(device)
-                        db.commit()
+                        
+                        # Retry logika pro SQLite locked errors
+                        max_retries = 3
+                        delay = 0.05  # 50ms
+                        committed = False
+                        
+                        for attempt in range(max_retries):
+                            try:
+                                db.commit()
+                                committed = True
+                                break
+                            except Exception as commit_err:
+                                error_str = str(commit_err).lower()
+                                if ("locked" in error_str or "database is locked" in error_str) and attempt < max_retries - 1:
+                                    import time
+                                    wait_time = delay * (2 ** attempt)  # Exponential backoff: 50ms, 100ms, 200ms
+                                    logger.debug(f"Database locked on ping, retrying in {wait_time*1000:.0f}ms (attempt {attempt + 1}/{max_retries})")
+                                    time.sleep(wait_time)
+                                    continue
+                                raise
+                        
+                        if not committed:
+                            logger.warning("Failed to update last_seen after retries")
+                            db.rollback()
                     except Exception as db_err:
                         # Log but don't crash connection
                         logger.error(f"Failed to update last_seen: {db_err}")

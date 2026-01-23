@@ -9,6 +9,7 @@ from . import models
 import logging
 import sys
 import asyncio
+import re
 
 # Setup logging
 logging.basicConfig(
@@ -141,17 +142,38 @@ os.makedirs(uploads_path, exist_ok=True)
 # NOTE: Screenshots are NOT served as public static files for security.
 # Use /api/files/screenshots/{device_id}/{filename} with authentication instead.
 
+def _get_android_version() -> str:
+    """Extract version name from Android build.gradle.kts."""
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        gradle_path = os.path.join(base_dir, "clients", "android", "app", "build.gradle.kts")
+        
+        if os.path.exists(gradle_path):
+            with open(gradle_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Match: versionName = "1.0.5"
+                match = re.search(r'versionName\s*=\s*"([^"]+)"', content)
+                if match:
+                    return match.group(1)
+    except Exception as e:
+        logger.warning(f"Failed to parse Android version: {e}")
+    return "latest"
+
+@app.get("/api/download")
+@app.get("/api/download/")
 @app.get("/api/download/android-agent")
+@app.get("/api/download/android-agent/")
 async def download_android_agent():
     """Download the latest Android Agent APK."""
     # Build path relative to backend/app/main.py -> backend -> root -> clients...
-    apk_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 
-                           "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    apk_path = os.path.join(base_dir, "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     
     if os.path.exists(apk_path):
+        version = _get_android_version()
         return FileResponse(
             path=apk_path, 
-            filename="FamilyEye-Agent-v1.0.0.apk", 
+            filename=f"FamilyEye-Agent-v{version}.apk", 
             media_type="application/vnd.android.package-archive"
         )
     return {"error": "APK file not found. Please build the Android project first."}

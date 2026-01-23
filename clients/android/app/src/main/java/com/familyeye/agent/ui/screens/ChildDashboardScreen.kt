@@ -3,6 +3,7 @@ package com.familyeye.agent.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,12 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-import androidx.compose.material.icons.filled.Settings
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.familyeye.agent.ui.OemSetupViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChildDashboardScreen(
-    onAdminClick: () -> Unit
+    onAdminClick: () -> Unit,
+    oemViewModel: OemSetupViewModel = hiltViewModel()
 ) {
     Scaffold(
         topBar = {
@@ -40,10 +43,17 @@ fun ChildDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top // Changed to Top to fit warning card better
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // OEM Setup Warning Card
+            OemSetupWarningCard(viewModel = oemViewModel)
+            
+            Spacer(modifier = Modifier.weight(1f)) // Push content to center
+            
             Icon(
                 imageVector = Icons.Outlined.CheckCircle,
                 contentDescription = "Chráněno",
@@ -94,6 +104,15 @@ fun ChildDashboardScreen(
                     )
                 }
             }
+            
+            Spacer(modifier = Modifier.weight(1.2f)) // Bottom balance
+            
+            Text(
+                text = "v1.0.6",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         }
     }
 }

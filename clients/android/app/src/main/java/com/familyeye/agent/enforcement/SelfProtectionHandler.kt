@@ -7,6 +7,7 @@ import com.familyeye.agent.service.RuleEnforcer
 import com.familyeye.agent.utils.PackageMatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
+import com.familyeye.agent.auth.ParentSessionManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +26,8 @@ import javax.inject.Singleton
 @Singleton
 class SelfProtectionHandler @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val ruleEnforcer: RuleEnforcer
+    private val ruleEnforcer: RuleEnforcer,
+    private val parentSessionManager: ParentSessionManager
 ) {
     companion object {
         // Package installer patterns (uninstall detection)
@@ -45,6 +47,13 @@ class SelfProtectionHandler @Inject constructor(
      */
     fun isTamperingAttempt(packageName: String, className: String?): Boolean {
         val isUnlockActive = ruleEnforcer.isUnlockSettingsActive()
+        
+        // ========== Parent Session Check ==========
+        // If parent is locally authenticated via PIN, allow all Settings access
+        if (parentSessionManager.isSessionActive()) {
+            Timber.d("Parent session active - Settings/installer access allowed")
+            return false
+        }
         
         // ========== Settings Protection ==========
         // Binary logic: FULL blocks everything, OFF allows everything

@@ -37,6 +37,10 @@
     
     <!-- Disable battery optimization -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    
+    <!-- Exact alarms for reliable restart scheduling (Android 12+) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" 
+        tools:ignore="ScheduleExactAlarm" />
 
     <application
         android:name=".FamilyEyeApp"

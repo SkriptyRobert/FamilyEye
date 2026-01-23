@@ -68,6 +68,26 @@ object AgentConstants {
      */
     const val ACCESSIBILITY_NOTIFICATION_TIMEOUT_MS = 100L
 
+    // ==================== RECOVERY & WATCHDOG ====================
+
+    /**
+     * Interval for security/health monitoring watchdog (milliseconds).
+     * Faster = quicker recovery from zombie state, but more CPU usage.
+     */
+    const val SECURITY_CHECK_INTERVAL_MS = 10_000L  // 10 seconds (was 60s)
+
+    /**
+     * Interval for WorkManager guardian worker (minutes).
+     * This is the minimum allowed by WorkManager.
+     */
+    const val GUARDIAN_WORKER_INTERVAL_MIN = 15L  // 15 minutes
+
+    /**
+     * Delay before escalating to nuclear restart (milliseconds).
+     * If self-repair doesn't work within this time, force full restart.
+     */
+    const val SELF_REPAIR_TIMEOUT_MS = 5_000L  // 5 seconds
+
     // ==================== SYNC LIMITS ====================
 
     /**
@@ -142,4 +162,9 @@ object AgentConstants {
      * Time format used in schedule rules.
      */
     const val SCHEDULE_TIME_FORMAT = "HH:mm"
+    
+    /**
+     * Shared Preferences file name.
+     */
+    const val PREFS_NAME = "family_eye_prefs"
 }

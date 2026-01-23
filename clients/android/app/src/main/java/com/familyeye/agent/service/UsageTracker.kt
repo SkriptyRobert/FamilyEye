@@ -37,7 +37,40 @@ class UsageTracker @Inject constructor(
     private val secureTimeProvider: SecureTimeProvider
 ) {
     private val trackerScope = CoroutineScope(Dispatchers.IO)
-    private var lastCheckTime = secureTimeProvider.getSecureCurrentTimeMillis()
+    
+    // Recovery Optimization: Persist lastCheckTime to handle service restarts
+    // When service dies and restarts, we want to know when we stopped tracking
+    private val prefs by lazy { 
+        context.getSharedPreferences(AgentConstants.PREFS_NAME, Context.MODE_PRIVATE) 
+    }
+    
+    // BUG FIX: Cache lastCheckTime in memory to prevent re-evaluation of default on every read
+    // The original bug: prefs.getLong("key", NOW) re-evaluates NOW every time, making elapsed = 0
+    @Volatile
+    private var _lastCheckTime: Long = -1L  // Sentinel value = not initialized
+    
+    private var lastCheckTime: Long
+        get() {
+            if (_lastCheckTime == -1L) {
+                // First access: load from prefs or initialize to NOW (only once)
+                val stored = prefs.getLong("last_usage_check_time", -1L)
+                _lastCheckTime = if (stored == -1L) {
+                    // First ever run: set to NOW and persist
+                    val now = secureTimeProvider.getSecureCurrentTimeMillis()
+                    prefs.edit().putLong("last_usage_check_time", now).apply()
+                    Timber.d("UsageTracker: Initialized lastCheckTime to NOW = $now")
+                    now
+                } else {
+                    Timber.d("UsageTracker: Restored lastCheckTime from prefs = $stored")
+                    stored
+                }
+            }
+            return _lastCheckTime
+        }
+        set(value) {
+            _lastCheckTime = value
+            prefs.edit().putLong("last_usage_check_time", value).apply()
+        }
     
     // Track screen state to avoid phantom usage when screen is off
     private val powerManager by lazy {
@@ -62,10 +95,14 @@ class UsageTracker @Inject constructor(
         val currentTime = secureTimeProvider.getSecureCurrentTimeMillis()
         val elapsedSeconds = (currentTime - lastCheckTime) / 1000
         
-        if (elapsedSeconds <= 0) return
+        if (elapsedSeconds <= 0) {
+            Timber.v("TrackUsage: elapsedSeconds <= 0, skipping")
+            return
+        }
 
         // Skip tracking if screen is off (no phantom usage)
         if (!isScreenOn()) {
+            Timber.v("TrackUsage: Screen OFF, updating lastCheckTime only")
             lastCheckTime = currentTime
             return
         }
@@ -85,16 +122,21 @@ class UsageTracker @Inject constructor(
 
         // 1. Try Real-Time Tracking (Preferred)
         val realTimePackage = AppDetectorService.currentPackage
+        Timber.d("TrackUsage: elapsed=${elapsedSeconds}s, screenOn=true, realTimePackage=$realTimePackage")
+        
         if (realTimePackage != null) {
             // Skip our own app
             if (realTimePackage != context.packageName) {
                 logUsage(realTimePackage, elapsedSeconds.toInt())
+            } else {
+                Timber.v("TrackUsage: Skipping own package: $realTimePackage")
             }
             lastCheckTime = currentTime
             return
         }
 
         // 2. Fallback to UsageStatsManager (If Accessibility is off)
+        Timber.d("TrackUsage: Accessibility currentPackage null, trying UsageStatsManager fallback")
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         
         // Get stats since last check (use device time for this API)
@@ -112,9 +154,14 @@ class UsageTracker @Inject constructor(
                 .filter { it.totalTimeInForeground > 0 && it.packageName != context.packageName }
                 .maxByOrNull { it.lastTimeUsed }
 
-            foregroundApp?.let { app ->
-                logUsage(app.packageName, elapsedSeconds.toInt())
+            if (foregroundApp != null) {
+                Timber.d("TrackUsage: Fallback found foreground app: ${foregroundApp.packageName}")
+                logUsage(foregroundApp.packageName, elapsedSeconds.toInt())
+            } else {
+                Timber.w("TrackUsage: UsageStats returned empty foreground after filter (stats count: ${stats.size})")
             }
+        } else {
+            Timber.w("TrackUsage: UsageStatsManager returned null/empty stats")
         }
         
         lastCheckTime = currentTime
