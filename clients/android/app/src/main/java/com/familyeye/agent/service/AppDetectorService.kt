@@ -96,6 +96,15 @@ class AppDetectorService : AccessibilityService() {
         }
         serviceInfo = info
         Timber.d("AppDetectorService connected")
+        
+        // CRITICAL: Ensure main service is running ("Zombie Fix")
+        // If system restarts Accessibility but not our Service, this revives it.
+        try {
+            FamilyEyeService.start(applicationContext)
+            Timber.i("Started FamilyEyeService from Accessibility connection")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to start FamilyEyeService from AppDetector")
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

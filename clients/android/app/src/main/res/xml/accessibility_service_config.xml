@@ -7,4 +7,5 @@
     android:canTakeScreenshot="true"
     android:notificationTimeout="100"
     android:description="@string/accessibility_service_description"
+    android:isAccessibilityTool="true"
     android:settingsActivity="com.familyeye.agent.ui.MainActivity" />
