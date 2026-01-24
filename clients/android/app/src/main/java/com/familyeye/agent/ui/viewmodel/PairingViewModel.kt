@@ -24,6 +24,11 @@ class PairingViewModel @Inject constructor(
     val uiState: StateFlow<PairingUiState> = _uiState.asStateFlow()
 
     fun pairDevice(token: String, backendUrl: String, deviceName: String, macAddress: String) {
+        if (_uiState.value is PairingUiState.Loading || _uiState.value is PairingUiState.Success) {
+            Timber.w("Pairing already in progress or completed, ignoring request")
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = PairingUiState.Loading
 

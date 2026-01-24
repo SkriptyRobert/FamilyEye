@@ -17,7 +17,9 @@ import com.familyeye.agent.ui.OemSetupViewModel
 @Composable
 fun OemSetupWarningCard(
     viewModel: OemSetupViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenBatteryOptimization: (() -> Unit)? = null,
+    onOpenAutoStart: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -83,7 +85,7 @@ fun OemSetupWarningCard(
                     
                     if (!uiState.isStandardBatteryOptimizationIgnored) {
                         Button(
-                            onClick = { viewModel.openBatteryOptimizationSettings() },
+                            onClick = { onOpenBatteryOptimization?.invoke() ?: viewModel.openBatteryOptimizationSettings() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
@@ -92,7 +94,7 @@ fun OemSetupWarningCard(
                         }
                     } else if (uiState.isAggressiveOem) {
                         Button(
-                            onClick = { viewModel.openAutoStartSettings() },
+                            onClick = { onOpenAutoStart?.invoke() ?: viewModel.openAutoStartSettings() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )

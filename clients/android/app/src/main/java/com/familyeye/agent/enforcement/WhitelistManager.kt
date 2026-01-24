@@ -36,10 +36,16 @@ class WhitelistManager @Inject constructor(
             return true
         }
 
-        // 2. System UI is always whitelisted to prevent crashes
-        // Note: In Device Lock mode, SystemUI is handled specially (closed)
+        // 2. System UI whitelisting - BUT only if Settings protection is OFF or unlocked
+        // When Settings protection is FULL, SystemUI must be blocked to prevent Clear All access
         if (PackageMatcher.isSystemUI(packageName)) {
-            return true
+            val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
+            val unlockActive = ruleEnforcer.isUnlockSettingsActive()
+            val shouldBlock = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSettings(
+                protectionLevel, unlockActive
+            )
+            // If we should block SystemUI, don't whitelist it
+            return !shouldBlock
         }
 
         // 3. Settings - blocked by default, allowed only when unlocked

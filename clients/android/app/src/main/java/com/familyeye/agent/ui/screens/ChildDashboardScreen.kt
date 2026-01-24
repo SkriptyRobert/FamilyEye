@@ -2,7 +2,6 @@ package com.familyeye.agent.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
@@ -14,6 +13,8 @@ import androidx.compose.ui.unit.dp
 
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.ui.OemSetupViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,6 +22,8 @@ fun ChildDashboardScreen(
     onAdminClick: () -> Unit,
     oemViewModel: OemSetupViewModel = hiltViewModel()
 ) {
+    val oemState by oemViewModel.uiState.collectAsState()
+    
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -33,7 +36,7 @@ fun ChildDashboardScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Rodič")
+                        Text(text = "Rodič")
                     }
                 }
             )
@@ -45,14 +48,11 @@ fun ChildDashboardScreen(
                 .padding(padding)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top // Changed to Top to fit warning card better
+            verticalArrangement = Arrangement.Center
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // OEM Setup Warning Card
-            OemSetupWarningCard(viewModel = oemViewModel)
-            
-            Spacer(modifier = Modifier.weight(1f)) // Push content to center
+
             
             Icon(
                 imageVector = Icons.Outlined.CheckCircle,
@@ -108,7 +108,7 @@ fun ChildDashboardScreen(
             Spacer(modifier = Modifier.weight(1.2f)) // Bottom balance
             
             Text(
-                text = "v1.0.7",
+                text = "v1.0.9",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.padding(bottom = 8.dp)

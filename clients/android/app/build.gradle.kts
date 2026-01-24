@@ -14,8 +14,8 @@ android {
         applicationId = "com.familyeye.agent"
         minSdk = 29  // Android 10
         targetSdk = 35  // Android 15
-        versionCode = 7
-        versionName = "1.0.7"
+        versionCode = 18
+        versionName = "1.0.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -77,6 +77,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
     
     // Networking
     implementation(libs.retrofit)

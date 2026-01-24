@@ -8,7 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import com.familyeye.agent.auth.ParentSessionManager
+
 import javax.inject.Inject
 
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,8 +16,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @ApplicationContext private val context: android.content.Context,
-    configRepository: AgentConfigRepository,
-    private val parentSessionManager: ParentSessionManager
+    configRepository: AgentConfigRepository
 ) : ViewModel() {
 
     val isPaired: StateFlow<Boolean?> = configRepository.isPaired
@@ -139,8 +138,8 @@ class MainViewModel @Inject constructor(
     suspend fun verifyPin(pin: String): Boolean {
         val isValid = repository.verifyPin(pin)
         if (isValid) {
-            // Start parent session on successful PIN verification
-            parentSessionManager.startSession()
+            // PIN Verified
+            // We no longer start a session as protection logic is now purely Dashboard-driven.
         }
         return isValid
     }

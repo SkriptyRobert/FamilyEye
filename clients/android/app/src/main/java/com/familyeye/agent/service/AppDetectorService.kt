@@ -156,6 +156,15 @@ class AppDetectorService : AccessibilityService() {
                     }
                 }
                 is EnforcementResult.Block -> {
+                    // CRITICAL: SystemUI blocking (Recents/Clear All prevention)
+                    if (packageName == "com.android.systemui") {
+                        Timber.w("CRITICAL: SystemUI detected - forcing HOME immediately to prevent Clear All")
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                        // Also show overlay to make it clear
+                        blockOverlayManager.show("System", result.blockType, "Přístup k přehledu aplikací je zablokován")
+                        return // Don't continue with normal block flow
+                    }
+                    
                     // "Brick Mode" logic:
                     // If Device is LOCKED or in SCHEDULE DOWNTIME, block the Notification Shade (SystemUI).
                     // This prevents bypassing the overlay or accessing quick settings.

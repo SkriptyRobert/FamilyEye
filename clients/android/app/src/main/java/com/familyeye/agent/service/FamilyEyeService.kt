@@ -13,7 +13,11 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.ExistingPeriodicWorkPolicy
+
 import androidx.work.WorkManager
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OutOfQuotaPolicy
+import com.familyeye.agent.service.RestartWorker
 import com.familyeye.agent.R
 import com.familyeye.agent.config.AgentConstants
 import com.familyeye.agent.data.repository.AgentConfigRepository
@@ -33,6 +37,7 @@ import javax.inject.Inject
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.familyeye.agent.ui.KeepAliveActivity
+import com.familyeye.agent.receiver.RestartReceiver
 import kotlin.system.exitProcess
 
 
@@ -70,6 +75,14 @@ class FamilyEyeService : Service(), ScreenStateListener {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "familyeye_monitor_channel"
         
+        // Cooldown to prevent strict restart loops (crash immediately after start)
+        // If service runs for less than this time, we delay the restart slightly instead of firing immediately.
+        private const val RESTART_COOLDOWN_MS = 3_000L  // 3 seconds (was 10s)
+        
+        // Prefs key for tracking last restart
+        private const val PREFS_NAME = "familyeye_service_prefs"
+        private const val KEY_LAST_RESTART = "last_restart_time"
+        
         fun start(context: Context) {
             val intent = Intent(context, FamilyEyeService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -85,9 +98,13 @@ class FamilyEyeService : Service(), ScreenStateListener {
         }
     }
 
+    // Track when service was created to detect restart loop
+    private var serviceCreatedTime = 0L
+
     override fun onCreate() {
         super.onCreate()
-        Timber.d("FamilyEyeService created")
+        serviceCreatedTime = System.currentTimeMillis()
+        Timber.d("FamilyEyeService created at $serviceCreatedTime")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification(), 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -192,30 +209,100 @@ class FamilyEyeService : Service(), ScreenStateListener {
 
     /**
      * Called when user swipes away the app from recent apps.
-     * Restart the service to ensure continuous monitoring.
+     * Uses DUAL ALARM STRATEGY for maximum reliability:
+     * 1. Primary: RestartReceiver at 100ms (fast, lightweight)
+     * 2. Backup: KeepAliveActivity at 3000ms (fallback if receiver fails)
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        Timber.w("FamilyEyeService task removed - performing HARD RESTART")
         
-        // Schedule restart via KeepAliveActivity to force process priority upgrade
-        // and trigger Accessibility re-bind
-        val restartIntent = Intent(applicationContext, KeepAliveActivity::class.java)
-        restartIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val currentTime = System.currentTimeMillis()
+        val timeSinceCreation = currentTime - serviceCreatedTime
         
-        val pendingIntent = PendingIntent.getActivity(
+        var delayMsPrimary = 100L
+        var delayMsBackup = 3000L
+
+        // COOLDOWN CHECK: If service was just created (<3s), this might be a loop or fast kill.
+        // Instead of skipping restart (which leads to death), we simply DELAY it to break the loop.
+        if (timeSinceCreation < RESTART_COOLDOWN_MS) {
+            Timber.w("Fast kill detected (${timeSinceCreation}ms) - DELAYING restart to break loop")
+            delayMsPrimary = 5000L   // 5s delay
+            delayMsBackup = 8000L    // 8s delay
+        } else {
+             Timber.i("Normal kill detected (${timeSinceCreation}ms) - Executing IMMEDIATE restart")
+        }
+        
+        Timber.w("Scheduling restart alarms: Primary=${delayMsPrimary}ms, Backup=${delayMsBackup}ms")
+        
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        
+        // PRIMARY: Fast restart via RestartReceiver
+        val primaryIntent = Intent(applicationContext, RestartReceiver::class.java).apply {
+            action = RestartReceiver.ACTION_RESTART
+            putExtra("source", "task_removed_primary")
+        }
+        val primaryPendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            1,
-            restartIntent,
+            1001,
+            primaryIntent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        alarmManager.set(
-            android.app.AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 500, // 500ms delay
-            pendingIntent
+        // BACKUP: Fallback via KeepAliveActivity
+        val backupIntent = Intent(applicationContext, KeepAliveActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra("source", "task_removed_backup")
+        }
+        val backupPendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            1002,
+            backupIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Schedule PRIMARY
+            alarmManager.setExactAndAllowWhileIdle(
+                android.app.AlarmManager.RTC_WAKEUP,
+                currentTime + delayMsPrimary,
+                primaryPendingIntent
+            )
+            // Schedule BACKUP
+            alarmManager.setExactAndAllowWhileIdle(
+                android.app.AlarmManager.RTC_WAKEUP,
+                currentTime + delayMsBackup,
+                backupPendingIntent
+            )
+        } else {
+            alarmManager.setExact(
+                android.app.AlarmManager.RTC_WAKEUP,
+                currentTime + delayMsPrimary,
+                primaryPendingIntent
+            )
+            alarmManager.setExact(
+                android.app.AlarmManager.RTC_WAKEUP,
+                currentTime + delayMsBackup,
+                backupPendingIntent
+            )
+        }
+        
+        Timber.i("Dual restart alarms scheduled: Primary=100ms, Backup=3000ms")
+        
+        // TRIPLE THREAT: WorkManager Backup (Expedited)
+        // This is the "nuclear option" - even if Alarms fail, WorkManager will eventually run this
+        try {
+            val restartWork = OneTimeWorkRequest.Builder(RestartWorker::class.java)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .addTag("restart_service")
+                .build()
+                
+            WorkManager.getInstance(applicationContext)
+                .enqueue(restartWork)
+                
+            Timber.i("Triple Threat: Expedited WorkManager restart scheduled")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to schedule WorkManager restart")
+        }
         
         // Suicide to ensure fresh start
         stopSelf()
@@ -389,10 +476,11 @@ class FamilyEyeService : Service(), ScreenStateListener {
                             triggerSelfRepair()
                             selfRepairAttemptTime = currentTime
                         } else if (currentTime - selfRepairAttemptTime > AgentConstants.SELF_REPAIR_TIMEOUT_MS) {
-                            // Self-repair didn't work - escalate to nuclear restart
-                            Timber.e("Self-repair FAILED after ${AgentConstants.SELF_REPAIR_TIMEOUT_MS}ms! Forcing NUCLEAR RESTART!")
-                            forceNuclearRestart()
-                            selfRepairAttemptTime = 0L  // Reset for next cycle
+                            // Self-repair didn't work - BUT DO NOT KILL PROCESS
+                            // The app is better alive without Accessibility than dead in a restart loop
+                            Timber.e("Self-repair timed out after ${AgentConstants.SELF_REPAIR_TIMEOUT_MS}ms - Retrying soft repair next cycle")
+                            // forceNuclearRestart() // DISABLE NUCLEAR RESTART
+                            selfRepairAttemptTime = 0L  // Reset for next cycle to try KeepAlive again
                         } else {
                             Timber.w("Waiting for self-repair... (${currentTime - selfRepairAttemptTime}ms elapsed)")
                         }

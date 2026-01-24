@@ -25,12 +25,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.ui.viewmodel.MainViewModel
+import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.components.PermissionItem
+import com.familyeye.agent.ui.screens.OemSetupWarningCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: MainViewModel = hiltViewModel(),
+    oemViewModel: OemSetupViewModel = hiltViewModel(),
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -78,6 +81,9 @@ fun SettingsScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // OEM Setup Warning (Parent-only, after PIN)
+            OemSetupWarningCard(viewModel = oemViewModel)
+            
             // Permissions Card
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {

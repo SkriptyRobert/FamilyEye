@@ -7,6 +7,17 @@ package com.familyeye.agent.utils
  * and provides consistent app identification across the codebase.
  */
 object PackageMatcher {
+    private val SETTINGS_PACKAGES = setOf(
+        "com.android.settings",           // AOSP / most OEMs
+        "com.miui.securitycenter",         // Xiaomi / MIUI
+        "com.huawei.systemmanager",        // Huawei
+        "com.samsung.android.lool",        // Samsung Device Care
+        "com.oppo.safe",                   // OPPO
+        "com.coloros.safecenter",          // ColorOS (OPPO/Realme)
+        "com.vivo.permissionmanager",      // Vivo
+        "com.iqoo.secure",                 // iQOO
+        "com.oneplus.security"             // OnePlus
+    )
 
     /**
      * Check if a package name matches a rule name using multiple strategies:
@@ -95,8 +106,13 @@ object PackageMatcher {
      * @return true if this is a settings app
      */
     fun isSettings(packageName: String): Boolean {
-        return packageName == "com.android.settings"
+        return SETTINGS_PACKAGES.contains(packageName)
     }
+
+    /**
+     * Get all known Settings-like packages for OEMs.
+     */
+    fun getSettingsPackages(): Set<String> = SETTINGS_PACKAGES
 
     /**
      * Check if a package is a package installer.

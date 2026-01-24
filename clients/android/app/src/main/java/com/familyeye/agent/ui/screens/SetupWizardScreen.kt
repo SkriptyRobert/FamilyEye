@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -31,6 +33,7 @@ enum class SetupStep {
     WELCOME,
     PIN_SETUP,
     PERMISSIONS,
+    OEM_CONFIG,
     PAIRING,
     COMPLETE
 }
@@ -47,6 +50,8 @@ fun SetupWizardScreen(
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf<String?>(null) }
+    
+    val oemState by oemViewModel.uiState.collectAsState()
     
     // Permission states
     var hasAccessibility by remember { mutableStateOf(false) }
@@ -65,17 +70,19 @@ fun SetupWizardScreen(
         hasOverlay = viewModel.checkOverlayPermission(context)
         hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
         hasBatteryOpt = viewModel.checkBatteryOptimizationPermission(context)
+        oemViewModel.refreshStatus()
     }
 
     LaunchedEffect(currentStep) {
-        if (currentStep == SetupStep.PERMISSIONS) {
+        if (currentStep == SetupStep.PERMISSIONS || currentStep == SetupStep.OEM_CONFIG) {
             refreshPermissions()
         }
     }
     
     DisposableEffect(lifecycleOwner, currentStep) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && currentStep == SetupStep.PERMISSIONS) {
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && 
+                (currentStep == SetupStep.PERMISSIONS || currentStep == SetupStep.OEM_CONFIG)) {
                 refreshPermissions()
             }
         }
@@ -94,6 +101,7 @@ fun SetupWizardScreen(
                             SetupStep.WELCOME -> "Vítejte"
                             SetupStep.PIN_SETUP -> "Nastavení PIN"
                             SetupStep.PERMISSIONS -> "Oprávnění"
+                            SetupStep.OEM_CONFIG -> "Výrobce"
                             SetupStep.PAIRING -> "Párování"
                             SetupStep.COMPLETE -> "Hotovo"
                         }
@@ -182,21 +190,27 @@ fun SetupWizardScreen(
                                 context.startActivity(intent)
                             }
                         },
-                        onRefresh = {
-                            hasAccessibility = viewModel.checkAccessibilityPermission(context)
-                            hasUsageStats = viewModel.checkUsageStatsPermission(context)
-                            hasOverlay = viewModel.checkOverlayPermission(context)
-                            hasDeviceAdmin = viewModel.checkDeviceAdminPermission(context)
-                            hasBatteryOpt = viewModel.checkBatteryOptimizationPermission(context)
-                            oemViewModel.refreshStatus()
+                        onRefresh = { refreshPermissions() },
+                        onNext = { 
+                            if (oemState.needsAttention) {
+                                currentStep = SetupStep.OEM_CONFIG
+                            } else {
+                                currentStep = SetupStep.PAIRING
+                            }
                         },
-                        onNext = { currentStep = SetupStep.PAIRING },
                         onBack = { currentStep = SetupStep.PIN_SETUP }
+                    )
+                }
+
+                SetupStep.OEM_CONFIG -> {
+                    OemConfigStep(
+                        oemViewModel = oemViewModel,
+                        onNext = { currentStep = SetupStep.PAIRING },
+                        onBack = { currentStep = SetupStep.PERMISSIONS }
                     )
                 }
                 
                 SetupStep.PAIRING -> {
-                    // Embed existing PairingScreen or simplified version
                     PairingScreen(
                         onPairingSuccess = { currentStep = SetupStep.COMPLETE }
                     )
@@ -218,7 +232,9 @@ fun SetupWizardScreen(
 @Composable
 private fun WelcomeStep(onNext: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -252,7 +268,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "verze 1.0.7 (AutoStart)",
+            text = "verze 1.0.18 (Speed Tuning)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
@@ -279,7 +295,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
             }
         }
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
         
         Button(
             onClick = onNext,
@@ -290,6 +306,8 @@ private fun WelcomeStep(onNext: () -> Unit) {
         ) {
             Text("Začít nastavení", style = MaterialTheme.typography.titleMedium)
         }
+        
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -526,18 +544,6 @@ private fun PermissionsStep(
 
 @Composable
 private fun CompleteStep(onFinish: () -> Unit) {
-    val context = LocalContext.current
-    var showAutoStartDialog by remember { mutableStateOf(false) }
-    var autoStartConfigured by remember { mutableStateOf(false) }
-    
-    // Check if this is an OEM phone that needs AutoStart configuration
-    val needsAutoStart = remember {
-        com.familyeye.agent.utils.OemCompatibility.isAggressiveBatteryManagement()
-    }
-    val manufacturer = remember {
-        android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
-    }
-    
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -566,79 +572,83 @@ private fun CompleteStep(onFinish: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        // AutoStart warning for OEM phones
-        if (needsAutoStart && !autoStartConfigured) {
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Důležité nastavení pro $manufacturer",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "Telefony $manufacturer mohou ukončit FamilyEye na pozadí. Pro spolehlivou ochranu je nutné povolit AutoStart.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Button(
-                        onClick = { 
-                            com.familyeye.agent.utils.OemCompatibility.openAutoStartSettings(context)
-                            autoStartConfigured = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Otevřít nastavení AutoStart")
-                    }
-                }
-            }
-        }
-        
         Spacer(modifier = Modifier.weight(1f))
         
         Button(
             onClick = onFinish,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !needsAutoStart || autoStartConfigured
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (needsAutoStart && !autoStartConfigured) "Nejdříve povolte AutoStart" else "Dokončit")
+            Text("Dokončit")
         }
+    }
+}
+
+@Composable
+private fun OemConfigStep(
+    oemViewModel: OemSetupViewModel,
+    onNext: () -> Unit,
+    onBack: () -> Unit
+) {
+    val state by oemViewModel.uiState.collectAsState()
+    
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Default.Build,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
         
-        // Allow skipping if already configured
-        if (needsAutoStart && !autoStartConfigured) {
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
-                onClick = { autoStartConfigured = true }
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Optimalizace pro ${state.manufacturer}",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "Výrobci jako ${state.manufacturer} mají agresivní správu baterie, která může zastavit ochranu.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        OemSetupWarningCard(
+            viewModel = oemViewModel
+        )
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.weight(1f)
             ) {
-                Text("Přeskočit (nedoporučeno)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Zpět")
+            }
+            Button(
+                onClick = onNext,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Vše nastaveno")
             }
         }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Pokračujte pouze pokud jste povolili AutoStart",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

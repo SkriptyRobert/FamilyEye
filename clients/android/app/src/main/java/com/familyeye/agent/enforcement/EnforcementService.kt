@@ -88,6 +88,20 @@ class EnforcementService @Inject constructor(
             )
         }
 
+        // 1.5. CRITICAL: Block SystemUI (Recents/Clear All) when Settings protection is active
+        // This MUST be before Device Lock check to prevent access to Clear All
+        if (PackageMatcher.isSystemUI(packageName)) {
+            val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
+            val unlockActive = ruleEnforcer.isUnlockSettingsActive()
+            val shouldBlockSystemUI = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSettings(
+                protectionLevel, unlockActive
+            )
+            if (shouldBlockSystemUI) {
+                Timber.w("CRITICAL: SystemUI blocked (prevents Clear All access)")
+                return EnforcementResult.Block(BlockType.TAMPERING)
+            }
+        }
+
         // 2. Device Lock check (blocks everything except SystemUI)
         if (ruleEnforcer.isDeviceLocked()) {
             // Allow SystemUI to prevent crash but will be handled specially

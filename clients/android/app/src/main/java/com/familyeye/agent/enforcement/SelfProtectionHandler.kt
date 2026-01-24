@@ -7,7 +7,7 @@ import com.familyeye.agent.service.RuleEnforcer
 import com.familyeye.agent.utils.PackageMatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
-import com.familyeye.agent.auth.ParentSessionManager
+
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,8 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class SelfProtectionHandler @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val ruleEnforcer: RuleEnforcer,
-    private val parentSessionManager: ParentSessionManager
+    private val ruleEnforcer: RuleEnforcer
 ) {
     companion object {
         // Package installer patterns (uninstall detection)
@@ -35,6 +34,13 @@ class SelfProtectionHandler @Inject constructor(
             "uninstall",
             "packageinstaller",
             "deletestagingdirjob"
+        )
+
+        // Recents/Overview patterns (Clear All entry point)
+        private val RECENTS_PATTERNS = setOf(
+            "recents",
+            "recent",
+            "overview"
         )
     }
 
@@ -47,13 +53,6 @@ class SelfProtectionHandler @Inject constructor(
      */
     fun isTamperingAttempt(packageName: String, className: String?): Boolean {
         val isUnlockActive = ruleEnforcer.isUnlockSettingsActive()
-        
-        // ========== Parent Session Check ==========
-        // If parent is locally authenticated via PIN, allow all Settings access
-        if (parentSessionManager.isSessionActive()) {
-            Timber.d("Parent session active - Settings/installer access allowed")
-            return false
-        }
         
         // ========== Settings Protection ==========
         // Binary logic: FULL blocks everything, OFF allows everything
@@ -68,6 +67,19 @@ class SelfProtectionHandler @Inject constructor(
             }
             // Protection is OFF or parent unlocked - allow access
             return false
+        }
+
+        // Block access to Recents (Clear All) when Settings protection is active.
+        // This is the only reliable way without Device Owner to prevent app kill attempts.
+        if (PackageMatcher.isSystemUI(packageName) && isRecentsActivity(className)) {
+            val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
+            val shouldBlock = SettingsProtectionPolicy.shouldBlockSettings(
+                protectionLevel, isUnlockActive
+            )
+            if (shouldBlock) {
+                Timber.w("Recents blocked: protection=$protectionLevel")
+                return true
+            }
         }
 
         // Check if this is a package installer (uninstall attempt)
@@ -91,6 +103,15 @@ class SelfProtectionHandler @Inject constructor(
         if (className == null) return false
         val lower = className.lowercase()
         return UNINSTALL_PATTERNS.any { lower.contains(it) }
+    }
+
+    /**
+     * Check if this is the Recents/Overview activity.
+     */
+    private fun isRecentsActivity(className: String?): Boolean {
+        if (className == null) return false
+        val lower = className.lowercase()
+        return RECENTS_PATTERNS.any { lower.contains(it) }
     }
 
     /**
@@ -164,6 +185,8 @@ class SelfProtectionHandler @Inject constructor(
         return when {
             isUninstallActivity(className) ->
                 "Attempted to uninstall FamilyEye"
+            PackageMatcher.isSystemUI(packageName) && isRecentsActivity(className) ->
+                "Attempted to access Recents (Clear All)"
             PackageMatcher.isPackageInstaller(packageName) -> 
                 "Attempted to access package installer (uninstall attempt)"
             className?.lowercase()?.contains("accessibility") == true ->
