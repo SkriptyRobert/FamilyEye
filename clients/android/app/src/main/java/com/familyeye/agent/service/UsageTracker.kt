@@ -34,7 +34,9 @@ class UsageTracker @Inject constructor(
     private val ruleEnforcer: RuleEnforcer,
     private val blockOverlayManager: BlockOverlayManager,
     private val reporter: Reporter,
-    private val secureTimeProvider: SecureTimeProvider
+    private val secureTimeProvider: SecureTimeProvider,
+    private val enforcementService: com.familyeye.agent.enforcement.EnforcementService,
+    private val blocker: com.familyeye.agent.enforcement.Blocker
 ) {
     private val trackerScope = CoroutineScope(Dispatchers.IO)
     
@@ -184,42 +186,45 @@ class UsageTracker @Inject constructor(
             )
         )
 
-        // Enforce Time Limit immediately
+        // Enforce Rules Strategy:
+        // 1. Check UNIVERSAL rules (Blacklist, Lock, Schedule) -> via EnforcementService
+        // 2. Check TIME LIMITS (Requires duration) -> via EnforcementService.evaluateTimeLimits
+        
+        // Step 1: Structural Checks (Fast, no time limits)
+        val structuralResult = enforcementService.evaluate(packageName)
+        when (structuralResult) {
+            is com.familyeye.agent.enforcement.EnforcementResult.Block -> {
+                 Timber.w("UsageTracker: Blocking $packageName due to ${structuralResult.blockType}")
+                 // Force sync if we hit a wall to ensure backend knows
+                 reporter.forceSync() 
+                 blocker.block(packageName, structuralResult.blockType, structuralResult.scheduleInfo)
+                 return
+            }
+            is com.familyeye.agent.enforcement.EnforcementResult.TamperingDetected -> {
+                 Timber.e("UsageTracker: Tampering detected: ${structuralResult.reason}")
+                 blocker.block(packageName, com.familyeye.agent.ui.screens.BlockType.TAMPERING)
+                 return
+            }
+            com.familyeye.agent.enforcement.EnforcementResult.Whitelisted -> {
+                // Don't check limits for whitelisted apps? Or should we?
+                // Usually whitelist means "System Critical" -> No limits.
+                return
+            }
+            com.familyeye.agent.enforcement.EnforcementResult.Allow -> {
+                // Proceed to time limits
+            }
+        }
+        
+        // Step 2: Time Limits (Requires duration calculation)
         val totalUsage = getTotalUsageToday()
+        val appUsage = getUsageToday(packageName)
         
-        // 1. Global Daily Limit
-        if (ruleEnforcer.isDailyLimitExceeded(totalUsage)) {
-            reporter.forceSync() // Force immediate sync on block!
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_LIMIT)
-            return
-        }
+        val limitResult = enforcementService.evaluateTimeLimits(packageName, appUsage, totalUsage)
         
-        // 2. Device Lock
-        if (ruleEnforcer.isDeviceLocked()) {
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_LOCK)
-            return
-        }
-
-        // 3. Global Schedule
-        if (ruleEnforcer.isDeviceScheduleBlocked()) {
-            val rule = ruleEnforcer.getActiveDeviceScheduleRule()
-            val info = rule?.let { "${it.scheduleStartTime} - ${it.scheduleEndTime}" }
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.DEVICE_SCHEDULE, info)
-            return
-        }
-        
-        // 4. App Schedule
-        if (ruleEnforcer.isAppScheduleBlocked(packageName)) {
-            val rule = ruleEnforcer.getActiveAppScheduleRule(packageName)
-            val info = rule?.let { "${it.scheduleStartTime} - ${it.scheduleEndTime}" }
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_SCHEDULE, info)
-            return
-        }
-        
-        // 5. App Time Limit
-        if (ruleEnforcer.isAppTimeLimitExceeded(packageName, getUsageToday(packageName))) {
-            reporter.forceSync() // Force immediate sync on block!
-            triggerOverlay(packageName, com.familyeye.agent.ui.screens.BlockType.APP_LIMIT)
+        if (limitResult is com.familyeye.agent.enforcement.EnforcementResult.Block) {
+             Timber.w("UsageTracker: Blocking $packageName due to TIME LIMIT (${limitResult.blockType})")
+             reporter.forceSync()
+             blocker.block(packageName, limitResult.blockType)
         }
     }
 

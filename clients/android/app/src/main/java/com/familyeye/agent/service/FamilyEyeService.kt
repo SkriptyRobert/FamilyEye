@@ -259,11 +259,29 @@ class FamilyEyeService : Service(), ScreenStateListener {
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
         
+        
         val currentTime = System.currentTimeMillis()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Aggressive approach: Try EXACT first, fallback to standard on crash.
+            // Device Owners usually have this permission, so checks might be false negatives on some ROMs.
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    currentTime + 300L, // Reduced to 300ms for even faster restart
+                    pendingIntent
+                )
+            } catch (e: SecurityException) {
+                Timber.e(e, "Exact alarm permission missing in onTaskRemoved - falling back to set()")
+                alarmManager.set(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    currentTime + 300L,
+                    pendingIntent
+                )
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setExactAndAllowWhileIdle(
                 android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + 500L,
+                currentTime + 300L,
                 pendingIntent
             )
         } else {

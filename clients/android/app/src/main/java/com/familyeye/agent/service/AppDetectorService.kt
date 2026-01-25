@@ -48,6 +48,10 @@ class AppDetectorService : AccessibilityService() {
     lateinit var reporter: Reporter
 
     @Inject
+    lateinit var blocker: com.familyeye.agent.enforcement.Blocker
+
+
+    @Inject
     lateinit var contentScanner: com.familyeye.agent.scanner.ContentScanner
 
     @Inject
@@ -322,17 +326,15 @@ class AppDetectorService : AccessibilityService() {
     }
 
     fun blockApp(packageName: String, blockType: BlockType, scheduleInfo: String? = null) {
-        Timber.w("BLOCKED: $packageName ($blockType)")
-        
-        // 1. Force minimize app first
-        performGlobalAction(GLOBAL_ACTION_HOME)
-        
-        // 2. Wait a tiny bit for transition to start, then show overlay
-        // This prevents the "flicker" where overlay shows on top of app before it closes
-        serviceScope.launch {
-            kotlinx.coroutines.delay(150)
-            blockOverlayManager.show(packageName, blockType, scheduleInfo)
+        // Fast path: use Accessibility Action if possible (faster than Intent)
+        try {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        } catch (e: Exception) {
+            // Ignore, Blocker will handle it via Intent
         }
+        
+        // Delegate to centralized Blocker for Intent kick + Overlay
+        blocker.block(packageName, blockType, scheduleInfo)
     }
 
     private fun handleTampering(packageName: String, className: String) {
