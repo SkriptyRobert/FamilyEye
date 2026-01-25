@@ -191,14 +191,15 @@ async def delete_rule(
             detail="Rule not found"
         )
     
+    # Save device_id before deletion to notify agent after commit
+    device_id_for_agent = rule.device.device_id if rule.device else None
+    
     db.delete(rule)
     db.commit()
     
-    # Notify agent (using loaded rule object before session closed? No, rule is detached but attrs might be there.
-    # Better to save device_id before delete)
-    # The rule object is still in memory.
-    if rule.device:
-        await send_command_to_device(rule.device.device_id, "REFRESH_RULES")
+    # Notify agent
+    if device_id_for_agent:
+        await send_command_to_device(device_id_for_agent, "REFRESH_RULES")
 
     return None
 
