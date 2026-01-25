@@ -12,6 +12,8 @@ import com.familyeye.agent.data.repository.AgentConfigRepository
 import com.familyeye.agent.data.repository.AgentConfigRepositoryImpl
 import com.familyeye.agent.data.repository.RuleRepository
 import com.familyeye.agent.data.repository.RuleRepositoryImpl
+import com.familyeye.agent.data.repository.UsageRepository
+import com.familyeye.agent.data.repository.UsageRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -96,4 +98,10 @@ abstract class RepositoryModule {
     abstract fun bindRuleRepository(
         impl: RuleRepositoryImpl
     ): RuleRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUsageRepository(
+        impl: UsageRepositoryImpl
+    ): UsageRepository
 }

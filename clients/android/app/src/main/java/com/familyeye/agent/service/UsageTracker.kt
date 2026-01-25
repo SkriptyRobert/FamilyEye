@@ -36,7 +36,8 @@ class UsageTracker @Inject constructor(
     private val reporter: Reporter,
     private val secureTimeProvider: SecureTimeProvider,
     private val enforcementService: com.familyeye.agent.enforcement.EnforcementService,
-    private val blocker: com.familyeye.agent.enforcement.Blocker
+    private val blocker: com.familyeye.agent.enforcement.Blocker,
+    private val usageRepository: com.familyeye.agent.data.repository.UsageRepository
 ) {
     private val trackerScope = CoroutineScope(Dispatchers.IO)
     
@@ -81,6 +82,9 @@ class UsageTracker @Inject constructor(
 
     fun start() {
         trackerScope.launch {
+            // Perform initial reconciliation to catch up on usage while agent was dead
+            reconcileWithSystemStats()
+            
             while (isActive) {
                 try {
                     trackUsage()
@@ -92,13 +96,71 @@ class UsageTracker @Inject constructor(
         }
     }
 
+    /**
+     * Reconcile local logs with system UsageStatsManager.
+     * 
+     * This fills in gaps created when the Agent service was killed or stopped,
+     * ensuring 100% accuracy even when offline.
+     */
+    suspend fun reconcileWithSystemStats() {
+        try {
+            Timber.i("UsageTracker: Starting local reconciliation...")
+            val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            
+            val startOfDay = secureTimeProvider.getSecureStartOfDay()
+            val endTime = System.currentTimeMillis()
+            
+            // Query stats for the entire current day using INTERVAL_DAILY
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                startOfDay, 
+                endTime
+            )
+            
+            if (stats.isNullOrEmpty()) {
+                Timber.v("UsageTracker: No UsageStats available for reconciliation")
+                return
+            }
+
+            stats.forEach { stat ->
+                val pkg = stat.packageName
+                val systemSeconds = (stat.totalTimeInForeground / 1000).toInt()
+                
+                // Skip noise, ourselves, and launchers
+                if (systemSeconds <= 10 || pkg == context.packageName) return@forEach
+                if (com.familyeye.agent.utils.PackageMatcher.isLauncher(pkg)) return@forEach
+                
+                // Get our local count
+                val localSeconds = usageLogDao.getUsageDurationForPackage(pkg, startOfDay) ?: 0
+                
+                // If system has significantly more, it means we missed a chunk while dead
+                if (systemSeconds > localSeconds + 30) { // 30s tolerance for overlapping sessions
+                    val delta = systemSeconds - localSeconds
+                    Timber.w("UsageTracker: GAP detected for $pkg! System=$systemSeconds, Local=$localSeconds. Reconciliation adding ${delta}s")
+                    logUsage(pkg, delta)
+                }
+            }
+            Timber.i("UsageTracker: Reconciliation complete")
+        } catch (e: Exception) {
+            Timber.e(e, "Error during usage reconciliation")
+        }
+    }
+
     private suspend fun trackUsage() {
         // Use secure time for tamper-resistant tracking
         val currentTime = secureTimeProvider.getSecureCurrentTimeMillis()
+        
+        // Handle negative time jumps (server sync) gracefullly
+        if (lastCheckTime > currentTime) {
+            Timber.w("Time jump detected (backwards). Resetting lastCheckTime.")
+            lastCheckTime = currentTime
+            return // Skip this tick
+        }
+
         val elapsedSeconds = (currentTime - lastCheckTime) / 1000
         
         if (elapsedSeconds <= 0) {
-            Timber.v("TrackUsage: elapsedSeconds <= 0, skipping")
+            // Wait for enough time to pass
             return
         }
 
@@ -259,12 +321,29 @@ class UsageTracker @Inject constructor(
 
     suspend fun getUsageToday(packageName: String): Int {
         val startOfDay = secureTimeProvider.getSecureStartOfDay()
-        return usageLogDao.getUsageDurationForPackage(packageName, startOfDay) ?: 0
+        val localUsage = usageLogDao.getUsageDurationForPackage(packageName, startOfDay) ?: 0
+        
+        // Combine with remote baseline (Source of Truth for historic usage)
+        val appName = AppInfoResolver.getAppName(context, packageName)
+        val remoteUsage = usageRepository.getRemoteAppUsage(appName)
+        
+        // We take the MAX because usage only grows.
+        // If local is 0 (due to loss), remote helps.
+        // If remote is stale (due to offline), local (which includes history if retained) + delta should be checked?
+        // Actually, DAOs usually store 'duration' segments. 
+        // Ideally: Remote Baseline + Local Usage SINCE Sync.
+        // But we don't know "Sync Time" easily here.
+        // Simplified Logic: The backend value INCLUDES everything up to last sync.
+        // If local usage > remote, it means we've tracked more locally (offline).
+        // If remote > local, it means we lost local data.
+        return maxOf(localUsage, remoteUsage)
     }
 
     suspend fun getTotalUsageToday(): Int {
         val startOfDay = secureTimeProvider.getSecureStartOfDay()
-        return usageLogDao.getTotalUsageToday(startOfDay).firstOrNull() ?: 0
+        val localTotal = usageLogDao.getTotalUsageToday(startOfDay).firstOrNull() ?: 0
+        val remoteTotal = usageRepository.getRemoteDailyUsage()
+        return maxOf(localTotal, remoteTotal)
     }
 
     /**

@@ -7,6 +7,8 @@ import com.familyeye.agent.data.local.toDTO
 import com.familyeye.agent.data.local.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.familyeye.agent.data.repository.AgentConfigRepository
+import com.familyeye.agent.data.repository.UsageRepository
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +17,8 @@ import javax.inject.Singleton
 class RuleRepositoryImpl @Inject constructor(
     private val api: FamilyEyeApi,
     private val ruleDao: RuleDao,
-    private val configRepository: AgentConfigRepository
+    private val configRepository: AgentConfigRepository,
+    private val usageRepository: UsageRepository
 ) : RuleRepository {
 
     override fun getRules(): Flow<List<RuleDTO>> {
@@ -52,6 +55,14 @@ class RuleRepositoryImpl @Inject constructor(
                         rulesResponse.settingsProtection ?: "full",
                         rulesResponse.settingsExceptions
                     )
+
+                    // Fix: Persist remote usage baseline to enforce limits even if local logs are lost
+                    if (rulesResponse.usageByApp != null) {
+                        usageRepository.saveRemoteUsage(
+                            rulesResponse.usageByApp,
+                            rulesResponse.dailyUsageSeconds
+                        )
+                    }
                 }
             } else {
                 Timber.e("Failed to fetch rules: ${response.code()}")

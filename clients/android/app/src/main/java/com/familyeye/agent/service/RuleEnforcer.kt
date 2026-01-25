@@ -161,7 +161,6 @@ class RuleEnforcer @Inject constructor(
             "ruleCount" to cachedRules.size,
             "deviceLocked" to isDeviceLocked(),
             "deviceScheduleBlocked" to isDeviceScheduleBlocked(),
-            "unlockActive" to isUnlockSettingsActive(),
             "settingsProtection" to getSettingsProtectionLevel().name
         )
     }
