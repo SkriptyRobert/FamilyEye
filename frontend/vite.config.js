@@ -11,6 +11,12 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  optimizeDeps: {
+    exclude: ['@yume-chan/adb-daemon-webusb']
+  },
+  build: {
+    target: 'esnext'
   }
 })
 

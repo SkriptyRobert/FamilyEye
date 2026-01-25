@@ -14,7 +14,7 @@ export const removeToken = () => {
 }
 
 export const getBackendUrl = () => {
-  // Try localStorage first
+  // Try localStorage first (saved during login)
   const saved = localStorage.getItem(BACKEND_URL_KEY)
   if (saved) return saved
   
@@ -22,17 +22,18 @@ export const getBackendUrl = () => {
   const envUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_DEFAULT_BACKEND_URL
   if (envUrl) return envUrl
   
-  // Auto-detect from current location
+  // Auto-detect from current location - use same protocol and host
   if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol // http: or https:
     const currentHost = window.location.hostname
     const backendPort = import.meta.env?.VITE_BACKEND_PORT || '8000'
-    return currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1'
-      ? `http://${currentHost}:${backendPort}`
-      : `http://localhost:${backendPort}`
+    
+    // Use same protocol as current page (important for self-signed certs)
+    return `${protocol}//${currentHost}:${backendPort}`
   }
   
-  // Fallback
-  return 'http://localhost:8000'
+  // Fallback for development
+  return 'https://localhost:8000'
 }
 
 export const setBackendUrl = (url) => {

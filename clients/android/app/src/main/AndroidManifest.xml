@@ -41,6 +41,9 @@
     <!-- Exact alarms for reliable restart scheduling (Android 12+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" 
         tools:ignore="ScheduleExactAlarm" />
+    
+    <!-- Account access for Device Owner provisioning check -->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
     <application
         android:name=".FamilyEyeApp"

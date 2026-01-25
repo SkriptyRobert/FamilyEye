@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import axios from 'axios'
 import { Sun, Moon, Eye } from 'lucide-react'
 import api, { updateApiBaseURL } from '../../services/api'
 import { setToken, setBackendUrl, getBackendUrl } from '../../utils/auth'
@@ -165,7 +166,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
               type="text"
               value={backendUrl}
               onChange={(e) => setBackendUrlState(e.target.value)}
-              placeholder="Backend URL (např. http://192.168.0.145:8000)"
+              placeholder="Backend URL (automaticky detekováno)"
               className="input"
               required
               disabled={autoDetecting}
@@ -177,7 +178,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
             )}
           </div>
           <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '-10px', marginBottom: '10px' }}>
-            Pro lokální síť použijte IP adresu serveru (např. https://192.168.0.145:8000)
+            URL serveru se detekuje automaticky. Pro jinou adresu zadejte manuálně.
           </small>
           <input
             type="email"

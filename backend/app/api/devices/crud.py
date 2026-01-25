@@ -97,6 +97,33 @@ async def update_device(
     return device
 
 
+@router.post("/{device_id}/device-owner-activated", response_model=DeviceResponse)
+async def device_owner_activated(
+    device_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Mark device as having Device Owner activated."""
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    from datetime import datetime, timezone
+    device.is_device_owner = True
+    device.device_owner_activated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(device)
+    
+    return device
+
+
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_device(
     device_id: int,

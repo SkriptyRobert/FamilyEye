@@ -22,6 +22,16 @@ import javax.inject.Singleton
 class DeviceOwnerPolicyEnforcer @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    /**
+     * Factory method for creating instance without Hilt DI.
+     * Used in DeviceAdminReceiver which doesn't support Hilt injection.
+     */
+    companion object {
+        fun create(context: Context): DeviceOwnerPolicyEnforcer {
+            return DeviceOwnerPolicyEnforcer(context.applicationContext)
+        }
+    }
+
     private val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private val admin = ComponentName(context, FamilyEyeDeviceAdmin::class.java)
     private var lastSettingsBlock: Boolean? = null
@@ -100,6 +110,80 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    /**
+     * Called after Device Owner provisioning is complete.
+     * Activates full protection including uninstall blocking and kiosk mode if needed.
+     */
+    fun onDeviceOwnerActivated() {
+        if (!isDeviceOwner()) {
+            Timber.w("onDeviceOwnerActivated called but not Device Owner")
+            return
+        }
+        
+        Timber.i("Device Owner activated - applying full protection")
+        
+        // Apply baseline restrictions
+        applyBaselineRestrictions()
+        
+        // Block uninstallation
+        setUninstallBlocked(true)
+        
+        // Enable kiosk mode if needed (can be configured later)
+        // enableKioskModeIfNeeded()
+    }
+
+    /**
+     * Block or allow uninstallation of this app.
+     */
+    fun setUninstallBlocked(blocked: Boolean) {
+        if (!isDeviceOwner()) {
+            Timber.w("setUninstallBlocked called but not Device Owner")
+            return
+        }
+        
+        try {
+            dpm.setUninstallBlocked(admin, context.packageName, blocked)
+            Timber.i("DeviceOwner: Uninstall ${if (blocked) "blocked" else "allowed"}")
+        } catch (e: Exception) {
+            Timber.e(e, "DeviceOwner: Failed to set uninstall blocked=$blocked")
+        }
+    }
+
+    /**
+     * Enable Kiosk Mode (Lock Task Mode) for specified packages.
+     * This locks the device to only allow specified apps to run.
+     */
+    fun enableKioskMode(packages: Array<String>) {
+        if (!isDeviceOwner()) {
+            Timber.w("enableKioskMode called but not Device Owner")
+            return
+        }
+        
+        try {
+            dpm.setLockTaskPackages(admin, packages)
+            Timber.i("DeviceOwner: Kiosk mode enabled for ${packages.size} packages")
+        } catch (e: Exception) {
+            Timber.e(e, "DeviceOwner: Failed to enable kiosk mode")
+        }
+    }
+
+    /**
+     * Disable Kiosk Mode (Lock Task Mode).
+     */
+    fun disableKioskMode() {
+        if (!isDeviceOwner()) {
+            Timber.w("disableKioskMode called but not Device Owner")
+            return
+        }
+        
+        try {
+            dpm.setLockTaskPackages(admin, emptyArray())
+            Timber.i("DeviceOwner: Kiosk mode disabled")
+        } catch (e: Exception) {
+            Timber.e(e, "DeviceOwner: Failed to disable kiosk mode")
         }
     }
 }

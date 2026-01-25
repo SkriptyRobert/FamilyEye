@@ -23,9 +23,9 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            // Debug URL - use environment variable or local development default
-            val debugUrl = project.findProperty("DEBUG_BACKEND_URL") as String? ?: "https://192.168.0.145:8000"
-            buildConfigField("String", "BACKEND_URL", "\"$debugUrl\"")
+            // Debug builds use dynamic URL from pairing - no hardcoded fallback
+            // URL is provided via QR code scan or manual input
+            buildConfigField("String", "BACKEND_URL", "\"\"")
         }
         release {
             isMinifyEnabled = false

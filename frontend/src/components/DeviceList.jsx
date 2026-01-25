@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import { formatToLocalTime } from '../utils/date'
 import { getDeviceTypeInfo } from '../utils/formatting'
-import { RefreshCw, Calendar, Smartphone, Trash2, Edit } from 'lucide-react'
+import { RefreshCw, Calendar, Smartphone, Trash2, Edit, Shield } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
+import DeviceOwnerSetup from './DeviceOwnerSetup'
 import './DeviceList.css'
 
 const DeviceList = ({ onSelectDevice }) => {
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deviceOwnerSetupDevice, setDeviceOwnerSetupDevice] = useState(null)
 
   useEffect(() => {
     fetchDevices()
@@ -141,17 +143,31 @@ const DeviceList = ({ onSelectDevice }) => {
                   </button>
 
                   {isAndroid && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleResetPin(device.id)
-                      }}
-                      className="card-btn edit"
-                      title="Resetovat PIN"
-                      style={{ color: 'var(--color-warning, #f59e0b)', borderColor: 'var(--color-warning, #f59e0b)' }}
-                    >
-                      <DynamicIcon name="unlock" size={14} style={{ marginRight: '6px' }} /> PIN
-                    </button>
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleResetPin(device.id)
+                        }}
+                        className="card-btn edit"
+                        title="Resetovat PIN"
+                        style={{ color: 'var(--color-warning, #f59e0b)', borderColor: 'var(--color-warning, #f59e0b)' }}
+                      >
+                        <DynamicIcon name="unlock" size={14} style={{ marginRight: '6px' }} /> PIN
+                      </button>
+                      {/* Always show button for re-activation/first activation */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeviceOwnerSetupDevice(device)
+                        }}
+                        className="card-btn edit"
+                        title={device.is_device_owner ? "Pře-activovat Device Owner" : "Aktivovat Device Owner"}
+                        style={{ color: 'var(--color-primary, #3b82f6)', borderColor: 'var(--color-primary, #3b82f6)' }}
+                      >
+                        <Shield size={14} style={{ marginRight: '6px' }} /> Device Owner
+                      </button>
+                    </>
                   )}
 
                   <button
@@ -167,6 +183,32 @@ const DeviceList = ({ onSelectDevice }) => {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Device Owner Setup Modal */}
+      {deviceOwnerSetupDevice && (
+        <div className="modal-overlay" onClick={() => setDeviceOwnerSetupDevice(null)}>
+          <div className="modal-content device-owner-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Device Owner Setup</h2>
+              <button className="modal-close" onClick={() => setDeviceOwnerSetupDevice(null)}>×</button>
+            </div>
+            <DeviceOwnerSetup
+              deviceId={deviceOwnerSetupDevice.device_id}
+              onComplete={async () => {
+                // Notify backend that Device Owner was activated
+                try {
+                  await api.post(`/api/devices/${deviceOwnerSetupDevice.id}/device-owner-activated`)
+                  await fetchDevices() // Refresh device list
+                  setDeviceOwnerSetupDevice(null)
+                } catch (err) {
+                  console.error('Failed to notify backend:', err)
+                }
+              }}
+              onCancel={() => setDeviceOwnerSetupDevice(null)}
+            />
+          </div>
         </div>
       )}
     </div>

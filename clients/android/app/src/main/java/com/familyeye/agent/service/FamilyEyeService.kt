@@ -15,9 +15,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.ExistingPeriodicWorkPolicy
 
 import androidx.work.WorkManager
-import androidx.work.OneTimeWorkRequest
-import androidx.work.OutOfQuotaPolicy
-import com.familyeye.agent.service.RestartWorker
 import com.familyeye.agent.R
 import com.familyeye.agent.config.AgentConstants
 import com.familyeye.agent.data.repository.AgentConfigRepository
@@ -38,7 +35,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
 import com.familyeye.agent.ui.KeepAliveActivity
 import com.familyeye.agent.receiver.RestartReceiver
-import kotlin.system.exitProcess
 
 
 /**
@@ -75,14 +71,6 @@ class FamilyEyeService : Service(), ScreenStateListener {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "familyeye_monitor_channel"
         
-        // Cooldown to prevent strict restart loops (crash immediately after start)
-        // If service runs for less than this time, we delay the restart slightly instead of firing immediately.
-        private const val RESTART_COOLDOWN_MS = 3_000L  // 3 seconds (was 10s)
-        
-        // Prefs key for tracking last restart
-        private const val PREFS_NAME = "familyeye_service_prefs"
-        private const val KEY_LAST_RESTART = "last_restart_time"
-        
         fun start(context: Context) {
             val intent = Intent(context, FamilyEyeService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -98,13 +86,9 @@ class FamilyEyeService : Service(), ScreenStateListener {
         }
     }
 
-    // Track when service was created to detect restart loop
-    private var serviceCreatedTime = 0L
-
     override fun onCreate() {
         super.onCreate()
-        serviceCreatedTime = System.currentTimeMillis()
-        Timber.d("FamilyEyeService created at $serviceCreatedTime")
+        Timber.d("FamilyEyeService created")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification(), 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -209,104 +193,49 @@ class FamilyEyeService : Service(), ScreenStateListener {
 
     /**
      * Called when user swipes away the app from recent apps.
-     * Uses DUAL ALARM STRATEGY for maximum reliability:
-     * 1. Primary: RestartReceiver at 100ms (fast, lightweight)
-     * 2. Backup: KeepAliveActivity at 3000ms (fallback if receiver fails)
+     * Simplified restart strategy:
+     * 1. PRIMARY: RestartReceiver via AlarmManager (fast, lightweight)
+     * 2. BACKUP: ProcessGuardianWorker via WorkManager (periodic check)
+     * 
+     * Removed exitProcess(0) - let system restart START_STICKY service naturally.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        
-        val currentTime = System.currentTimeMillis()
-        val timeSinceCreation = currentTime - serviceCreatedTime
-        
-        var delayMsPrimary = 100L
-        var delayMsBackup = 3000L
-
-        // COOLDOWN CHECK: If service was just created (<3s), this might be a loop or fast kill.
-        // Instead of skipping restart (which leads to death), we simply DELAY it to break the loop.
-        if (timeSinceCreation < RESTART_COOLDOWN_MS) {
-            Timber.w("Fast kill detected (${timeSinceCreation}ms) - DELAYING restart to break loop")
-            delayMsPrimary = 5000L   // 5s delay
-            delayMsBackup = 8000L    // 8s delay
-        } else {
-             Timber.i("Normal kill detected (${timeSinceCreation}ms) - Executing IMMEDIATE restart")
-        }
-        
-        Timber.w("Scheduling restart alarms: Primary=${delayMsPrimary}ms, Backup=${delayMsBackup}ms")
+        Timber.w("onTaskRemoved - Scheduling restart via RestartReceiver")
         
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
         
         // PRIMARY: Fast restart via RestartReceiver
-        val primaryIntent = Intent(applicationContext, RestartReceiver::class.java).apply {
+        val restartIntent = Intent(applicationContext, RestartReceiver::class.java).apply {
             action = RestartReceiver.ACTION_RESTART
-            putExtra("source", "task_removed_primary")
+            putExtra("source", "task_removed")
         }
-        val primaryPendingIntent = PendingIntent.getBroadcast(
+        val pendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            1001,
-            primaryIntent,
+            1000,
+            restartIntent,
             PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        // BACKUP: Fallback via KeepAliveActivity
-        val backupIntent = Intent(applicationContext, KeepAliveActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra("source", "task_removed_backup")
-        }
-        val backupPendingIntent = PendingIntent.getActivity(
-            applicationContext,
-            1002,
-            backupIntent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-        
+        val currentTime = System.currentTimeMillis()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Schedule PRIMARY
             alarmManager.setExactAndAllowWhileIdle(
                 android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + delayMsPrimary,
-                primaryPendingIntent
-            )
-            // Schedule BACKUP
-            alarmManager.setExactAndAllowWhileIdle(
-                android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + delayMsBackup,
-                backupPendingIntent
+                currentTime + 500L,
+                pendingIntent
             )
         } else {
             alarmManager.setExact(
                 android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + delayMsPrimary,
-                primaryPendingIntent
-            )
-            alarmManager.setExact(
-                android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + delayMsBackup,
-                backupPendingIntent
+                currentTime + 500L,
+                pendingIntent
             )
         }
         
-        Timber.i("Dual restart alarms scheduled: Primary=100ms, Backup=3000ms")
+        Timber.i("Restart alarm scheduled via RestartReceiver")
         
-        // TRIPLE THREAT: WorkManager Backup (Expedited)
-        // This is the "nuclear option" - even if Alarms fail, WorkManager will eventually run this
-        try {
-            val restartWork = OneTimeWorkRequest.Builder(RestartWorker::class.java)
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .addTag("restart_service")
-                .build()
-                
-            WorkManager.getInstance(applicationContext)
-                .enqueue(restartWork)
-                
-            Timber.i("Triple Threat: Expedited WorkManager restart scheduled")
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to schedule WorkManager restart")
-        }
-        
-        // Suicide to ensure fresh start
-        stopSelf()
-        exitProcess(0)
+        // BACKUP: WorkManager will check periodically via ProcessGuardianWorker
+        // No need for immediate WorkManager task - ProcessGuardianWorker runs every 15 min
     }
 
     private fun startMonitoring() {
@@ -509,37 +438,6 @@ class FamilyEyeService : Service(), ScreenStateListener {
         }
     }
 
-    /**
-     * Nuclear restart - completely kills and restarts the process.
-     * Used when soft repair (KeepAliveActivity) fails.
-     */
-    private fun forceNuclearRestart() {
-        Timber.w("Executing NUCLEAR RESTART!")
-        
-        // Schedule restart via AlarmManager
-        val restartIntent = Intent(applicationContext, KeepAliveActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra("source", "nuclear_restart")
-        }
-        
-        val pendingIntent = PendingIntent.getActivity(
-            applicationContext,
-            System.currentTimeMillis().toInt(),  // Unique request code
-            restartIntent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-        
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(
-            android.app.AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 1000,
-            pendingIntent
-        )
-        
-        // Kill process to force fresh start
-        stopSelf()
-        exitProcess(0)
-    }
 
     /**
      * Attempts to repair broken service bindings by launching a transparent activity.

@@ -47,6 +47,10 @@ class Device(Base):
     settings_protection = Column(String, default="full")  # 'full' or 'off'
     settings_exceptions = Column(String, nullable=True)   # Reserved for future use
     
+    # Device Owner status
+    is_device_owner = Column(Boolean, default=False)
+    device_owner_activated_at = Column(DateTime(timezone=True), nullable=True)
+    
     # Relationships
     parent = relationship("User", foreign_keys=[parent_id], back_populates="parent_devices")
     child = relationship("User", foreign_keys=[child_id], back_populates="child_devices")

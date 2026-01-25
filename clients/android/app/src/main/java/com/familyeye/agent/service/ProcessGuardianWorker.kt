@@ -58,6 +58,7 @@ class ProcessGuardianWorker @AssistedInject constructor(
 
     /**
      * Check if all critical agent components are running properly.
+     * Also checks Device Owner status if available.
      */
     private fun checkServiceHealth(): Boolean {
         // 1. Check FamilyEyeService is running
@@ -74,7 +75,18 @@ class ProcessGuardianWorker @AssistedInject constructor(
             return false
         }
 
-        // 3. Check WebSocket connection (allow 2 min silent period)
+        // 3. Check Device Owner status (if applicable)
+        try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+            val isDeviceOwner = dpm.isDeviceOwnerApp(context.packageName)
+            if (isDeviceOwner) {
+                Timber.d("Guardian: Device Owner mode active - enhanced protection")
+            }
+        } catch (e: Exception) {
+            Timber.d("Guardian: Could not check Device Owner status (normal if not provisioned)")
+        }
+
+        // 4. Check WebSocket connection (allow 2 min silent period)
         val isWebSocketConnected = webSocketClient.isConnected.value
         if (!isWebSocketConnected) {
             Timber.w("Guardian: WebSocket not connected (may be temporary)")

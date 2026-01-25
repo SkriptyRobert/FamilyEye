@@ -74,6 +74,9 @@ class DeviceResponse(BaseModel):
     # Settings protection (Android)
     settings_protection: str = "full"  # 'full' or 'off'
     settings_exceptions: Optional[str] = None  # Reserved for future use
+    # Device Owner status
+    is_device_owner: bool = False
+    device_owner_activated_at: Optional[datetime] = None
 
     @validator("last_screenshot", pre=True)
     def ensure_full_url(cls, v):

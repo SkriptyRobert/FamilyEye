@@ -11,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,16 +121,49 @@ fun PairingScreen(
                     Column(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .padding(16.dp),
+                            .padding(24.dp)
+                            .fillMaxWidth()
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        androidx.compose.material.icons.Icons.Default.Error?.let {
+                            Icon(
+                                imageVector = it,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = (uiState as PairingUiState.Error).message,
+                            text = "Chyba párování",
+                            style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.resetState() }) {
-                            Text("Zkusit znovu")
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                text = (uiState as PairingUiState.Error).message,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(onClick = { viewModel.resetState() }) {
+                                Text("Zkusit znovu")
+                            }
+                            Button(onClick = { showManualInput = true }) {
+                                Text("Zadat ručně")
+                            }
                         }
                     }
                 }
@@ -164,7 +199,7 @@ fun PairingScreen(
                                 value = manualBackendUrl,
                                 onValueChange = { manualBackendUrl = it },
                                 label = { Text("Adresa serveru") },
-                                placeholder = { Text("např. 192.168.0.100:8000") },
+                                placeholder = { Text("např. https://192.168.1.100:8000") },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -173,7 +208,7 @@ fun PairingScreen(
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                 ),
                                 supportingText = { 
-                                    Text("IP adresa nebo doména serveru FamilyEye") 
+                                    Text("Zadejte URL serveru (z QR kódu nebo dashboardu)") 
                                 }
                             )
                             

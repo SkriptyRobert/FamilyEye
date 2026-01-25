@@ -12,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import com.familyeye.agent.ui.viewmodel.SetupWizardViewModel
 import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.components.PermissionCard
 import com.familyeye.agent.ui.screens.OemSetupWarningCard
+import com.familyeye.agent.utils.AccountHelper
 import timber.log.Timber
 
 enum class SetupStep {
@@ -34,6 +37,8 @@ enum class SetupStep {
     PIN_SETUP,
     PERMISSIONS,
     OEM_CONFIG,
+    DEVICE_OWNER_PREP,  // NOVY: "Odeberte účty"
+    DEVICE_OWNER_PC,    // NOVY: "Připojte k PC"
     PAIRING,
     COMPLETE
 }
@@ -102,6 +107,8 @@ fun SetupWizardScreen(
                             SetupStep.PIN_SETUP -> "Nastavení PIN"
                             SetupStep.PERMISSIONS -> "Oprávnění"
                             SetupStep.OEM_CONFIG -> "Výrobce"
+                            SetupStep.DEVICE_OWNER_PREP -> "Příprava Device Owner"
+                            SetupStep.DEVICE_OWNER_PC -> "Aktivace Device Owner"
                             SetupStep.PAIRING -> "Párování"
                             SetupStep.COMPLETE -> "Hotovo"
                         }
@@ -195,7 +202,14 @@ fun SetupWizardScreen(
                             if (oemState.needsAttention) {
                                 currentStep = SetupStep.OEM_CONFIG
                             } else {
-                                currentStep = SetupStep.PAIRING
+                                // Check if Device Owner is already active
+                                val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                                val isDeviceOwner = dpm.isDeviceOwnerApp(context.packageName)
+                                if (isDeviceOwner) {
+                                    currentStep = SetupStep.PAIRING
+                                } else {
+                                    currentStep = SetupStep.DEVICE_OWNER_PREP
+                                }
                             }
                         },
                         onBack = { currentStep = SetupStep.PIN_SETUP }
@@ -205,8 +219,38 @@ fun SetupWizardScreen(
                 SetupStep.OEM_CONFIG -> {
                     OemConfigStep(
                         oemViewModel = oemViewModel,
-                        onNext = { currentStep = SetupStep.PAIRING },
+                        onNext = { 
+                            // Check if Device Owner is already active
+                            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                            val isDeviceOwner = dpm.isDeviceOwnerApp(context.packageName)
+                            if (isDeviceOwner) {
+                                currentStep = SetupStep.PAIRING
+                            } else {
+                                currentStep = SetupStep.DEVICE_OWNER_PREP
+                            }
+                        },
                         onBack = { currentStep = SetupStep.PERMISSIONS }
+                    )
+                }
+                
+                SetupStep.DEVICE_OWNER_PREP -> {
+                    DeviceOwnerPrepStep(
+                        onNext = { currentStep = SetupStep.DEVICE_OWNER_PC },
+                        onBack = { 
+                            if (oemState.needsAttention) {
+                                currentStep = SetupStep.OEM_CONFIG
+                            } else {
+                                currentStep = SetupStep.PERMISSIONS
+                            }
+                        },
+                        onSkip = { currentStep = SetupStep.PAIRING }
+                    )
+                }
+                
+                SetupStep.DEVICE_OWNER_PC -> {
+                    DeviceOwnerPcStep(
+                        onNext = { currentStep = SetupStep.PAIRING },
+                        onBack = { currentStep = SetupStep.DEVICE_OWNER_PREP }
                     )
                 }
                 
@@ -650,5 +694,283 @@ private fun OemConfigStep(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun DeviceOwnerPrepStep(
+    onNext: () -> Unit,
+    onBack: () -> Unit,
+    onSkip: () -> Unit
+) {
+    val context = LocalContext.current
+    val accounts = remember { AccountHelper.getGoogleAccounts(context) }
+    val hasAccounts = accounts.isNotEmpty()
+    
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Default.Security,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Příprava Device Owner",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "Device Owner poskytuje maximální ochranu a přežije i agresivní správu baterie.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (hasAccounts) 
+                    MaterialTheme.colorScheme.errorContainer 
+                else 
+                    MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = if (hasAccounts) "Účty musí být odebrány" else "Žádné účty nenalezeny",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (hasAccounts) 
+                        MaterialTheme.colorScheme.onErrorContainer 
+                    else 
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                if (hasAccounts) {
+                    Text(
+                        text = "Nalezené Google účty:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    accounts.forEach { account ->
+                        Text(
+                            text = "• $account",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Odeberte tyto účty v Nastavení → Účty před pokračováním.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                } else {
+                    Text(
+                        text = "Zařízení je připraveno pro Device Owner aktivaci.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Zpět")
+            }
+            
+            if (hasAccounts) {
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(android.provider.Settings.ACTION_SYNC_SETTINGS)
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Otevřít účty")
+                }
+            }
+            
+            Button(
+                onClick = onNext,
+                modifier = Modifier.weight(1f),
+                enabled = !hasAccounts
+            ) {
+                Text("Pokračovat")
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        TextButton(onClick = onSkip) {
+            Text("Přeskočit Device Owner")
+        }
+    }
+}
+
+@Composable
+private fun DeviceOwnerPcStep(
+    onNext: () -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val packageName = context.packageName
+    val adminReceiver = "${packageName}/com.familyeye.agent.receiver.FamilyEyeDeviceAdmin"
+    val adbCommand = "adb shell dpm set-device-owner $adminReceiver"
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Default.Usb,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Aktivace Device Owner",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "Připojte telefon k počítači s Chrome a spusťte aktivaci z dashboardu.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Instrukce:",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text("1. Připojte telefon k PC pomocí USB kabelu", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("2. Zapněte USB ladění (Pokud ještě není)", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("3. Otevřete FamilyEye Dashboard v Chrome", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("4. Přejděte na stránku Device Owner Setup", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("5. Klikněte na 'Aktivovat Device Owner'", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "ADB příkaz (pro ruční aktivaci):",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SelectionContainer {
+                    Text(
+                        text = adbCommand,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Check if Device Owner is already active
+        val dpm = remember { 
+            context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        }
+        val isDeviceOwner = remember { dpm.isDeviceOwnerApp(packageName) }
+        
+        if (isDeviceOwner) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Device Owner je aktivní!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Zpět")
+            }
+            Button(
+                onClick = onNext,
+                modifier = Modifier.weight(1f),
+                enabled = isDeviceOwner
+            ) {
+                Text(if (isDeviceOwner) "Pokračovat" else "Čekám na aktivaci...")
+            }
+        }
     }
 }

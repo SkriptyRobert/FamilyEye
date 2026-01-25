@@ -32,9 +32,11 @@ class PairingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = PairingUiState.Loading
 
+            // Normalize URL before try block so it's available in catch
+            val normalizedUrl = normalizeUrl(backendUrl)
+
             try {
                 // Save backend URL first - this enables the dynamic URL interceptor
-                val normalizedUrl = normalizeUrl(backendUrl)
                 configRepository.saveBackendUrl(normalizedUrl)
                 Timber.d("Saved backend URL: $normalizedUrl")
 
@@ -62,21 +64,68 @@ class PairingViewModel @Inject constructor(
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                     Timber.e("Pairing failed: $errorMsg")
-                    _uiState.value = PairingUiState.Error("Chyba párování: ${response.code()}")
+                    
+                    val userMessage = when (response.code()) {
+                        404 -> "Token nebyl nalezen nebo vypršel.\n\nZkuste vygenerovat nový QR kód."
+                        400 -> "Neplatný požadavek: $errorMsg"
+                        500 -> "Chyba serveru. Zkuste to později."
+                        else -> "Chyba párování (${response.code()}): $errorMsg"
+                    }
+                    
+                    _uiState.value = PairingUiState.Error(userMessage)
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Pairing exception")
-                _uiState.value = PairingUiState.Error(e.message ?: "Chyba připojení")
+                
+                // Provide user-friendly error messages
+                val errorMessage = when {
+                    e.message?.contains("ENETUNREACH") == true || 
+                    e.message?.contains("Network is unreachable") == true ||
+                    e.message?.contains("Failed to connect") == true -> {
+                        "Nelze se připojit k serveru $normalizedUrl.\n\n" +
+                        "Zkontrolujte:\n" +
+                        "• Jste na stejné Wi-Fi síti?\n" +
+                        "• Běží backend server?\n" +
+                        "• Firewall neblokuje port 8000?\n" +
+                        "• IP adresa je správná?"
+                    }
+                    e.message?.contains("SSL") == true || 
+                    e.message?.contains("certificate") == true -> {
+                        "Chyba SSL certifikátu.\n\n" +
+                        "Pro lokální vývoj povolte self-signed certifikáty."
+                    }
+                    e.message?.contains("timeout") == true -> {
+                        "Připojení vypršelo.\n\n" +
+                        "Server neodpovídá. Zkontrolujte, zda backend běží."
+                    }
+                    else -> {
+                        "Chyba připojení: ${e.message ?: "Neznámá chyba"}\n\n" +
+                        "Zkontrolujte síťové připojení a URL serveru."
+                    }
+                }
+                
+                _uiState.value = PairingUiState.Error(errorMessage)
             }
         }
     }
 
     private fun normalizeUrl(url: String): String {
         var normalized = url.trim()
-        // Ensure https:// prefix
+        
+        // Remove any whitespace
+        normalized = normalized.replace("\\s".toRegex(), "")
+        
+        // If user entered just IP:PORT, add https://
         if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
-            normalized = "https://$normalized"
+            // Check if it looks like IP:PORT or domain:PORT
+            if (normalized.contains(":") && !normalized.contains("/")) {
+                normalized = "https://$normalized"
+            } else {
+                // Assume it's a domain or IP without port
+                normalized = "https://$normalized:8000"
+            }
         }
+        
         // Remove trailing slash
         return normalized.trimEnd('/')
     }
