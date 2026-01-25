@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FamilyEye</string>
+    <string name="app_name">FamilyEye Security</string>
     <string name="accessibility_service_description">FamilyEye používá tuto službu k monitorování a blokování aplikací podle pravidel nastavených rodiči.</string>
     <string name="device_admin_description">FamilyEye potřebuje oprávnění správce zařízení pro správu času obrazovky a blokování aplikací.</string>
     

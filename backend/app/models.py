@@ -202,3 +202,54 @@ class ShieldAlert(Base):
     device = relationship("Device", back_populates="shield_alerts")
 
 
+class DeviceOwnerSettings(Base):
+    """
+    Device Owner restriction settings for Android devices.
+    
+    This model stores the configuration for Device Owner mode restrictions,
+    allowing parents to customize which protections are enabled.
+    """
+    __tablename__ = "device_owner_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"), unique=True, nullable=False)
+    
+    # Balanced preset (default restrictions)
+    disallow_safe_boot = Column(Boolean, default=True)
+    disallow_factory_reset = Column(Boolean, default=True)
+    disallow_uninstall_apps = Column(Boolean, default=True)
+    disallow_apps_control = Column(Boolean, default=True)  # Hides Force Stop
+    disallow_debugging = Column(Boolean, default=True)
+    disallow_usb_transfer = Column(Boolean, default=True)
+    disallow_install_unknown_sources = Column(Boolean, default=True)
+    disallow_add_user = Column(Boolean, default=True)
+    disallow_remove_user = Column(Boolean, default=True)
+    disallow_modify_accounts = Column(Boolean, default=True)
+    
+    # Paranoid options (disabled by default, for future configuration)
+    disallow_wifi_config = Column(Boolean, default=False)
+    disallow_bluetooth_config = Column(Boolean, default=False)
+    disallow_sms = Column(Boolean, default=False)
+    disallow_outgoing_calls = Column(Boolean, default=False)
+    disallow_share_location = Column(Boolean, default=False)
+    disallow_screenshots = Column(Boolean, default=False)
+    
+    # Kiosk mode settings (for future implementation)
+    kiosk_mode_enabled = Column(Boolean, default=False)
+    kiosk_allowed_packages = Column(Text, nullable=True)  # JSON array of package names
+    
+    # Auto-grant permissions (for silent permission granting)
+    auto_grant_location = Column(Boolean, default=True)
+    auto_grant_camera = Column(Boolean, default=True)
+    auto_grant_contacts = Column(Boolean, default=False)
+    auto_grant_call_log = Column(Boolean, default=False)
+    auto_grant_sms = Column(Boolean, default=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    device = relationship("Device", backref="device_owner_settings")
+
+

@@ -46,6 +46,7 @@ class Reporter @Inject constructor(
     private val secureTimeProvider: SecureTimeProvider,
     private val webSocketClient: com.familyeye.agent.data.api.WebSocketClient, // Phase 1 Optimization
     private val ruleRepository: com.familyeye.agent.data.repository.RuleRepository, // Rule sync fix
+    private val deviceOwnerEnforcer: com.familyeye.agent.device.DeviceOwnerPolicyEnforcer,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) {
     private val reporterScope = CoroutineScope(Dispatchers.IO)
@@ -238,7 +239,8 @@ class Reporter @Inject constructor(
             deviceId = deviceId,
             apiKey = apiKey,
             usageLogs = reportItems,
-            clientTimestamp = isoFormat.format(Date(secureTimeProvider.getSecureCurrentTimeMillis()))
+            clientTimestamp = isoFormat.format(Date(secureTimeProvider.getSecureCurrentTimeMillis())),
+            protectionLevel = deviceOwnerEnforcer.getProtectionLevel()
         )
 
         lastSyncAttempt = System.currentTimeMillis()

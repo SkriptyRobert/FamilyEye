@@ -42,6 +42,14 @@ class RestartReceiver : BroadcastReceiver() {
                     Timber.e(e2, "Fallback restart also failed")
                 }
             }
+            
+            // RE-SCHEDULE THE HEARTBEAT
+            // This creates the infinite loop. Even if the service starts, we want the next alarm ready.
+            try {
+                com.familyeye.agent.service.AlarmWatchdog.scheduleHeartbeat(context)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to reschedule heartbeat from receiver")
+            }
         }
     }
 }

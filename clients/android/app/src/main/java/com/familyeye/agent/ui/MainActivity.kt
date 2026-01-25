@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         setContent {
-        setContent {
             com.familyeye.agent.ui.theme.FamilyEyeTheme (
                 darkTheme = true // Force dark theme for "Enterprise" feel
             ) {
@@ -62,9 +61,72 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     FamilyEyeApp()
+                    
+                    // Xiaomi Logic: Check for Autostart permission
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    LaunchedEffect(Unit) {
+                        if (isXiaomi()) {
+                            checkXiaomiAutostart(context)
+                        }
+                        checkBatteryOptimization(context)
+                    }
                 }
             }
         }
+    }
+
+    private fun isXiaomi(): Boolean {
+        return Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)
+    }
+
+    private fun checkXiaomiAutostart(context: android.content.Context) {
+        val prefs = context.getSharedPreferences("agent_prefs", android.content.Context.MODE_PRIVATE)
+        val hasAsked = prefs.getBoolean("xiaomi_autostart_asked", false)
+        
+        if (!hasAsked) {
+            val intent = android.content.Intent().apply {
+                component = android.content.ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                )
+            }
+            // Verify if intent can be handled
+            if (context.packageManager.resolveActivity(intent, 0) != null) {
+                // Show dialog (simplified for now as a direct intent launch wrapped in a toast explaining why)
+                // Ideally this should be a nice Compose Dialog, but for Agentic speed we launch it with a Toast.
+                android.widget.Toast.makeText(context, "Please enable AUTOSTART for FamilyEye to ensure protection!", android.widget.Toast.LENGTH_LONG).show()
+                try {
+                    context.startActivity(intent)
+                    prefs.edit().putBoolean("xiaomi_autostart_asked", true).apply()
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to launch Xiaomi Autostart settings")
+                }
+            }
+        }
+    }
+
+    private fun checkBatteryOptimization(context: android.content.Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            val packageName = context.packageName
+            val isIgnoring = powerManager.isIgnoringBatteryOptimizations(packageName)
+            
+            if (!isIgnoring) {
+                Timber.w("Battery Optimization ACTIVE - Requesting exemption")
+                android.widget.Toast.makeText(context, "FAMILYEYE: Requesting Battery Exemption to prevent KILL", android.widget.Toast.LENGTH_LONG).show()
+                
+                try {
+                    val intent = android.content.Intent().apply {
+                        action = android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        data = android.net.Uri.parse("package:$packageName")
+                    }
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to launch Battery Optimization settings")
+                }
+            } else {
+                 Timber.i("Battery Optimization already IGNORED (Good)")
+            }
         }
     }
 

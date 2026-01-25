@@ -91,7 +91,8 @@ class AppDetectorService : AccessibilityService() {
                          AccessibilityEvent.TYPE_VIEW_SCROLLED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
-                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                    AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
             notificationTimeout = 100
         }
         serviceInfo = info
@@ -107,9 +108,24 @@ class AppDetectorService : AccessibilityService() {
         }
     }
 
+    private var eventCounter = 0
+    private val PULSE_THRESHOLD = 5 // Check every 5 events
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!isPaired) return
         
+        // Accessibility Pulse: Ensure service is alive on every few events
+        // Interaction with the screen is the best time to revive the agent.
+        eventCounter++
+        if (eventCounter >= PULSE_THRESHOLD) {
+            eventCounter = 0
+            try {
+                FamilyEyeService.start(applicationContext)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         val packageName = event?.packageName?.toString() ?: return
         val className = event.className?.toString()
 
@@ -117,6 +133,17 @@ class AppDetectorService : AccessibilityService() {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             currentPackage = packageName
             
+            // VERBOSE LOGGING for debugging Xiaomi Recents
+            Timber.i("Window Change: $packageName / $className")
+            
+            // Xiaomi Specific: Xiaomi often handles Recents inside the Launcher (com.miui.home)
+            // If we detect the Recents view name, block it immediately.
+            if (packageName == "com.miui.home" && className?.contains("recents", ignoreCase = true) == true) {
+                Timber.w("Xiaomi Recents detected via className - Blocking!")
+                blockApp(packageName, BlockType.TAMPERING, "Překrytí přehledu aplikací")
+                return
+            }
+
             // Delegate blocking logic to EnforcementService
             handleWindowChange(packageName, className)
             
@@ -137,6 +164,33 @@ class AppDetectorService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    override fun onKeyEvent(event: android.view.KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        val action = event.action
+        
+        // DISCOVERY LOGS: Capture what Xiaomi sends
+        if (action == android.view.KeyEvent.ACTION_DOWN) {
+            Timber.i("Key Event: $keyCode (action=$action)")
+        }
+        
+        // BLOCK RECENTS BUTTON
+        // KEYCODE_APP_SWITCH is the modern square button.
+        // KEYCODE_MENU is the legacy mapping for the same physical button on some Xiaomi ROMs.
+        if (keyCode == android.view.KeyEvent.KEYCODE_APP_SWITCH || 
+            keyCode == android.view.KeyEvent.KEYCODE_RECENT_APPS ||
+            keyCode == android.view.KeyEvent.KEYCODE_MENU) {
+            
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                Timber.w("BLOCKED: Recents button pressed")
+                // Optionally show a toast or overlay explanation?
+                // For now, silent block is more confusing/effective for the child.
+            }
+            return true // Consume the event (DO NOT pass to system)
+        }
+        
+        return super.onKeyEvent(event)
     }
 
     private fun handleWindowChange(packageName: String, className: String?) {

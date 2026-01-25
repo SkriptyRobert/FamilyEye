@@ -1,13 +1,19 @@
 """Device instant actions (lock, unlock, internet control, etc.)."""
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from ...database import get_db
 from ...models import Device, User, Rule
-from ..auth import get_current_parent
+from ..auth import get_current_parent, verify_password
 from ..websocket import send_command_to_device
 
 router = APIRouter()
+
+
+class DeactivateDeviceOwnerRequest(BaseModel):
+    """Request to deactivate Device Owner protections."""
+    password: str  # Require password for extra security
 
 
 def _get_device(device_id: int, current_user: User, db: Session) -> Device:
@@ -219,4 +225,91 @@ async def reset_pin(
     return {
         "status": "success", 
         "message": f"PIN reset command sent to device. New PIN: {new_pin}"
+    }
+
+
+# ==================== Device Owner Management ====================
+
+@router.post("/{device_id}/deactivate-device-owner", status_code=status.HTTP_200_OK)
+async def deactivate_device_owner(
+    device_id: int,
+    request: DeactivateDeviceOwnerRequest,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """
+    Deactivate Device Owner protections on a device.
+    
+    This allows the parent to remove all Device Owner restrictions,
+    enabling normal app uninstallation.
+    
+    Requires password verification for extra security.
+    """
+    # 1. Verify password
+    if not verify_password(request.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+    
+    # 2. Get and validate device
+    device = _get_device(device_id, current_user, db)
+    
+    # 3. Check if device has Device Owner
+    if not device.is_device_owner:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Device Owner is not active on this device"
+        )
+    
+    # 4. Send WebSocket command to deactivate
+    await send_command_to_device(device.device_id, "DEACTIVATE_DEVICE_OWNER")
+    
+    # 5. Update device status in database
+    device.is_device_owner = False
+    device.device_owner_activated_at = None
+    db.commit()
+    
+    return {
+        "status": "success",
+        "message": "Device Owner deactivation command sent. All protections will be removed."
+    }
+
+
+@router.post("/{device_id}/reactivate-device-owner", status_code=status.HTTP_200_OK)
+async def reactivate_device_owner(
+    device_id: int,
+    request: DeactivateDeviceOwnerRequest,  # Same schema, password required
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """
+    Reactivate Device Owner protections on a device.
+    
+    This re-enables all Device Owner restrictions after they were deactivated.
+    Device must still be a Device Owner at Android level.
+    
+    Requires password verification for security.
+    """
+    # 1. Verify password
+    if not verify_password(request.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password"
+        )
+    
+    # 2. Get and validate device
+    device = _get_device(device_id, current_user, db)
+    
+    # 3. Send WebSocket command to reactivate
+    await send_command_to_device(device.device_id, "REACTIVATE_DEVICE_OWNER")
+    
+    # 4. Update device status in database
+    device.is_device_owner = True
+    device.device_owner_activated_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    return {
+        "status": "success",
+        "message": "Device Owner reactivation command sent. Protections will be restored."
     }

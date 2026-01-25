@@ -270,3 +270,103 @@ class ShieldAlertResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Device Owner Settings schemas
+class DeviceOwnerSettingsCreate(BaseModel):
+    """Schema for creating Device Owner settings for a device."""
+    device_id: int
+    # Balanced preset (defaults)
+    disallow_safe_boot: bool = True
+    disallow_factory_reset: bool = True
+    disallow_uninstall_apps: bool = True
+    disallow_apps_control: bool = True
+    disallow_debugging: bool = True
+    disallow_usb_transfer: bool = True
+    disallow_install_unknown_sources: bool = True
+    disallow_add_user: bool = True
+    disallow_remove_user: bool = True
+    disallow_modify_accounts: bool = True
+    # Paranoid options (disabled by default)
+    disallow_wifi_config: bool = False
+    disallow_bluetooth_config: bool = False
+    disallow_sms: bool = False
+    disallow_outgoing_calls: bool = False
+    disallow_share_location: bool = False
+    disallow_screenshots: bool = False
+    # Kiosk mode
+    kiosk_mode_enabled: bool = False
+    kiosk_allowed_packages: Optional[str] = None
+    # Auto-grant permissions
+    auto_grant_location: bool = True
+    auto_grant_camera: bool = True
+    auto_grant_contacts: bool = False
+    auto_grant_call_log: bool = False
+    auto_grant_sms: bool = False
+
+
+class DeviceOwnerSettingsUpdate(BaseModel):
+    """Schema for updating Device Owner settings."""
+    # All fields are optional for partial updates
+    disallow_safe_boot: Optional[bool] = None
+    disallow_factory_reset: Optional[bool] = None
+    disallow_uninstall_apps: Optional[bool] = None
+    disallow_apps_control: Optional[bool] = None
+    disallow_debugging: Optional[bool] = None
+    disallow_usb_transfer: Optional[bool] = None
+    disallow_install_unknown_sources: Optional[bool] = None
+    disallow_add_user: Optional[bool] = None
+    disallow_remove_user: Optional[bool] = None
+    disallow_modify_accounts: Optional[bool] = None
+    disallow_wifi_config: Optional[bool] = None
+    disallow_bluetooth_config: Optional[bool] = None
+    disallow_sms: Optional[bool] = None
+    disallow_outgoing_calls: Optional[bool] = None
+    disallow_share_location: Optional[bool] = None
+    disallow_screenshots: Optional[bool] = None
+    kiosk_mode_enabled: Optional[bool] = None
+    kiosk_allowed_packages: Optional[str] = None
+    auto_grant_location: Optional[bool] = None
+    auto_grant_camera: Optional[bool] = None
+    auto_grant_contacts: Optional[bool] = None
+    auto_grant_call_log: Optional[bool] = None
+    auto_grant_sms: Optional[bool] = None
+
+
+class DeviceOwnerSettingsResponse(BaseModel):
+    """Schema for returning Device Owner settings."""
+    id: int
+    device_id: int
+    # Balanced preset
+    disallow_safe_boot: bool
+    disallow_factory_reset: bool
+    disallow_uninstall_apps: bool
+    disallow_apps_control: bool
+    disallow_debugging: bool
+    disallow_usb_transfer: bool
+    disallow_install_unknown_sources: bool
+    disallow_add_user: bool
+    disallow_remove_user: bool
+    disallow_modify_accounts: bool
+    # Paranoid options
+    disallow_wifi_config: bool
+    disallow_bluetooth_config: bool
+    disallow_sms: bool
+    disallow_outgoing_calls: bool
+    disallow_share_location: bool
+    disallow_screenshots: bool
+    # Kiosk mode
+    kiosk_mode_enabled: bool
+    kiosk_allowed_packages: Optional[str]
+    # Auto-grant permissions
+    auto_grant_location: bool
+    auto_grant_camera: bool
+    auto_grant_contacts: bool
+    auto_grant_call_log: bool
+    auto_grant_sms: bool
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True

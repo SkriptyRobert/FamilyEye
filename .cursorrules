@@ -13,6 +13,15 @@ To build the FamilyEye Windows Agent and Installer, follow these specific steps:
 For a detailed breakdown of the architecture (Service vs User Agent) and build steps, refer to:
 [build-process.md](file:///.agent/rules/build-process.md)
 
+## Android Agent Management
+
+To manage, build, and test the Android Agent via ADB:
+- **Build APK**: Use `./gradlew.bat assembleDebug` in `clients/android`.
+- **ADB Management**: Use the detailed guide for Device Owner setup and persistence testing.
+
+For ADB commands and Device Owner procedures, refer to:
+[android-adb-management.md](file:///.agent/rules/android-adb-management.md)
+
 ## Coding Standards
 - Use `Path` objects from `pathlib` for all file/directory operations.
 - All agent logs should go to `C:\ProgramData\FamilyEye\Agent\Logs`.

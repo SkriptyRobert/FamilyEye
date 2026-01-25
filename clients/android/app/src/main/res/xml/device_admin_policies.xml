@@ -13,5 +13,7 @@
         <limit-password />
         <!-- Watch login attempts -->
         <watch-login />
+        <!-- Disable keyguard (lock screen) - deprecated but needed for older APIs -->
+        <disable-keyguard />
     </uses-policies>
 </device-admin>

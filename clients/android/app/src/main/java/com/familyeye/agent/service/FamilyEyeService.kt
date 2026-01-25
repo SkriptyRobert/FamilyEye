@@ -65,11 +65,15 @@ class FamilyEyeService : Service(), ScreenStateListener {
     @Inject
     lateinit var webSocketClient: com.familyeye.agent.data.api.WebSocketClient
 
+    @Inject
+    lateinit var deviceOwnerEnforcer: com.familyeye.agent.device.DeviceOwnerPolicyEnforcer
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "familyeye_monitor_channel"
+        private const val DEVICE_OWNER_NOTIFICATION_ID = 1003
         
         fun start(context: Context) {
             val intent = Intent(context, FamilyEyeService::class.java)
@@ -98,6 +102,19 @@ class FamilyEyeService : Service(), ScreenStateListener {
             }
         )
         
+        // Apply Device Owner restrictions if active
+        // Also log the current protection tier for debugging
+        val protectionLevel = deviceOwnerEnforcer.getProtectionLevel()
+        Timber.i("FamilyEye Service Starting... Protection Level: $protectionLevel")
+        
+        deviceOwnerEnforcer.applyBaselineRestrictions()
+        
+        // Start Watchdog Service in separate process
+        startWatchdog()
+        
+        // Schedule JobScheduler Resurrection (3rd layer of persistence)
+        ResurrectionJobService.schedule(applicationContext)
+        
         // Schedule WorkManager guardian as backup recovery mechanism
         scheduleGuardianWorker()
         
@@ -106,6 +123,31 @@ class FamilyEyeService : Service(), ScreenStateListener {
         
         // Register screen state receiver for immediate sync on wake
         registerScreenStateReceiver()
+
+        // Mutual monitoring: periodic check of the watchdog
+        startWatchdogMonitoring()
+        
+        // Start Alarm Heartbeat (Aggressive persistence)
+        AlarmWatchdog.scheduleHeartbeat(applicationContext)
+    }
+
+    private fun startWatchdog() {
+        try {
+            val intent = Intent(this, WatchdogService::class.java)
+            startService(intent)
+            Timber.i("Started WatchdogService from FamilyEyeService")
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to start WatchdogService")
+        }
+    }
+
+    private fun startWatchdogMonitoring() {
+        serviceScope.launch {
+            while (isActive) {
+                delay(10000) // Check watchdog every 10 seconds
+                startWatchdog()
+            }
+        }
     }
 
     /**
@@ -277,6 +319,14 @@ class FamilyEyeService : Service(), ScreenStateListener {
                          Timber.i("Screenshot Requested")
                          captureAndUploadScreenshot()
                      }
+                     "DEACTIVATE_DEVICE_OWNER" -> {
+                         Timber.i("Device Owner Deactivation Requested")
+                         handleDeactivateDeviceOwner()
+                     }
+                     "REACTIVATE_DEVICE_OWNER" -> {
+                         Timber.i("Device Owner Reactivation Requested")
+                         handleReactivateDeviceOwner()
+                     }
                      else -> {
                          if (command.command.startsWith("RESET_PIN:")) {
                              val newPin = command.command.substringAfter("RESET_PIN:")
@@ -287,6 +337,70 @@ class FamilyEyeService : Service(), ScreenStateListener {
                  }
              }
         }
+    }
+
+    /**
+     * Handle Device Owner deactivation command from parent dashboard.
+     * Removes all Device Owner restrictions, allowing app uninstallation.
+     */
+    private fun handleDeactivateDeviceOwner() {
+        try {
+            val enforcer = com.familyeye.agent.device.DeviceOwnerPolicyEnforcer.create(this)
+            val success = enforcer.deactivateAllProtections()
+            
+            if (success) {
+                Timber.i("Device Owner protections deactivated successfully")
+                // Show notification to inform user
+                showDeviceOwnerNotification(
+                    "Ochrana deaktivována",
+                    "Device Owner ochrany byly deaktivovány rodicem. Aplikaci lze nyni odinstalovat."
+                )
+            } else {
+                Timber.w("Failed to deactivate Device Owner protections")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error deactivating Device Owner")
+        }
+    }
+
+    /**
+     * Handle Device Owner reactivation command from parent dashboard.
+     * Re-enables all Device Owner restrictions.
+     */
+    private fun handleReactivateDeviceOwner() {
+        try {
+            val enforcer = com.familyeye.agent.device.DeviceOwnerPolicyEnforcer.create(this)
+            val success = enforcer.reactivateAllProtections()
+            
+            if (success) {
+                Timber.i("Device Owner protections reactivated successfully")
+                showDeviceOwnerNotification(
+                    "Ochrana aktivovana",
+                    "Device Owner ochrany byly znovu aktivovany."
+                )
+            } else {
+                Timber.w("Failed to reactivate Device Owner protections")
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error reactivating Device Owner")
+        }
+    }
+
+    /**
+     * Show a notification about Device Owner status change.
+     */
+    private fun showDeviceOwnerNotification(title: String, message: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        
+        val notification = androidx.core.app.NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        
+        notificationManager.notify(DEVICE_OWNER_NOTIFICATION_ID, notification)
     }
 
     private fun captureAndUploadScreenshot() {

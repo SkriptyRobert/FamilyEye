@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import { formatToLocalTime } from '../utils/date'
 import { getDeviceTypeInfo } from '../utils/formatting'
-import { RefreshCw, Calendar, Smartphone, Trash2, Edit, Shield } from 'lucide-react'
+import { RefreshCw, Calendar, Smartphone, Trash2, Edit, Shield, ShieldOff, AlertTriangle } from 'lucide-react'
 import DynamicIcon from './DynamicIcon'
 import DeviceOwnerSetup from './DeviceOwnerSetup'
 import './DeviceList.css'
@@ -12,6 +12,12 @@ const DeviceList = ({ onSelectDevice }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deviceOwnerSetupDevice, setDeviceOwnerSetupDevice] = useState(null)
+  
+  // Device Owner deactivation state
+  const [deactivateDevice, setDeactivateDevice] = useState(null)
+  const [deactivatePassword, setDeactivatePassword] = useState('')
+  const [deactivateLoading, setDeactivateLoading] = useState(false)
+  const [deactivateError, setDeactivateError] = useState('')
 
   useEffect(() => {
     fetchDevices()
@@ -73,6 +79,38 @@ const DeviceList = ({ onSelectDevice }) => {
     } catch (err) {
       setError('Chyba při resetování PINu');
       console.error(err);
+    }
+  }
+
+  // Handle Device Owner deactivation
+  const handleDeactivateDeviceOwner = async () => {
+    if (!deactivatePassword.trim()) {
+      setDeactivateError('Zadejte heslo pro potvrzení');
+      return;
+    }
+
+    setDeactivateLoading(true);
+    setDeactivateError('');
+
+    try {
+      await api.post(`/api/devices/${deactivateDevice.id}/deactivate-device-owner`, {
+        password: deactivatePassword
+      });
+      
+      // Success - close modal and refresh
+      setDeactivateDevice(null);
+      setDeactivatePassword('');
+      await fetchDevices();
+      alert('Device Owner ochrany byly deaktivovany. Aplikaci lze nyni odinstalovat.');
+    } catch (err) {
+      console.error('Failed to deactivate Device Owner:', err);
+      if (err.response?.status === 401) {
+        setDeactivateError('Nesprávné heslo');
+      } else {
+        setDeactivateError(err.response?.data?.detail || 'Chyba při deaktivaci Device Owner');
+      }
+    } finally {
+      setDeactivateLoading(false);
     }
   }
 
@@ -155,18 +193,38 @@ const DeviceList = ({ onSelectDevice }) => {
                       >
                         <DynamicIcon name="unlock" size={14} style={{ marginRight: '6px' }} /> PIN
                       </button>
-                      {/* Always show button for re-activation/first activation */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDeviceOwnerSetupDevice(device)
-                        }}
-                        className="card-btn edit"
-                        title={device.is_device_owner ? "Pře-activovat Device Owner" : "Aktivovat Device Owner"}
-                        style={{ color: 'var(--color-primary, #3b82f6)', borderColor: 'var(--color-primary, #3b82f6)' }}
-                      >
-                        <Shield size={14} style={{ marginRight: '6px' }} /> Device Owner
-                      </button>
+                      
+                      {/* Device Owner activation button (when not active) */}
+                      {!device.is_device_owner && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeviceOwnerSetupDevice(device)
+                          }}
+                          className="card-btn edit"
+                          title="Aktivovat Device Owner"
+                          style={{ color: 'var(--color-primary, #3b82f6)', borderColor: 'var(--color-primary, #3b82f6)' }}
+                        >
+                          <Shield size={14} style={{ marginRight: '6px' }} /> Aktivovat DO
+                        </button>
+                      )}
+                      
+                      {/* Device Owner deactivation button (when active) */}
+                      {device.is_device_owner && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeactivateDevice(device)
+                            setDeactivatePassword('')
+                            setDeactivateError('')
+                          }}
+                          className="card-btn edit"
+                          title="Deaktivovat Device Owner ochrany"
+                          style={{ color: 'var(--color-error, #ef4444)', borderColor: 'var(--color-error, #ef4444)' }}
+                        >
+                          <ShieldOff size={14} style={{ marginRight: '6px' }} /> Deaktivovat DO
+                        </button>
+                      )}
                     </>
                   )}
 
@@ -208,6 +266,71 @@ const DeviceList = ({ onSelectDevice }) => {
               }}
               onCancel={() => setDeviceOwnerSetupDevice(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Device Owner Deactivation Confirmation Modal */}
+      {deactivateDevice && (
+        <div className="modal-overlay" onClick={() => setDeactivateDevice(null)}>
+          <div className="modal-content deactivate-do-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Deaktivovat Device Owner</h2>
+              <button className="modal-close" onClick={() => setDeactivateDevice(null)}>×</button>
+            </div>
+            
+            <div className="deactivate-do-content">
+              <div className="warning-box">
+                <AlertTriangle size={24} />
+                <div>
+                  <strong>Upozorneni</strong>
+                  <p>Toto odstraní všechny Device Owner ochrany ze zarizeni "{deactivateDevice.name}".</p>
+                </div>
+              </div>
+              
+              <div className="deactivate-info">
+                <p><strong>Co se stane:</strong></p>
+                <ul>
+                  <li>Aplikaci FamilyEye bude mozne odinstalovat</li>
+                  <li>Factory reset bude povolen</li>
+                  <li>Safe Mode bude povolen</li>
+                  <li>Force Stop bude povolen</li>
+                  <li>USB debugging bude povolen</li>
+                </ul>
+              </div>
+              
+              <div className="password-confirm">
+                <label>Zadejte heslo pro potvrzeni:</label>
+                <input
+                  type="password"
+                  value={deactivatePassword}
+                  onChange={(e) => setDeactivatePassword(e.target.value)}
+                  placeholder="Vase heslo"
+                  autoFocus
+                />
+              </div>
+              
+              {deactivateError && (
+                <div className="error-message">{deactivateError}</div>
+              )}
+              
+              <div className="modal-actions">
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setDeactivateDevice(null)}
+                  disabled={deactivateLoading}
+                >
+                  Zrusit
+                </button>
+                <button 
+                  className="btn-danger"
+                  onClick={handleDeactivateDeviceOwner}
+                  disabled={deactivateLoading || !deactivatePassword.trim()}
+                >
+                  {deactivateLoading ? 'Deaktivuji...' : 'Deaktivovat ochrany'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

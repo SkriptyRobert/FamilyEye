@@ -47,6 +47,7 @@
 
     <application
         android:name=".FamilyEyeApp"
+        android:testOnly="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -88,6 +89,19 @@
                 android:value="parental_control_monitoring" />
         </service>
 
+        <!-- Watchdog Service (separate process) -->
+        <service
+            android:name=".service.WatchdogService"
+            android:enabled="true"
+            android:exported="false"
+            android:process=":watchdog" />
+
+        <!-- Job Scheduler Backup (survives app kill) -->
+        <service
+            android:name=".service.ResurrectionJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
+            
         <!-- Accessibility Service for real-time app detection -->
         <service
             android:name=".service.AppDetectorService"

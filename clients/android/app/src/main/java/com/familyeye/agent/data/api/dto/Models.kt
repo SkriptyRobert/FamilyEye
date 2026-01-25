@@ -73,7 +73,8 @@ data class AgentReportRequest(
     @Json(name = "device_usage_today_seconds") val deviceUsageTodaySeconds: Int? = null,
     @Json(name = "battery_level") val batteryLevel: Int? = null, // Added based on plan
     @Json(name = "android_version") val androidVersion: String? = null, // Added based on plan
-    @Json(name = "screen_on") val screenOn: Boolean? = null // Added based on plan
+    @Json(name = "screen_on") val screenOn: Boolean? = null, // Added based on plan
+    @Json(name = "protection_level") val protectionLevel: String? = null // GOD_MODE, RESURRECTION_MODE, NONE
 )
 
 @JsonClass(generateAdapter = true)
