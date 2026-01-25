@@ -12,16 +12,48 @@ import timber.log.Timber
  * This is more reliable than Activity-based restart on some OEMs (especially Xiaomi).
  * 
  * Using a receiver instead of activity avoids UI permission issues and is faster.
+ * 
+ * Includes debounce mechanism to prevent multiple concurrent restarts.
  */
 class RestartReceiver : BroadcastReceiver() {
     
     companion object {
         const val ACTION_RESTART = "com.familyeye.agent.ACTION_RESTART"
+        
+        // Debounce settings
+        private const val DEBOUNCE_PREFS = "restart_debounce"
+        private const val KEY_LAST_RESTART = "last_restart_time"
+        private const val DEBOUNCE_MS = 2000L // Skip if restart was triggered within 2 seconds
+        
+        /**
+         * Check if a restart should be debounced.
+         * Returns true if restart should proceed, false if it should be skipped.
+         */
+        @Synchronized
+        fun shouldProceedWithRestart(context: Context, source: String): Boolean {
+            val prefs = context.getSharedPreferences(DEBOUNCE_PREFS, Context.MODE_PRIVATE)
+            val lastRestart = prefs.getLong(KEY_LAST_RESTART, 0L)
+            val now = System.currentTimeMillis()
+            
+            return if (now - lastRestart < DEBOUNCE_MS) {
+                Timber.d("Restart debounced from '$source' (last restart ${now - lastRestart}ms ago)")
+                false
+            } else {
+                prefs.edit().putLong(KEY_LAST_RESTART, now).apply()
+                true
+            }
+        }
     }
     
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION_RESTART) {
             val source = intent.getStringExtra("source") ?: "unknown"
+            
+            // Debounce check - skip if restart was triggered recently
+            if (!shouldProceedWithRestart(context, source)) {
+                return
+            }
+            
             Timber.i("RestartReceiver triggered from: $source")
             
             // Start the foreground service immediately

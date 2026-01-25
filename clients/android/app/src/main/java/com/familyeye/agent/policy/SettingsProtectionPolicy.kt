@@ -22,11 +22,8 @@ object SettingsProtectionPolicy {
      * @return true if access should be blocked
      */
     fun shouldBlockSettings(
-        protectionLevel: ProtectionLevel,
-        isUnlockActive: Boolean
+        protectionLevel: ProtectionLevel
     ): Boolean {
-        // Parent unlocked temporarily - always allow
-        if (isUnlockActive) return false
         
         return when (protectionLevel) {
             ProtectionLevel.FULL -> true  // Block everything

@@ -92,9 +92,8 @@ class EnforcementService @Inject constructor(
         // This MUST be before Device Lock check to prevent access to Clear All
         if (PackageMatcher.isSystemUI(packageName)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
-            val unlockActive = ruleEnforcer.isUnlockSettingsActive()
             val shouldBlockSystemUI = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSettings(
-                protectionLevel, unlockActive
+                protectionLevel
             )
             if (shouldBlockSystemUI) {
                 Timber.w("CRITICAL: SystemUI blocked (prevents Clear All access)")
@@ -182,10 +181,5 @@ class EnforcementService @Inject constructor(
         return PackageMatcher.isLauncher(packageName)
     }
 
-    /**
-     * Check if unlock settings is active (parent unlocked device temporarily).
-     */
-    fun isUnlockSettingsActive(): Boolean {
-        return ruleEnforcer.isUnlockSettingsActive()
-    }
+
 }

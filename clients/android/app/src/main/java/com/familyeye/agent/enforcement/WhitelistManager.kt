@@ -40,9 +40,8 @@ class WhitelistManager @Inject constructor(
         // When Settings protection is FULL, SystemUI must be blocked to prevent Clear All access
         if (PackageMatcher.isSystemUI(packageName)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
-            val unlockActive = ruleEnforcer.isUnlockSettingsActive()
             val shouldBlock = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSettings(
-                protectionLevel, unlockActive
+                protectionLevel
             )
             // If we should block SystemUI, don't whitelist it
             return !shouldBlock
@@ -50,7 +49,7 @@ class WhitelistManager @Inject constructor(
 
         // 3. Settings - blocked by default, allowed only when unlocked
         if (PackageMatcher.isSettings(packageName)) {
-            val isUnlocked = ruleEnforcer.isUnlockSettingsActive()
+            val isUnlocked = false
             if (isUnlocked) {
                 Timber.v("Settings whitelisted - unlock active")
             }

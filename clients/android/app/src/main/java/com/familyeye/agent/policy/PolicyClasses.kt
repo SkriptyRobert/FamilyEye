@@ -237,26 +237,4 @@ object DeviceLockPolicy {
     }
 }
 
-/**
- * Policy for unlock settings (temporary parent access).
- */
-object UnlockPolicy {
-    
-    /**
-     * Check if settings unlock is currently active.
-     * 
-     * @param rules All current rules  
-     * @return true if unlock is active
-     */
-    fun isUnlockActive(rules: List<RuleDTO>): Boolean {
-        return rules.any { rule ->
-            if (!rule.enabled || rule.ruleType != "unlock_settings") return@any false
-            
-            // If no schedule, assume valid if enabled
-            val start = rule.scheduleStartTime ?: return@any true
-            val end = rule.scheduleEndTime ?: return@any true
-            
-            TimeUtils.isCurrentTimeInRange(start, end)
-        }
-    }
-}
+

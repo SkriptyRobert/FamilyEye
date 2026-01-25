@@ -334,13 +334,7 @@ const AndroidDeviceCard = ({
 
                     {/* Extended actions */}
                     <div className="detail-section actions-section">
-                        <button
-                            className={`action-btn-full unlock ${actionPending[`${device.id}-unlock-settings`] ? 'pending' : ''}`}
-                            onClick={() => onDeviceAction(device.id, 'unlock-settings')}
-                            disabled={actionPending[`${device.id}-unlock-settings`] || !device.is_online}
-                        >
-                            <Settings size={14} style={{ marginRight: '6px' }} /> Povolit nastavení (5 min)
-                        </button>
+
 
                         <button
                             className={`action-btn-full reset-pin ${actionPending[`${device.id}-reset-pin`] ? 'pending' : ''}`}

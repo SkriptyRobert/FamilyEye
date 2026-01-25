@@ -1,8 +1,8 @@
 package com.familyeye.agent.ui
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
+import com.familyeye.agent.receiver.RestartReceiver
 import com.familyeye.agent.service.FamilyEyeService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +18,7 @@ import timber.log.Timber
  * "Foreground" / User-Interactive for a moment, which dramatically increases
  * the chance that the System will re-bind the Accessibility Service (AppDetector).
  * 
- * IMPROVED: Now waits briefly to verify service health and logs recovery source.
+ * Includes debounce mechanism to prevent concurrent restart attempts.
  */
 class KeepAliveActivity : Activity() {
 
@@ -26,33 +26,41 @@ class KeepAliveActivity : Activity() {
         super.onCreate(savedInstanceState)
         
         val source = intent.getStringExtra("source") ?: "unknown"
-        Timber.d("KeepAliveActivity: Recovery triggered from '$source'")
+        
+        // Debounce check - skip if restart was triggered recently
+        if (!RestartReceiver.shouldProceedWithRestart(this, "KeepAlive:$source")) {
+            Timber.d("KeepAliveActivity: Skipped (debounced) from '$source'")
+            finish()
+            return
+        }
+        
+        Timber.i("KeepAliveActivity: Recovery triggered from '$source'")
 
         // 1. Ensure Service is running first
         try {
             FamilyEyeService.start(this)
-            Timber.i("FamilyEyeService.start() called")
+            Timber.i("FamilyEyeService.start() called from KeepAlive")
         } catch (e: Exception) {
             Timber.e(e, "Failed to start service from KeepAlive")
         }
 
-        // 2. Wait and verify service health before closing
+        // 2. Wait to allow service to stabilize before closing
         CoroutineScope(Dispatchers.Main).launch {
             verifyAndFinish()
         }
     }
 
     /**
-     * Simplified recovery: Start service and finish immediately.
-     * Service will handle Accessibility binding verification internally.
+     * Wait for service to stabilize then finish.
+     * Increased delay to 1000ms to allow Accessibility Service rebinding.
      */
     private suspend fun verifyAndFinish() {
-        // Brief delay to allow service to start
-        delay(500)
+        // Increased delay to allow service and Accessibility rebinding
+        delay(1000)
         
         // Finish immediately without animation
         finish()
+        @Suppress("DEPRECATION")
         overridePendingTransition(0, 0)
     }
-
 }

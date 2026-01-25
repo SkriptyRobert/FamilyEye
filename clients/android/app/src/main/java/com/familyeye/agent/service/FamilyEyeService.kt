@@ -261,33 +261,47 @@ class FamilyEyeService : Service(), ScreenStateListener {
         
         
         val currentTime = System.currentTimeMillis()
+        val restartDelay = 300L // Fast restart delay
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Aggressive approach: Try EXACT first, fallback to standard on crash.
-            // Device Owners usually have this permission, so checks might be false negatives on some ROMs.
-            try {
-                alarmManager.setExactAndAllowWhileIdle(
+            // Android 12+: Check permission before using exact alarms
+            if (alarmManager.canScheduleExactAlarms()) {
+                try {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        currentTime + restartDelay,
+                        pendingIntent
+                    )
+                } catch (e: SecurityException) {
+                    // Fallback: Use inexact but Doze-aware alarm
+                    Timber.w(e, "Exact alarm failed despite permission check, using inexact")
+                    alarmManager.setAndAllowWhileIdle(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        currentTime + restartDelay,
+                        pendingIntent
+                    )
+                }
+            } else {
+                // No exact alarm permission - use Doze-aware inexact alarm
+                Timber.w("No exact alarm permission, using setAndAllowWhileIdle")
+                alarmManager.setAndAllowWhileIdle(
                     android.app.AlarmManager.RTC_WAKEUP,
-                    currentTime + 300L, // Reduced to 300ms for even faster restart
-                    pendingIntent
-                )
-            } catch (e: SecurityException) {
-                Timber.e(e, "Exact alarm permission missing in onTaskRemoved - falling back to set()")
-                alarmManager.set(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    currentTime + 300L,
+                    currentTime + restartDelay,
                     pendingIntent
                 )
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android 6-11: Exact alarms allowed without permission
             alarmManager.setExactAndAllowWhileIdle(
                 android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + 300L,
+                currentTime + restartDelay,
                 pendingIntent
             )
         } else {
+            // Pre-Android 6: Use standard exact alarm
             alarmManager.setExact(
                 android.app.AlarmManager.RTC_WAKEUP,
-                currentTime + 500L,
+                currentTime + restartDelay,
                 pendingIntent
             )
         }

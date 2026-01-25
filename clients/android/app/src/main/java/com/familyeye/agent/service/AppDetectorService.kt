@@ -137,8 +137,8 @@ class AppDetectorService : AccessibilityService() {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             currentPackage = packageName
             
-            // VERBOSE LOGGING for debugging Xiaomi Recents
-            Timber.i("Window Change: $packageName / $className")
+            // Verbose logging - only shown in debug builds
+            Timber.v("Window Change: $packageName / $className")
             
             // Xiaomi Specific: Xiaomi often handles Recents inside the Launcher (com.miui.home)
             // If we detect the Recents view name, block it immediately.
@@ -174,9 +174,9 @@ class AppDetectorService : AccessibilityService() {
         val keyCode = event.keyCode
         val action = event.action
         
-        // DISCOVERY LOGS: Capture what Xiaomi sends
+        // Verbose logging - only shown in debug builds
         if (action == android.view.KeyEvent.ACTION_DOWN) {
-            Timber.i("Key Event: $keyCode (action=$action)")
+            Timber.v("Key Event: $keyCode (action=$action)")
         }
         
         // BLOCK RECENTS BUTTON

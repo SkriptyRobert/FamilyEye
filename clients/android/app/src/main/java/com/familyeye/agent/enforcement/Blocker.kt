@@ -10,6 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
@@ -24,6 +25,8 @@ class Blocker @Inject constructor(
     @ApplicationContext private val context: Context,
     private val blockOverlayManager: BlockOverlayManager
 ) {
+    // Dedicated scope with SupervisorJob to prevent memory leaks
+    private val blockerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
      * Execute a block action against a specific package.
@@ -44,7 +47,7 @@ class Blocker @Inject constructor(
         
         // 2. Show Overlay (The "Shield")
         // We use the main thread for UI operations
-        CoroutineScope(Dispatchers.Main).launch {
+        blockerScope.launch {
             blockOverlayManager.show(packageName, blockType, scheduleInfo)
         }
     }

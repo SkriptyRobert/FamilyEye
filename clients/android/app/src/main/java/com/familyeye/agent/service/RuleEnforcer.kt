@@ -6,7 +6,7 @@ import com.familyeye.agent.policy.DeviceLockPolicy
 import com.familyeye.agent.policy.LimitPolicy
 import com.familyeye.agent.policy.SchedulePolicy
 import com.familyeye.agent.policy.SettingsProtectionPolicy
-import com.familyeye.agent.policy.UnlockPolicy
+
 import com.familyeye.agent.utils.AppInfoResolver
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -125,12 +125,7 @@ class RuleEnforcer @Inject constructor(
         return exceeded
     }
 
-    /**
-     * Check if settings unlock is currently active (parent allowed access).
-     */
-    fun isUnlockSettingsActive(): Boolean {
-        return UnlockPolicy.isUnlockActive(getRules())
-    }
+
 
     /**
      * Get remaining daily limit time in seconds.

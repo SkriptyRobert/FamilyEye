@@ -47,6 +47,10 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
             "disallow_debugging" to UserManager.DISALLOW_DEBUGGING_FEATURES,
             "disallow_usb_transfer" to UserManager.DISALLOW_USB_FILE_TRANSFER,
             "disallow_install_unknown_sources" to UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+            // Time manipulation protection - prevents bypassing time limits
+            "disallow_config_date_time" to UserManager.DISALLOW_CONFIG_DATE_TIME,
+            // USB/OTG protection - prevents physical media access
+            "disallow_mount_physical_media" to UserManager.DISALLOW_MOUNT_PHYSICAL_MEDIA,
             // Paranoid options for future use
             "disallow_config_wifi" to UserManager.DISALLOW_CONFIG_WIFI,
             "disallow_config_bluetooth" to UserManager.DISALLOW_CONFIG_BLUETOOTH,
@@ -71,9 +75,13 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
         UserManager.DISALLOW_UNINSTALL_APPS,
         UserManager.DISALLOW_APPS_CONTROL,
         UserManager.DISALLOW_MODIFY_ACCOUNTS,
+        UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+        // Time manipulation protection - prevents bypassing time limits
+        UserManager.DISALLOW_CONFIG_DATE_TIME,
+        // USB/OTG protection - prevents physical media access
+        UserManager.DISALLOW_MOUNT_PHYSICAL_MEDIA
         // UserManager.DISALLOW_DEBUGGING_FEATURES, // Temporarily disabled for dev testing
         // UserManager.DISALLOW_USB_FILE_TRANSFER,  // Temporarily disabled for dev testing
-        UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES
     )
 
     fun isDeviceOwner(): Boolean {
@@ -136,10 +144,14 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun isPackageInstalled(pm: PackageManager, packageName: String): Boolean {
         return try {
-            pm.getPackageInfo(packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(packageName, 0)
+            }
             true
         } catch (_: Exception) {
             false
@@ -525,7 +537,6 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "DeviceOwner: Failed to set camera disabled")
             false
-            false
         }
     }
 
@@ -544,23 +555,23 @@ class DeviceOwnerPolicyEnforcer @Inject constructor(
     }
 
     /**
-     * Helper to call setControlDisabledPackages via reflection to avoid compiler issues.
+     * Helper to call setControlDisabledPackages via reflection.
+     * This API exists on some Android 11+ ROMs but is not in the public SDK.
      */
     private fun safeSetControlDisabledPackages(packages: List<String>) {
         try {
-            // DISCOVERY: Log all methods to see what Xiaomi did
-            val methods = DevicePolicyManager::class.java.methods
-            val matches = methods.filter { it.name.contains("Package", ignoreCase = true) || it.name.startsWith("set") }
-            Timber.d("DPM Discovery: Found ${matches.size} candidate methods")
-            matches.take(20).forEach { 
-                Timber.v("DPM Method: ${it.name}(${it.parameterTypes.joinToString { p -> p.simpleName }})")
-            }
-
-            val method = DevicePolicyManager::class.java.getMethod("setControlDisabledPackages", ComponentName::class.java, List::class.java)
+            val method = DevicePolicyManager::class.java.getMethod(
+                "setControlDisabledPackages", 
+                ComponentName::class.java, 
+                List::class.java
+            )
             method.invoke(dpm, admin, packages)
-            Timber.i("Reflection: Successfully called setControlDisabledPackages with ${packages.size} packages")
+            Timber.i("DeviceOwner: setControlDisabledPackages applied to ${packages.size} packages")
+        } catch (e: NoSuchMethodException) {
+            // Method not available on this device/ROM - this is expected on many devices
+            Timber.d("DeviceOwner: setControlDisabledPackages not available on this device")
         } catch (e: Exception) {
-            Timber.e("Reflection: Failed to call setControlDisabledPackages on ${dpm.javaClass.name}: ${e}")
+            Timber.w(e, "DeviceOwner: Failed to call setControlDisabledPackages")
         }
     }
 }

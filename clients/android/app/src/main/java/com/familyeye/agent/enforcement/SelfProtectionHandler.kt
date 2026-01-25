@@ -52,14 +52,14 @@ class SelfProtectionHandler @Inject constructor(
      * @return true if this appears to be a tampering attempt
      */
     fun isTamperingAttempt(packageName: String, className: String?): Boolean {
-        val isUnlockActive = ruleEnforcer.isUnlockSettingsActive()
+        val isUnlockActive = false
         
         // ========== Settings Protection ==========
         // Binary logic: FULL blocks everything, OFF allows everything
         if (PackageMatcher.isSettings(packageName)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
             val shouldBlock = SettingsProtectionPolicy.shouldBlockSettings(
-                protectionLevel, isUnlockActive
+                protectionLevel
             )
             if (shouldBlock) {
                 Timber.w("Settings blocked: level=$protectionLevel")
@@ -74,7 +74,7 @@ class SelfProtectionHandler @Inject constructor(
         if (PackageMatcher.isSystemUI(packageName) && isRecentsActivity(className)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
             val shouldBlock = SettingsProtectionPolicy.shouldBlockSettings(
-                protectionLevel, isUnlockActive
+                protectionLevel
             )
             if (shouldBlock) {
                 Timber.w("Recents blocked: protection=$protectionLevel")
@@ -119,7 +119,7 @@ class SelfProtectionHandler @Inject constructor(
      * Settings are blocked by default but can be unlocked by parent.
      */
     fun isSettingsAccessAllowed(): Boolean {
-        return ruleEnforcer.isUnlockSettingsActive()
+        return false
     }
     
     // ==================== Phase 3: New Security Checks ====================
