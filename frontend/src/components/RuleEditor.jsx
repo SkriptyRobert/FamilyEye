@@ -39,6 +39,7 @@ const RuleEditor = ({ deviceId }) => {
   const [showForm, setShowForm] = useState(false)
   const [editingRuleId, setEditingRuleId] = useState(null)
   const [frequentApps, setFrequentApps] = useState([])
+  const [allApps, setAllApps] = useState([]) // New: All apps recorded for device
   const [hiddenApps, setHiddenApps] = useState([])
   const [selectedApps, setSelectedApps] = useState([])
   const [appInputValue, setAppInputValue] = useState('')
@@ -53,6 +54,7 @@ const RuleEditor = ({ deviceId }) => {
     if (selectedDeviceId) {
       fetchRules()
       fetchFrequentApps()
+      fetchDeviceApps() // New: Fetch all apps for autocomplete
     }
     fetchHiddenApps()
   }, [selectedDeviceId])
@@ -131,19 +133,46 @@ const RuleEditor = ({ deviceId }) => {
     }
   }
 
+  const fetchDeviceApps = async () => {
+    if (!selectedDeviceId) return
+    try {
+      const response = await api.get(`/api/reports/device/${selectedDeviceId}/apps`)
+      setAllApps(response.data || [])
+    } catch (err) {
+      console.error('Error fetching all device apps:', err)
+      setAllApps([])
+    }
+  }
+
   const getSuggestedApps = () => {
-    const allApps = [...frequentApps]
+    // If user is typing, show filtered matches from ALL apps
+    if (appInputValue.trim().length > 0) {
+      const search = appInputValue.toLowerCase()
+      return allApps
+        .filter(app =>
+          app.display_name?.toLowerCase().includes(search) ||
+          app.app_name?.toLowerCase().includes(search)
+        )
+        .slice(0, 15) // Show more results when searching
+        .map(app => ({
+          name: app.display_name || 'Neznámá aplikace',
+          keyword: app.app_name || ''
+        }))
+    }
+
+    // Default view: Show top usage apps
+    const allAppsList = [...frequentApps]
 
     DEFAULT_SUGGESTED_APPS.forEach(defaultApp => {
-      const exists = allApps.some(
-        app => app.keyword.toLowerCase() === defaultApp.keyword.toLowerCase()
+      const exists = allAppsList.some(
+        app => (app.keyword?.toLowerCase() || '') === (defaultApp.keyword?.toLowerCase() || '')
       )
       if (!exists) {
-        allApps.push(defaultApp)
+        allAppsList.push(defaultApp)
       }
     })
 
-    return allApps.slice(0, 12)
+    return allAppsList.slice(0, 12)
   }
 
   const handleSubmit = async (e) => {
@@ -246,6 +275,7 @@ const RuleEditor = ({ deviceId }) => {
   }
 
   const handleAddApp = (appName) => {
+    if (!appName) return
     const trimmed = appName.trim().toLowerCase()
     if (trimmed && !selectedApps.includes(trimmed)) {
       setSelectedApps([...selectedApps, trimmed])
@@ -392,21 +422,31 @@ const RuleEditor = ({ deviceId }) => {
 
                       <div className="suggested-apps" style={{ marginTop: '10px' }}>
                         <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>
-                          {frequentApps.length > 0 ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpoužívanější aplikace:</> : 'Časté aplikace:'}
+                          {appInputValue.trim().length > 0
+                            ? <><Plus size={12} style={{ marginRight: '4px' }} /> Nalezené aplikace:</>
+                            : frequentApps.length > 0
+                              ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpoužívanější aplikace:</>
+                              : 'Časté aplikace:'
+                          }
                         </small>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                          {getSuggestedApps().map(app => (
+                          {getSuggestedApps().map((app, idx) => (
                             <button
-                              key={app.keyword}
+                              key={`${app.keyword}-${idx}`}
                               type="button"
-                              className={`tag-button ${selectedApps.includes(app.keyword.toLowerCase()) ? 'selected' : ''}`}
+                              className={`tag-button ${selectedApps.includes(app.keyword?.toLowerCase() || '') ? 'selected' : ''}`}
                               onClick={() => handleSuggestedClick(app)}
-                              title={app.duration ? `Použito: ${Math.round(app.duration / 60)} min` : ''}
-                              disabled={selectedApps.includes(app.keyword.toLowerCase())}
+                              title={app.duration ? `Použito: ${Math.round(app.duration / 60)} min` : app.keyword}
+                              disabled={selectedApps.includes(app.keyword?.toLowerCase() || '')}
                             >
                               {app.name}
                             </button>
                           ))}
+                          {appInputValue.trim().length > 0 && getSuggestedApps().length === 0 && (
+                            <span style={{ fontSize: '0.85em', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                              Žádná aplikace nebyla nalezena. Můžete ji přidat tlačítkem Enter.
+                            </span>
+                          )}
                         </div>
                       </div>
                     </>

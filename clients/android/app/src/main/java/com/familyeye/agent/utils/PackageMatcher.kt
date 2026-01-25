@@ -31,22 +31,41 @@ object PackageMatcher {
      * @return true if any matching strategy succeeds
      */
     fun matches(packageName: String, ruleName: String, appLabel: String): Boolean {
-        // 1. Exact package name match (case-insensitive)
-        if (ruleName.equals(packageName, ignoreCase = true)) {
+        val normRule = normalize(ruleName)
+        val normPackage = normalize(packageName)
+        val normLabel = normalize(appLabel)
+
+        // 1. Exact package name match (case-insensitive + normalizovaná diakritika)
+        if (normRule.equals(normPackage, ignoreCase = true)) {
             return true
         }
 
-        // 2. Partial package name match (rule name contained in package)
-        if (packageName.contains(ruleName, ignoreCase = true)) {
+        // 2. Partial package name match
+        if (normPackage.contains(normRule, ignoreCase = true)) {
             return true
         }
 
-        // 3. App label match (case-insensitive)
-        if (ruleName.equals(appLabel, ignoreCase = true)) {
+        // 3. App label match
+        if (normRule.equals(normLabel, ignoreCase = true)) {
             return true
         }
 
         return false
+    }
+
+    /**
+     * Remove accents/diacritics from a string.
+     * E.g., "Poznámky" -> "Poznamky"
+     */
+    private fun normalize(input: String?): String {
+        if (input == null) return ""
+        val normalized = java.text.Collator.getInstance(java.util.Locale.US).apply {
+            strength = java.text.Collator.PRIMARY
+        }
+        // Simplest way in Kotlin without heavy ICU: Normalizer
+        val temp = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+        val pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+")
+        return pattern.matcher(temp).replaceAll("")
     }
 
     /**

@@ -97,3 +97,58 @@ async def cleanup_old_logs(
     
     db.commit()
     return {"status": "success", "deleted_count": deleted_count}
+
+
+@router.get("/device/{device_id}/apps")
+async def get_all_device_apps(
+    device_id: int,
+    current_user: User = Depends(get_current_parent),
+    db: Session = Depends(get_db)
+):
+    """Get a list of all unique apps ever recorded for this device."""
+    # Verify device ownership
+    device = db.query(Device).filter(
+        Device.id == device_id,
+        Device.parent_id == current_user.id
+    ).first()
+    
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+    
+    # Query all unique apps for this device
+    unique_apps = db.query(
+        UsageLog.app_name,
+        func.max(UsageLog.timestamp).label('last_seen')
+    ).filter(
+        UsageLog.device_id == device_id
+    ).group_by(UsageLog.app_name).all()
+    
+    # Process and enrich
+    app_list = []
+    seen_friendly = set()
+    
+    for app in unique_apps:
+        raw_name = app[0]
+        if not app_filter.is_trackable(raw_name):
+            continue
+            
+        friendly_name = app_filter.get_friendly_name(raw_name)
+        
+        # Avoid duplicate friendly names in the list (e.g., msedge and msedge.exe)
+        if friendly_name.lower() in seen_friendly:
+            continue
+            
+        seen_friendly.add(friendly_name.lower())
+        
+        app_list.append({
+            "app_name": raw_name,
+            "display_name": friendly_name,
+            "category": app_filter.get_category(raw_name),
+            "icon_type": app_filter.get_icon_type(raw_name)
+        })
+        
+    # Sort alphabetically by display name
+    return sorted(app_list, key=lambda x: x["display_name"].lower())
