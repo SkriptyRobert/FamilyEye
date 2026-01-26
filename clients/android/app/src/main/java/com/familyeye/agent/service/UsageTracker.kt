@@ -57,15 +57,25 @@ class UsageTracker @Inject constructor(
             if (_lastCheckTime == -1L) {
                 // First access: load from prefs or initialize to NOW (only once)
                 val stored = prefs.getLong("last_usage_check_time", -1L)
+                val now = secureTimeProvider.getSecureCurrentTimeMillis()
+                
                 _lastCheckTime = if (stored == -1L) {
                     // First ever run: set to NOW and persist
-                    val now = secureTimeProvider.getSecureCurrentTimeMillis()
                     prefs.edit().putLong("last_usage_check_time", now).apply()
                     Timber.d("UsageTracker: Initialized lastCheckTime to NOW = $now")
                     now
                 } else {
-                    Timber.d("UsageTracker: Restored lastCheckTime from prefs = $stored")
-                    stored
+                    // Check if stored time is too old (app was killed/restarted)
+                    // If gap > 60 seconds, reset to NOW to prevent phantom usage
+                    val gapSeconds = (now - stored) / 1000
+                    if (gapSeconds > 60) {
+                        Timber.w("UsageTracker: Large gap detected (${gapSeconds}s). Resetting lastCheckTime to NOW to prevent phantom usage.")
+                        prefs.edit().putLong("last_usage_check_time", now).apply()
+                        now
+                    } else {
+                        Timber.d("UsageTracker: Restored lastCheckTime from prefs = $stored (gap: ${gapSeconds}s)")
+                        stored
+                    }
                 }
             }
             return _lastCheckTime
@@ -82,8 +92,11 @@ class UsageTracker @Inject constructor(
 
     fun start() {
         trackerScope.launch {
-            // Perform initial reconciliation to catch up on usage while agent was dead
-            reconcileWithSystemStats()
+            // DISABLED: Reconciliation causes inflated usage stats
+            // reconcileWithSystemStats()
+            // Instead, just reset lastCheckTime to NOW on fresh start
+            // This prevents phantom usage from accumulating
+            Timber.i("UsageTracker: Starting fresh tracking (no reconciliation)")
             
             while (isActive) {
                 try {
@@ -136,8 +149,15 @@ class UsageTracker @Inject constructor(
                 // If system has significantly more, it means we missed a chunk while dead
                 if (systemSeconds > localSeconds + 30) { // 30s tolerance for overlapping sessions
                     val delta = systemSeconds - localSeconds
-                    Timber.w("UsageTracker: GAP detected for $pkg! System=$systemSeconds, Local=$localSeconds. Reconciliation adding ${delta}s")
-                    logUsage(pkg, delta)
+                    
+                    // BUGFIX: Limit reconciliation to max 5 minutes per app
+                    // Large deltas usually indicate stale system stats, not real gaps
+                    val cappedDelta = minOf(delta, 300)  // Max 5 minutes
+                    
+                    if (cappedDelta > 0) {
+                        Timber.w("UsageTracker: GAP detected for $pkg! System=$systemSeconds, Local=$localSeconds. Reconciliation adding ${cappedDelta}s (capped from ${delta}s)")
+                        logUsage(pkg, cappedDelta)
+                    }
                 }
             }
             Timber.i("UsageTracker: Reconciliation complete")
