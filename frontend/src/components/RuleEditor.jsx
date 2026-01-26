@@ -1,34 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
-import {
-  RefreshCw, X, Globe, BarChart3, Monitor, Shield, Plus
-} from 'lucide-react'
-import DayPicker from './DayPicker'
-import { RuleCard, HiddenAppsSection } from './rules'
+import { RefreshCw, X, Shield, Plus } from 'lucide-react'
+import { 
+  RuleCard, 
+  HiddenAppsSection, 
+  AppPicker, 
+  ScheduleForm,
+  INITIAL_FORM_DATA,
+  SYSTEM_APP_PATTERNS 
+} from './rules'
 import './RuleEditor.css'
-
-// Fallback suggested apps (shown when no data available)
-const DEFAULT_SUGGESTED_APPS = [
-  { name: 'Epic Games', keyword: 'Epic' },
-  { name: 'Steam', keyword: 'Steam' },
-  { name: 'Discord', keyword: 'Discord' },
-  { name: 'Chrome', keyword: 'Chrome' },
-  { name: 'Roblox', keyword: 'Roblox' },
-  { name: 'Minecraft', keyword: 'Minecraft' }
-]
-
-const INITIAL_FORM_DATA = {
-  rule_type: 'app_block',
-  name: '',
-  app_name: '',
-  website_url: '',
-  time_limit: '',
-  enabled: true,
-  schedule_start_time: '',
-  schedule_end_time: '',
-  schedule_days: '',
-  block_network: false
-}
 
 const RuleEditor = ({ deviceId }) => {
   const [devices, setDevices] = useState([])
@@ -39,22 +20,21 @@ const RuleEditor = ({ deviceId }) => {
   const [showForm, setShowForm] = useState(false)
   const [editingRuleId, setEditingRuleId] = useState(null)
   const [frequentApps, setFrequentApps] = useState([])
-  const [allApps, setAllApps] = useState([]) // New: All apps recorded for device
+  const [allApps, setAllApps] = useState([])
   const [hiddenApps, setHiddenApps] = useState([])
   const [selectedApps, setSelectedApps] = useState([])
   const [appInputValue, setAppInputValue] = useState('')
   const [scheduleTarget, setScheduleTarget] = useState('apps')
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
 
-  useEffect(() => {
-    fetchDevices()
-  }, [])
+  // Data fetching
+  useEffect(() => { fetchDevices() }, [])
 
   useEffect(() => {
     if (selectedDeviceId) {
       fetchRules()
       fetchFrequentApps()
-      fetchDeviceApps() // New: Fetch all apps for autocomplete
+      fetchDeviceApps()
     }
     fetchHiddenApps()
   }, [selectedDeviceId])
@@ -94,7 +74,6 @@ const RuleEditor = ({ deviceId }) => {
 
   const fetchRules = async () => {
     if (!selectedDeviceId) return
-
     setLoading(true)
     try {
       const response = await api.get(`/api/rules/device/${selectedDeviceId}`)
@@ -108,16 +87,13 @@ const RuleEditor = ({ deviceId }) => {
 
   const fetchFrequentApps = async () => {
     if (!selectedDeviceId) return
-
     try {
       const response = await api.get(`/api/reports/device/${selectedDeviceId}/summary`)
       const topApps = response.data?.top_apps || []
-
       const apps = topApps
         .filter(app => {
           const name = (app.app_name || '').toLowerCase()
-          const skipPatterns = ['service', 'host', 'helper', 'system', 'windows', 'svchost']
-          return !skipPatterns.some(p => name.includes(p))
+          return !SYSTEM_APP_PATTERNS.some(p => name.includes(p))
         })
         .slice(0, 8)
         .map(app => ({
@@ -125,10 +101,8 @@ const RuleEditor = ({ deviceId }) => {
           keyword: app.app_name,
           duration: app.duration_seconds
         }))
-
       setFrequentApps(apps)
     } catch (err) {
-      console.error('Error fetching frequent apps:', err)
       setFrequentApps([])
     }
   }
@@ -139,70 +113,32 @@ const RuleEditor = ({ deviceId }) => {
       const response = await api.get(`/api/reports/device/${selectedDeviceId}/apps`)
       setAllApps(response.data || [])
     } catch (err) {
-      console.error('Error fetching all device apps:', err)
       setAllApps([])
     }
   }
 
-  const getSuggestedApps = () => {
-    // If user is typing, show filtered matches from ALL apps
-    if (appInputValue.trim().length > 0) {
-      const search = appInputValue.toLowerCase()
-      return allApps
-        .filter(app =>
-          app.display_name?.toLowerCase().includes(search) ||
-          app.app_name?.toLowerCase().includes(search)
-        )
-        .slice(0, 15) // Show more results when searching
-        .map(app => ({
-          name: app.display_name || 'Neznámá aplikace',
-          keyword: app.app_name || ''
-        }))
-    }
-
-    // Default view: Show top usage apps
-    const allAppsList = [...frequentApps]
-
-    DEFAULT_SUGGESTED_APPS.forEach(defaultApp => {
-      const exists = allAppsList.some(
-        app => (app.keyword?.toLowerCase() || '') === (defaultApp.keyword?.toLowerCase() || '')
-      )
-      if (!exists) {
-        allAppsList.push(defaultApp)
-      }
-    })
-
-    return allAppsList.slice(0, 12)
-  }
-
+  // Form handling
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!selectedDeviceId) return
 
     // Validation
-    if (formData.rule_type === 'app_block' || formData.rule_type === 'time_limit') {
-      if (selectedApps.length === 0) {
-        alert('Prosím vyberte alespoň jednu aplikaci')
-        return
-      }
+    if ((formData.rule_type === 'app_block' || formData.rule_type === 'time_limit') && selectedApps.length === 0) {
+      alert('Prosim vyberte alespon jednu aplikaci')
+      return
     }
-    if (formData.rule_type === 'schedule' && scheduleTarget === 'apps') {
-      if (selectedApps.length === 0) {
-        alert('Prosím vyberte alespoň jednu aplikaci')
-        return
-      }
+    if (formData.rule_type === 'schedule' && scheduleTarget === 'apps' && selectedApps.length === 0) {
+      alert('Prosim vyberte alespon jednu aplikaci')
+      return
     }
-    if (formData.rule_type === 'web_block') {
-      if (!formData.website_url.trim()) {
-        alert('Prosím zadejte URL webu')
-        return
-      }
+    if (formData.rule_type === 'web_block' && !formData.website_url.trim()) {
+      alert('Prosim zadejte URL webu')
+      return
     }
 
     try {
       const appNameValue = formData.rule_type === 'schedule' && scheduleTarget === 'device'
-        ? ''
-        : selectedApps.join(',')
+        ? '' : selectedApps.join(',')
 
       const payload = {
         ...formData,
@@ -221,7 +157,7 @@ const RuleEditor = ({ deviceId }) => {
       fetchRules()
     } catch (err) {
       console.error('Error saving rule:', err)
-      alert('Chyba při ukládání pravidla')
+      alert('Chyba pri ukladani pravidla')
     }
   }
 
@@ -236,18 +172,10 @@ const RuleEditor = ({ deviceId }) => {
 
   const handleEdit = (rule) => {
     setEditingRuleId(rule.id)
-
-    let apps = []
-    if (rule.app_name) {
-      apps = rule.app_name.split(',').filter(a => a)
-    }
-
-    setSelectedApps(apps)
-
+    setSelectedApps(rule.app_name ? rule.app_name.split(',').filter(a => a) : [])
     if (rule.rule_type === 'schedule') {
       setScheduleTarget(!rule.app_name ? 'device' : 'apps')
     }
-
     setFormData({
       rule_type: rule.rule_type,
       name: rule.name || '',
@@ -260,7 +188,6 @@ const RuleEditor = ({ deviceId }) => {
       schedule_days: rule.schedule_days || '',
       block_network: rule.block_network || false
     })
-
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -287,64 +214,46 @@ const RuleEditor = ({ deviceId }) => {
     setSelectedApps(selectedApps.filter(a => a !== appName))
   }
 
-  const handleAppInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddApp(appInputValue)
-    }
-  }
-
-  const handleSuggestedClick = (app) => {
-    handleAddApp(app.keyword)
-  }
-
+  // Render
   if (loading && devices.length === 0) {
-    return <div className="loading">Načítání...</div>
+    return <div className="loading">Nacitani...</div>
   }
 
   const currentDevice = devices.find(d => d.id === selectedDeviceId)
+  const showAppPicker = formData.rule_type !== 'daily_limit' && 
+    formData.rule_type !== 'web_block' && 
+    formData.rule_type !== 'website_block' &&
+    !(formData.rule_type === 'schedule' && scheduleTarget === 'device')
 
   return (
     <div className="rule-editor premium-card">
+      {/* Header */}
       <div className="rule-editor-header">
         <div className="header-title-group">
-          <h2>Správa pravidel</h2>
+          <h2>Sprava pravidel</h2>
           <span className="rules-count-badge">{rules.length}</span>
         </div>
-
         <div className="header-actions">
           <select
             value={selectedDeviceId || ''}
             onChange={(e) => setSelectedDeviceId(parseInt(e.target.value))}
             className="device-select"
           >
-            <option value="">Vyberte zařízení</option>
+            <option value="">Vyberte zarizeni</option>
             {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.name}
-              </option>
+              <option key={device.id} value={device.id}>{device.name}</option>
             ))}
           </select>
-
           <div className="action-buttons-group">
-            <button
-              onClick={fetchRules}
-              className="refresh-btn-icon"
-              disabled={loading}
-              title="Obnovit pravidla"
-            >
+            <button onClick={fetchRules} className="refresh-btn-icon" disabled={loading} title="Obnovit pravidla">
               <RefreshCw size={18} className={loading ? 'spinning' : ''} />
             </button>
-
             <button
-              onClick={() => {
-                setShowForm(!showForm)
-                if (showForm) setEditingRuleId(null)
-              }}
+              onClick={() => { setShowForm(!showForm); if (showForm) setEditingRuleId(null) }}
               className={`add-rule-btn ${showForm ? 'active' : ''}`}
             >
               {showForm ? <X size={18} /> : <Plus size={18} />}
-              <span>{showForm ? 'Zrušit' : 'Nové pravidlo'}</span>
+              <span>{showForm ? 'Zrusit' : 'Nove pravidlo'}</span>
             </button>
           </div>
         </div>
@@ -352,6 +261,7 @@ const RuleEditor = ({ deviceId }) => {
 
       {selectedDeviceId && (
         <>
+          {/* Rule Form */}
           {showForm && (
             <form onSubmit={handleSubmit} className="rule-form premium-card">
               <div className="form-group">
@@ -362,170 +272,90 @@ const RuleEditor = ({ deviceId }) => {
                   className="input"
                 >
                   <option value="app_block">Blokovat aplikaci</option>
-                  <option value="time_limit">Absolutní denní limit (pro aplikaci)</option>
-                  <option value="daily_limit">Celkový denní limit zařízení</option>
+                  <option value="time_limit">Absolutni denni limit (pro aplikaci)</option>
+                  <option value="daily_limit">Celkovy denni limit zarizeni</option>
                   {currentDevice?.device_type !== 'android' && (
                     <option value="web_block">Blokovat web</option>
                   )}
-                  <option value="schedule">Časový rozvrh (blokovat vše v čase)</option>
+                  <option value="schedule">Casovy rozvrh (blokovat vse v case)</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Název pravidla (volitelné)</label>
+                <label>Nazev pravidla (volitelne)</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="např. Škola, Víkend, Trénink"
+                  placeholder="napr. Skola, Vikend, Trenink"
                   className="input"
                 />
               </div>
 
-              {formData.rule_type !== 'daily_limit' && !(formData.rule_type === 'schedule' && scheduleTarget === 'device') && (
+              {/* Web URL input */}
+              {(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') && (
                 <div className="form-group">
-                  <label>{(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') ? 'Webová adresa' : 'Název aplikace'}</label>
-                  {(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') ? (
-                    <input
-                      type="text"
-                      value={formData.website_url}
-                      onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                      placeholder="např. tiktok.com nebo jen tiktok"
-                      className="input"
-                    />
-                  ) : (
-                    <>
-                      {/* Selected Apps Chips */}
-                      {selectedApps.length > 0 && (
-                        <div className="selected-apps-chips">
-                          {selectedApps.map(app => (
-                            <span key={app} className="app-chip">
-                              {app}
-                              <X
-                                size={14}
-                                onClick={() => handleRemoveApp(app)}
-                                style={{ cursor: 'pointer', marginLeft: '4px' }}
-                              />
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <input
-                        type="text"
-                        value={appInputValue}
-                        onChange={(e) => setAppInputValue(e.target.value)}
-                        onKeyDown={handleAppInputKeyDown}
-                        placeholder={selectedApps.length > 0 ? "Přidat další aplikaci..." : "Název (např. Epic, Chrome, Minecraft)"}
-                        className="input"
-                      />
-
-                      <div className="suggested-apps" style={{ marginTop: '10px' }}>
-                        <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>
-                          {appInputValue.trim().length > 0
-                            ? <><Plus size={12} style={{ marginRight: '4px' }} /> Nalezené aplikace:</>
-                            : frequentApps.length > 0
-                              ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpoužívanější aplikace:</>
-                              : 'Časté aplikace:'
-                          }
-                        </small>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                          {getSuggestedApps().map((app, idx) => (
-                            <button
-                              key={`${app.keyword}-${idx}`}
-                              type="button"
-                              className={`tag-button ${selectedApps.includes(app.keyword?.toLowerCase() || '') ? 'selected' : ''}`}
-                              onClick={() => handleSuggestedClick(app)}
-                              title={app.duration ? `Použito: ${Math.round(app.duration / 60)} min` : app.keyword}
-                              disabled={selectedApps.includes(app.keyword?.toLowerCase() || '')}
-                            >
-                              {app.name}
-                            </button>
-                          ))}
-                          {appInputValue.trim().length > 0 && getSuggestedApps().length === 0 && (
-                            <span style={{ fontSize: '0.85em', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                              Žádná aplikace nebyla nalezena. Můžete ji přidat tlačítkem Enter.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {(formData.rule_type === 'time_limit' || formData.rule_type === 'daily_limit') && (
-                <div className="form-group">
-                  <label>Absolutní denní limit (minuty)</label>
-                  <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85em' }}>
-                    Určuje maximální povolený čas pro každý den. V přehledu lze tento čas operativně navýšit.
-                  </small>
+                  <label>Webova adresa</label>
                   <input
-                    type="number"
-                    value={formData.time_limit}
-                    onChange={(e) => setFormData({ ...formData, time_limit: e.target.value })}
-                    placeholder="počet minut za den"
+                    type="text"
+                    value={formData.website_url}
+                    onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                    placeholder="napr. tiktok.com nebo jen tiktok"
                     className="input"
                   />
                 </div>
               )}
 
-              {formData.rule_type === 'schedule' && (
+              {/* App Picker */}
+              {showAppPicker && (
                 <div className="form-group">
-                  <label>Rozvrh platí pro:</label>
-                  <div className="schedule-target-selector">
-                    <label className={`radio-option ${scheduleTarget === 'device' ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name="scheduleTarget"
-                        value="device"
-                        checked={scheduleTarget === 'device'}
-                        onChange={(e) => setScheduleTarget(e.target.value)}
-                      />
-                      <Monitor size={16} />
-                      <span>Celé zařízení</span>
-                    </label>
-                    <label className={`radio-option ${scheduleTarget === 'apps' ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name="scheduleTarget"
-                        value="apps"
-                        checked={scheduleTarget === 'apps'}
-                        onChange={(e) => setScheduleTarget(e.target.value)}
-                      />
-                      <Shield size={16} />
-                      <span>Vybrané aplikace</span>
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label>Od</label>
-                      <input
-                        type="time"
-                        value={formData.schedule_start_time}
-                        onChange={(e) => setFormData({ ...formData, schedule_start_time: e.target.value })}
-                        className="input"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label>Do</label>
-                      <input
-                        type="time"
-                        value={formData.schedule_end_time}
-                        onChange={(e) => setFormData({ ...formData, schedule_end_time: e.target.value })}
-                        className="input"
-                      />
-                    </div>
-                  </div>
-                  <label style={{ marginTop: '10px' }}>Dny v týdnu</label>
-                  <DayPicker
-                    selectedDays={formData.schedule_days}
-                    onChange={(days) => setFormData({ ...formData, schedule_days: days })}
+                  <label>Nazev aplikace</label>
+                  <AppPicker
+                    selectedApps={selectedApps}
+                    onAddApp={handleAddApp}
+                    onRemoveApp={handleRemoveApp}
+                    inputValue={appInputValue}
+                    onInputChange={setAppInputValue}
+                    frequentApps={frequentApps}
+                    allApps={allApps}
                   />
                 </div>
               )}
 
+              {/* Time Limit */}
+              {(formData.rule_type === 'time_limit' || formData.rule_type === 'daily_limit') && (
+                <div className="form-group">
+                  <label>Absolutni denni limit (minuty)</label>
+                  <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85em' }}>
+                    Urcuje maximalni povoleny cas pro kazdy den. V prehledu lze tento cas operativne navysit.
+                  </small>
+                  <input
+                    type="number"
+                    value={formData.time_limit}
+                    onChange={(e) => setFormData({ ...formData, time_limit: e.target.value })}
+                    placeholder="pocet minut za den"
+                    className="input"
+                  />
+                </div>
+              )}
+
+              {/* Schedule Form */}
+              {formData.rule_type === 'schedule' && (
+                <div className="form-group">
+                  <ScheduleForm
+                    scheduleTarget={scheduleTarget}
+                    onScheduleTargetChange={setScheduleTarget}
+                    startTime={formData.schedule_start_time}
+                    endTime={formData.schedule_end_time}
+                    selectedDays={formData.schedule_days}
+                    onStartTimeChange={(v) => setFormData({ ...formData, schedule_start_time: v })}
+                    onEndTimeChange={(v) => setFormData({ ...formData, schedule_end_time: v })}
+                    onDaysChange={(days) => setFormData({ ...formData, schedule_days: days })}
+                  />
+                </div>
+              )}
+
+              {/* Network Block Option */}
               {formData.rule_type === 'app_block' && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px', padding: '10px', background: 'rgba(0,0,0,0.05)', borderRadius: '8px', cursor: 'pointer' }}>
                   <input
@@ -534,51 +364,41 @@ const RuleEditor = ({ deviceId }) => {
                     onChange={(e) => setFormData({ ...formData, block_network: e.target.checked })}
                   />
                   <div>
-                    <span style={{ fontWeight: 'bold' }}>Blokovat síťový přístup</span><br />
-                    <small>Zabrání aplikaci v přístupu k internetu úplně.</small>
+                    <span style={{ fontWeight: 'bold' }}>Blokovat sitovy pristup</span><br />
+                    <small>Zabrani aplikaci v pristupu k internetu uplne.</small>
                   </div>
                 </label>
               )}
 
               <button type="submit" className="button button-success" style={{ marginTop: '15px' }}>
-                {editingRuleId ? 'Aktualizovat pravidlo' : 'Uložit pravidlo'}
+                {editingRuleId ? 'Aktualizovat pravidlo' : 'Ulozit pravidlo'}
               </button>
             </form>
           )}
 
+          {/* Rules List */}
           <div className="rules-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0 }}>Aktivní pravidla ({rules.length})</h3>
+              <h3 style={{ margin: 0 }}>Aktivni pravidla ({rules.length})</h3>
             </div>
-
             {loading ? (
-              <div className="loading-small">Načítání pravidel...</div>
+              <div className="loading-small">Nacitani pravidel...</div>
             ) : rules.length === 0 ? (
               <div className="rules-empty-state">
-                <div className="empty-state-icon">
-                  <Shield size={48} />
-                </div>
-                <h3>Žádná aktivní pravidla</h3>
-                <p>Pro toto zařízení zatím nebyla nastavena žádná omezení. Klikněte na tlačítko "Nové pravidlo" pro začátek.</p>
+                <div className="empty-state-icon"><Shield size={48} /></div>
+                <h3>Zadna aktivni pravidla</h3>
+                <p>Pro toto zarizeni zatim nebyla nastavena zadna omezeni. Kliknete na tlacitko "Nove pravidlo" pro zacatek.</p>
               </div>
             ) : (
               <div className="rules-grid">
                 {rules.map((rule) => (
-                  <RuleCard
-                    key={rule.id}
-                    rule={rule}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
+                  <RuleCard key={rule.id} rule={rule} onEdit={handleEdit} onDelete={handleDelete} />
                 ))}
               </div>
             )}
           </div>
 
-          <HiddenAppsSection
-            hiddenApps={hiddenApps}
-            onRestoreApp={handleRestoreApp}
-          />
+          <HiddenAppsSection hiddenApps={hiddenApps} onRestoreApp={handleRestoreApp} />
         </>
       )}
     </div>

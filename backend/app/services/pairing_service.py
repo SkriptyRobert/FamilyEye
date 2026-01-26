@@ -18,7 +18,8 @@ def generate_pairing_token(parent_id: int, db: Session) -> PairingToken:
     pairing_token = PairingToken(
         token=token,
         parent_id=parent_id,
-        expires_at=expires_at
+        expires_at=expires_at,
+        used=False
     )
     db.add(pairing_token)
     db.commit()

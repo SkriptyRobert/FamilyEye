@@ -19,6 +19,8 @@ zxing = "3.5.3"
 ksp = "2.0.21-1.0.28"
 coroutines = "1.9.0"
 timber = "5.0.1"
+mockk = "1.13.13"
+robolectric = "4.14.1"
 
 [libraries]
 # Core
@@ -88,6 +90,8 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version = "1.2.1
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "3.6.1" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

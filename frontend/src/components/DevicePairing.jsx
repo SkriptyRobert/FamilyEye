@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
+import { getBackendUrl } from '../utils/auth'
 import { Smartphone, Link as LinkIcon, Copy, CheckCircle, Monitor, Check } from 'lucide-react'
 import './DevicePairing.css'
 
@@ -149,10 +150,8 @@ const DevicePairing = () => {
     }
 
     const getServerAddress = () => {
-        // Získat IP adresu serveru pro zobrazení
-        const hostname = window.location.hostname
-        const port = window.location.port || '8000'
-        return `https://${hostname}:${port}`
+        // Používáme stejnou logiku jako API klient - vrátí skutečnou backend URL
+        return getBackendUrl()
     }
 
     const copyToClipboard = (text) => {

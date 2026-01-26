@@ -79,15 +79,27 @@ class ContentScanner @Inject constructor(
         return sb
     }
 
+    private var lastDetector: KeywordDetector? = null
+    private var lastKeywordList: List<String> = emptyList()
+
     private suspend fun scanForKeywords(text: StringBuilder, packageName: String) {
-        val content = text.toString().lowercase(Locale.getDefault())
-        val keywords = keywordManager.getKeywords()
+        val content = text.toString()
+        val keywords = keywordManager.getKeywords().filter { it.enabled }.map { it.keyword }
         
-        for (kw in keywords) {
-            if (kw.enabled && content.contains(kw.keyword)) {
+        if (keywords.isEmpty()) return
+
+        // Rebuild detector only if keywords changed
+        if (keywords != lastKeywordList || lastDetector == null) {
+            lastDetector = KeywordDetector(keywords)
+            lastKeywordList = keywords
+        }
+        
+        val found = lastDetector?.findAny(content)
+        if (found != null) {
+            val kw = keywordManager.getKeywords().find { it.keyword == found }
+            if (kw != null) {
                 Timber.w("SMART SHIELD: Detected '${kw.keyword}' in $packageName")
                 handleDetection(kw, packageName, content)
-                break // Report one match per scan to avoid spam
             }
         }
     }

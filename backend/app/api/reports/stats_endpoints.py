@@ -1,26 +1,26 @@
 """
 Advanced statistics endpoints for charts and analytics.
 
-Split from monolithic reports.py for better maintainability.
+Thin API layer - common logic is in services/stats_service.py
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import Dict
 from datetime import datetime, timedelta, timezone
 import logging
-from dateutil import parser
 
 from ...database import get_db
 from ...models import UsageLog, Device, User
 from ..auth import get_current_parent
 from ...cache import stats_cache
+from ...services import stats_service
+from ...services.app_filter import app_filter
 
 router = APIRouter()
 logger = logging.getLogger("stats_endpoints")
 
 # Czech day names for weekly pattern
-CZECH_DAYS = ["Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota", "Neděle"]
+CZECH_DAYS = ["Pondeli", "Utery", "Streda", "Ctvrtek", "Patek", "Sobota", "Nedele"]
 
 
 def verify_device_ownership(device_id: int, user_id: int, db: Session) -> Device:
@@ -70,14 +70,12 @@ async def get_usage_by_hour(
         func.strftime('%H', UsageLog.timestamp)
     ).all()
     
-    heatmap_data = []
-    for row in results:
-        heatmap_data.append({
-            "date": row.date,
-            "hour": int(row.hour),
-            "duration_seconds": int(row.total_seconds or 0),
-            "duration_minutes": round((row.total_seconds or 0) / 60, 1)
-        })
+    heatmap_data = [{
+        "date": row.date,
+        "hour": int(row.hour),
+        "duration_seconds": int(row.total_seconds or 0),
+        "duration_minutes": round((row.total_seconds or 0) / 60, 1)
+    } for row in results]
     
     response = {
         "device_id": device_id,
@@ -113,53 +111,21 @@ async def get_usage_trends(
         day = now_utc - timedelta(days=i)
         day_str = day.strftime('%Y-%m-%d')
         
-        first_activity = db.query(func.min(UsageLog.timestamp)).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).scalar()
+        # Use service functions
+        first_time, last_time = stats_service.get_activity_boundaries(db, device_id, day_str)
+        day_minutes = stats_service.calculate_day_usage_minutes(db, device_id, day_str)
+        apps_count, sessions_count = stats_service.get_day_stats(db, device_id, day_str)
         
-        last_activity = db.query(func.max(UsageLog.timestamp)).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).scalar()
-        
-        day_minutes = db.query(
-            func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
-        ).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).scalar() or 0
         total_seconds = day_minutes * 60
-        
-        first_time_str = None
-        last_time_str = None
-        if first_activity and last_activity:
-            try:
-                if isinstance(first_activity, str):
-                    first_activity = parser.parse(first_activity)
-                if isinstance(last_activity, str):
-                    last_activity = parser.parse(last_activity)
-                first_time_str = first_activity.strftime('%H:%M')
-                last_time_str = last_activity.strftime('%H:%M')
-            except Exception:
-                pass
-        
-        stats = db.query(
-            func.count(func.distinct(UsageLog.app_name)).label('apps_count'),
-            func.count(UsageLog.id).label('sessions_count')
-        ).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).first()
         
         results.append({
             "date": day_str,
             "total_seconds": total_seconds,
             "total_minutes": round(total_seconds / 60, 1),
-            "apps_count": stats.apps_count if stats else 0,
-            "sessions_count": stats.sessions_count if stats else 0,
-            "first_activity": first_time_str,
-            "last_activity": last_time_str
+            "apps_count": apps_count,
+            "sessions_count": sessions_count,
+            "first_activity": first_time,
+            "last_activity": last_time
         })
     
     results.reverse()
@@ -193,12 +159,7 @@ async def get_weekly_pattern(
         day_str = day.strftime('%Y-%m-%d')
         day_of_week = day.weekday()
         
-        day_minutes = db.query(
-            func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
-        ).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).scalar() or 0
+        day_minutes = stats_service.calculate_day_usage_minutes(db, device_id, day_str)
         day_usage = day_minutes * 60
         
         if day_usage > 0:
@@ -247,9 +208,8 @@ async def get_weekly_current(
     verify_device_ownership(device_id, current_user.id, db)
     
     now_utc = datetime.now(timezone.utc)
-    today_weekday = now_utc.weekday()  # 0 = Monday, 6 = Sunday
+    today_weekday = now_utc.weekday()
     
-    # Calculate Monday of the current week
     monday = now_utc - timedelta(days=today_weekday)
     monday = monday.replace(hour=0, minute=0, second=0, microsecond=0)
     
@@ -259,15 +219,7 @@ async def get_weekly_current(
         day_str = day.strftime('%Y-%m-%d')
         day_end = day + timedelta(days=1)
         
-        # Get total usage for this specific day
-        day_minutes = db.query(
-            func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
-        ).filter(
-            UsageLog.device_id == device_id,
-            UsageLog.timestamp >= day,
-            UsageLog.timestamp < day_end
-        ).scalar() or 0
-        
+        day_minutes = stats_service.calculate_day_usage_range(db, device_id, day, day_end)
         total_seconds = day_minutes * 60
         
         results.append({
@@ -280,13 +232,11 @@ async def get_weekly_current(
             "is_future": day_idx > today_weekday
         })
     
-    # Cache for shorter time since it's current week data
     stats_cache.set(cache_key, results, ttl=60)
     return results
 
 
 @router.get("/device/{device_id}/app-details")
-
 async def get_app_details(
     device_id: int,
     app_name: str,
@@ -308,60 +258,25 @@ async def get_app_details(
     start_date = now_utc - timedelta(days=days)
     start_str = start_date.strftime('%Y-%m-%d')
     
-    app_name_lower = app_name.lower()
-    app_names = [app_name_lower, f"{app_name_lower}.exe"]
+    app_names = stats_service.get_app_name_variants(app_name)
     
-    total_stats = db.query(
-        func.sum(UsageLog.duration).label('total_duration'),
-        func.count(UsageLog.id).label('sessions_count'),
-        func.min(UsageLog.timestamp).label('first_use'),
-        func.max(UsageLog.timestamp).label('last_use')
-    ).filter(
-        UsageLog.device_id == device_id,
-        func.lower(UsageLog.app_name).in_(app_names),
-        UsageLog.timestamp >= start_str
-    ).first()
-    
+    # Total stats
+    total_stats = stats_service.get_app_total_stats(db, device_id, app_names, start_str)
     total_seconds = int(total_stats.total_duration or 0)
     sessions_count = int(total_stats.sessions_count or 0)
     avg_session = int(total_seconds / sessions_count) if sessions_count > 0 else 0
     
-    hourly_stats = db.query(
-        func.strftime('%H', UsageLog.timestamp).label('hour'),
-        func.sum(UsageLog.duration).label('total')
-    ).filter(
-        UsageLog.device_id == device_id,
-        func.lower(UsageLog.app_name).in_(app_names),
-        UsageLog.timestamp >= start_str
-    ).group_by(
-        func.strftime('%H', UsageLog.timestamp)
-    ).all()
+    # Hourly distribution
+    usage_by_hour = stats_service.get_hourly_distribution(db, device_id, app_names, start_str)
     
-    usage_by_hour = [{"hour": h, "duration_seconds": 0} for h in range(24)]
-    for stat in hourly_stats:
-        if stat.hour:
-            hour_int = int(stat.hour)
-            usage_by_hour[hour_int]["duration_seconds"] = int(stat.total or 0)
-    
+    # Daily breakdown
     usage_by_day = []
     for i in range(days):
         day = now_utc - timedelta(days=i)
         day_str = day.strftime('%Y-%m-%d')
-        
-        day_duration = db.query(func.sum(UsageLog.duration)).filter(
-            UsageLog.device_id == device_id,
-            func.lower(UsageLog.app_name).in_(app_names),
-            UsageLog.timestamp.like(f'{day_str}%')
-        ).scalar() or 0
-        
-        usage_by_day.append({
-            "date": day_str,
-            "duration_seconds": int(day_duration)
-        })
-    
+        day_duration = stats_service.get_app_day_duration(db, device_id, app_names, day_str)
+        usage_by_day.append({"date": day_str, "duration_seconds": int(day_duration)})
     usage_by_day.reverse()
-    
-    from ...services.app_filter import app_filter
     
     response = {
         "app_name": app_name,
@@ -400,9 +315,7 @@ async def get_app_trends(
     verify_device_ownership(device_id, current_user.id, db)
     
     now_utc = datetime.now(timezone.utc)
-    
-    app_name_lower = app_name.lower()
-    app_names = [app_name_lower, f"{app_name_lower}.exe"]
+    app_names = stats_service.get_app_name_variants(app_name)
     
     results = []
     for i in range(days):
@@ -424,33 +337,14 @@ async def get_app_trends(
         sessions = int(stats.sessions_count or 0)
         avg_session = int(duration / sessions) if sessions > 0 else 0
         
-        first_use = None
-        last_use = None
-        if stats.first_use:
-            try:
-                if isinstance(stats.first_use, str):
-                    first_use = parser.parse(stats.first_use).strftime('%H:%M')
-                else:
-                    first_use = stats.first_use.strftime('%H:%M')
-            except Exception:
-                pass
-        if stats.last_use:
-            try:
-                if isinstance(stats.last_use, str):
-                    last_use = parser.parse(stats.last_use).strftime('%H:%M')
-                else:
-                    last_use = stats.last_use.strftime('%H:%M')
-            except Exception:
-                pass
-        
         results.append({
             "date": day_str,
             "duration_seconds": duration,
             "duration_minutes": round(duration / 60, 1),
             "sessions_count": sessions,
             "avg_session_duration": avg_session,
-            "first_use": first_use,
-            "last_use": last_use
+            "first_use": stats_service.format_timestamp_to_time(stats.first_use),
+            "last_use": stats_service.format_timestamp_to_time(stats.last_use)
         })
     
     results.reverse()
