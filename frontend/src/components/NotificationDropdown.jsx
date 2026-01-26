@@ -109,7 +109,6 @@ const NotificationDropdown = () => {
         // Subscribe to Real-time Alerts
         const unsubscribe = webSocketService.subscribe((data) => {
             if (data.type === 'shield_alert') {
-                console.log('Real-time Alert Received:', data)
 
                 // Add new alert immediately
                 setNotifications(prev => {

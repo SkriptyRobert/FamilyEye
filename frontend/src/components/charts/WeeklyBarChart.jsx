@@ -32,7 +32,6 @@ const WeeklyBarChart = ({ deviceId, onDateSelect, selectedDate }) => {
             if (Array.isArray(response.data)) {
                 setData(response.data)
             } else {
-                console.warn('Unexpected response format:', response.data)
                 setData([])
             }
         } catch (err) {

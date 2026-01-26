@@ -16,12 +16,10 @@ class WebSocketService {
         // Convert HTTP URL to WS URL
         const baseUrl = api.defaults.baseURL || 'http://localhost:8000'; // Fallback
         const wsUrl = baseUrl.replace('http', 'ws') + `/ws/${userId}`;
-        console.log('Connecting to WebSocket:', wsUrl);
 
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
-            console.log('WebSocket Connected');
             this.reconnectAttempts = 0;
         };
 
@@ -35,7 +33,6 @@ class WebSocketService {
         };
 
         this.socket.onclose = () => {
-            console.log('WebSocket Disconnected');
             this.attemptReconnect(userId);
         };
 
@@ -48,7 +45,6 @@ class WebSocketService {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             const timeout = Math.min(1000 * this.reconnectAttempts, 5000);
-            console.log(`Reconnecting in ${timeout}ms...`);
             setTimeout(() => this.connect(userId), timeout);
         }
     }

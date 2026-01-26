@@ -61,7 +61,7 @@ const DevicePairing = () => {
                 }
             } catch (err) {
                 // Tichá chyba, neblokujeme UI
-                console.debug('Pairing status check:', err)
+                // Status check error - silently ignored
             }
         }
 

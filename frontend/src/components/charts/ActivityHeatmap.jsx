@@ -38,7 +38,6 @@ const ActivityHeatmap = ({ deviceId, days = 7, onDaysChange, largerDots = false 
             if (Array.isArray(responseData)) {
                 setData(responseData)
             } else {
-                console.warn('Unexpected response format:', response.data)
                 setData([])
             }
         } catch (err) {

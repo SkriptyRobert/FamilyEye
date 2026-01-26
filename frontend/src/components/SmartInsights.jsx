@@ -9,8 +9,6 @@ const SmartInsights = ({ insights }) => {
     const [activeTab, setActiveTab] = useState('anomalies'); // 'anomalies', 'balance'
     const [showInfo, setShowInfo] = useState(false);
 
-    console.log('SmartInsights Rendering, insights:', insights);
-
     if (!insights) return <div className="bento-card">Načítám analýzu...</div>;
 
     const formatDecimalHour = (decimal) => {

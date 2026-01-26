@@ -186,7 +186,6 @@ const DynamicIcon = ({
 
     if (!IconComponent) {
         // Fallback: return a generic circle if icon not found
-        console.warn(`DynamicIcon: Unknown icon name "${name}"`)
         return <Circle size={size} color={color} className={className} style={style} {...props} />
     }
 
