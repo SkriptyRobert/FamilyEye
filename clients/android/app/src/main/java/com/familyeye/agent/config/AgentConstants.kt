@@ -57,11 +57,7 @@ object AgentConstants {
      */
     const val WEBSOCKET_RETRY_INTERVAL_MS = 5_000L  // 5 seconds
 
-    /**
-     * Timeout for content scanner between scans (milliseconds).
-     * Prevents excessive scanning during fast scrolling.
-     */
-    const val CONTENT_SCAN_INTERVAL_MS = 2_000L  // 2 seconds
+
 
     /**
      * Notification timeout for accessibility service (milliseconds).
@@ -75,6 +71,13 @@ object AgentConstants {
      * Faster = quicker recovery from zombie state, but more CPU usage.
      */
     const val SECURITY_CHECK_INTERVAL_MS = 10_000L  // 10 seconds (was 60s)
+
+    /**
+     * Interval for content scanner (Smart Shield) between scans (milliseconds).
+     * Set to 1000L for responsiveness.
+     */
+    const val CONTENT_SCAN_INTERVAL_MS = 1_000L
+
 
     /**
      * Interval for WorkManager guardian worker (minutes).
