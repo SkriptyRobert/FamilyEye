@@ -71,7 +71,9 @@ installer/agent/test.iss
 
 # IDE and workspace
 .agent/
+.agent/rules
 .cursor/
+.cursorrules
 
 # Temporary Build & Test Logs
 clients/android/build_error*.txt
