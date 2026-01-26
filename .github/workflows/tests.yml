@@ -26,10 +26,11 @@ jobs:
       - name: Run backend tests
         run: |
           cd backend
-          pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
+          PYTHONPATH=$PWD:$PYTHONPATH pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
         env:
           DATABASE_URL: "sqlite:///:memory:"
           BACKEND_URL: "http://localhost:8000"
+          PYTHONPATH: ${{ github.workspace }}/backend
       
       - name: Upload coverage
         uses: codecov/codecov-action@v3

@@ -8,6 +8,7 @@ import com.familyeye.agent.data.local.UsageLogEntity
 import com.familyeye.agent.data.repository.AgentConfigRepository
 import com.familyeye.agent.time.SecureTimeProvider
 import io.mockk.*
+import io.mockk.coEvery
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -183,7 +184,7 @@ class UsageTrackerTest {
 
         every { secureTimeProvider.getSecureStartOfDay() } returns startOfDay
         every { usageLogDao.getUsageDurationForPackage(packageName, startOfDay) } returns localUsage
-        every { usageRepository.getRemoteAppUsage(any()) } returns remoteUsage
+        coEvery { usageRepository.getRemoteAppUsage(any()) } returns remoteUsage
 
         val usage = usageTracker.getUsageToday(packageName)
 
@@ -199,7 +200,7 @@ class UsageTrackerTest {
 
         every { secureTimeProvider.getSecureStartOfDay() } returns startOfDay
         every { usageLogDao.getTotalUsageToday(startOfDay) } returns flowOf(localTotal)
-        every { usageRepository.getRemoteDailyUsage() } returns remoteTotal
+        coEvery { usageRepository.getRemoteDailyUsage() } returns remoteTotal
 
         val total = usageTracker.getTotalUsageToday()
 
