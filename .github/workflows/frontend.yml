@@ -32,7 +32,7 @@ jobs:
       
       - name: Run frontend tests
         working-directory: frontend
-        run: npm test -- --run --coverage --bail
+        run: npm test -- --run --coverage
         continue-on-error: true
 
   frontend-summary:
