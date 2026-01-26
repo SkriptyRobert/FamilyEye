@@ -113,8 +113,12 @@ FamilyEye/
 | [Architecture](docs/ARCHITECTURE.md) | System architecture overview |
 | [Backend API](docs/API.md) | REST API documentation |
 | [Frontend](docs/FRONTEND.md) | Dashboard development guide |
+| [Agent](docs/AGENT.md) | Windows & Android agent documentation |
 | [Deployment](docs/DEPLOYMENT.md) | Production deployment guide |
 | [Development](docs/DEVELOPMENT.md) | Developer setup guide |
+| [System Design](docs/architecture/system-design.md) | Detailed system design |
+| [Security Model](docs/architecture/security-model.md) | Security architecture |
+| [Feature Matrix](docs/reference/feature-matrix.md) | Complete feature reference |
 
 ## 🤝 Contributing
 
