@@ -60,6 +60,7 @@ ANDROID AGENT:
 - Background: WorkManager + Foreground Service
 - Min SDK: 29 (Android 10)
 - Target SDK: 35 (Android 15)
+- 🤖 Device Owner: Supported (Custom štítek)
 
 ================================================================================
 PROJECT STRUCTURE
@@ -349,6 +350,7 @@ TIME SYNCHRONIZATION:
 - Usage tracking uses monotonic time for accuracy
 
 DEVICE OWNER (Android):
+- 🤖 Device Owner: Supported (Custom štítek)
 - Required for full MDM capabilities
 - Set via: adb shell dpm set-device-owner
 - Prevents uninstall, enables advanced controls
