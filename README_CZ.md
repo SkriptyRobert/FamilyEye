@@ -113,8 +113,12 @@ FamilyEye/
 | [Architektura](docs/ARCHITECTURE.md) | Přehled architektury systému |
 | [Backend API](docs/API.md) | Dokumentace REST API |
 | [Frontend](docs/FRONTEND.md) | Průvodce vývojem dashboardu |
+| [Agent](docs/AGENT.md) | Dokumentace Windows & Android agenta |
 | [Nasazení](docs/DEPLOYMENT.md) | Průvodce produkčním nasazením |
 | [Vývoj](docs/DEVELOPMENT.md) | Průvodce nastavením vývojového prostředí |
+| [Systémový design](docs/architecture/system-design.md) | Detailní systémový design |
+| [Bezpečnostní model](docs/architecture/security-model.md) | Bezpečnostní architektura |
+| [Feature Matrix](docs/reference/feature-matrix.md) | Kompletní reference funkcí |
 
 ## 🤝 Jak přispět
 
