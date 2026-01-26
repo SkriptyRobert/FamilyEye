@@ -56,7 +56,9 @@ class UsageTrackerTest {
         every { context.getSystemService(Context.POWER_SERVICE) } returns powerManager
         every { powerManager.isInteractive } returns true
         every { context.packageName } returns "com.familyeye.agent"
-        every { context.getSharedPreferences(any(), any()) } returns context.getSharedPreferences("test", Context.MODE_PRIVATE)
+        // Use real SharedPreferences for testing
+        val realPrefs = context.getSharedPreferences("test", Context.MODE_PRIVATE)
+        every { context.getSharedPreferences(any(), any()) } returns realPrefs
 
         usageTracker = UsageTracker(
             context,
@@ -181,7 +183,7 @@ class UsageTrackerTest {
         val remoteUsage = 150 // seconds
 
         every { secureTimeProvider.getSecureStartOfDay() } returns startOfDay
-        every { usageLogDao.getUsageDurationForPackage(packageName, startOfDay) } returns localUsage
+        coEvery { usageLogDao.getUsageDurationForPackage(packageName, startOfDay) } returns localUsage
         coEvery { usageRepository.getRemoteAppUsage(any()) } returns remoteUsage
 
         val usage = usageTracker.getUsageToday(packageName)
