@@ -1,0 +1,52 @@
+name: Android Tests
+
+on:
+  push:
+    branches: [ main, master, android-fix-process ]
+    paths:
+      - 'clients/android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    branches: [ main, master, android-fix-process ]
+    paths:
+      - 'clients/android/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  android-unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x clients/android/gradlew
+      
+      - name: Run Android unit tests
+        working-directory: clients/android
+        run: |
+          ./gradlew test --no-daemon --max-workers=2 --parallel --build-cache
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-unit-test-results
+          path: clients/android/app/build/test-results/
+
+  android-summary:
+    runs-on: ubuntu-latest
+    needs: [android-unit-tests]
+    if: always()
+    steps:
+      - name: Test Summary
+        run: |
+          echo "## Android Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.android-unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
