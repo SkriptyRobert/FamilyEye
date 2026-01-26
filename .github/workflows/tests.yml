@@ -24,7 +24,7 @@ jobs:
         working-directory: backend
         run: |
           pip install -r requirements.txt
-          pip install pytest pytest-cov
+          pip install pytest pytest-cov pytest-asyncio
       
       - name: Run backend tests
         working-directory: backend
