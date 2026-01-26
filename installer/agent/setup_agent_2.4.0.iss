@@ -1,7 +1,7 @@
 [Setup]
 AppName=FamilyEye Agent
-AppVersion=2.3.0
-AppVerName=FamilyEye Agent 2.3.0
+AppVersion=2.4.0
+AppVerName=FamilyEye Agent 2.4.0
 AppPublisher=FamilyEye
 AppPublisherURL=https://github.com/SkriptyRobert/FamilyEye
 AppSupportURL=https://github.com/SkriptyRobert/FamilyEye/issues

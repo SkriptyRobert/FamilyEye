@@ -51,9 +51,9 @@ Projekt obsahuje dva oddělené instalátory:
 ### Build:
 ```
 1. Nainstalujte Inno Setup 6
-2. Otevřete installer/agent/setup_agent_2.3.0.iss
+2. Otevřete installer/agent/setup_agent_2.4.0.iss
 3. Build → Compile
-4. Výstup: `installer/agent/output/FamilyEyeAgent_Setup_2.3.0.exe`
+4. Výstup: `installer/agent/output/FamilyEyeAgent_Setup_2.4.0.exe`
 ```
 
 ---

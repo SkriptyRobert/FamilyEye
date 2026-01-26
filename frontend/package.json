@@ -1,6 +1,6 @@
 {
   "name": "family-eye-dashboard",
-  "version": "1.0.0",
+  "version": "2.4.0",
   "description": "Parent Dashboard for FamilyEye System",
   "type": "module",
   "scripts": {

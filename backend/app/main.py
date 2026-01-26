@@ -29,7 +29,7 @@ init_db()
 app = FastAPI(
     title="FamilyEye API",
     description="Backend API for FamilyEye parental control system",
-    version="1.0.0"
+    version="2.4.0"
 )
 
 # CORS middleware
