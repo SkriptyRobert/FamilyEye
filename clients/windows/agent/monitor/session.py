@@ -87,22 +87,104 @@ class SessionTracker:
 
     @staticmethod
     def is_screen_locked() -> bool:
-        """Check if screen is currently locked or on secure desktop (UAC/Login)."""
-        import ctypes
+        """Check if screen is currently locked using WTS API.
         
+        This method is robust for Service Context (Session 0).
+        It checks the active console session's state:
+        - WTSActive (0): User is logged in and screen is UNLOCKED
+        - WTSConnected (1): User is logged in but DISCONNECTED (Locked/Switch User)
+        - WTSConnectQuery (2): Session is in process of connecting
+        - WTSShadow (3): Shadowing session
+        - WTSDisconnected (4): User is logged out
+        - WTSIdle (5): Idle
+        - WTSListen (6): Listening
+        - WTSReset (7): Reset
+        - WTSDown (8): Down
+        - WTSInit (9): Init
+        
+        Returns:
+            True if the session is NOT active (i.e. locked, disconnected, or on login screen)
+        """
+        try:
+            import ctypes
+            from ctypes import wintypes
+            
+            # WTS Constants
+            WTS_CURRENT_SERVER_HANDLE = 0
+            WTS_CURRENT_SESSION_LOGON_TIME = 0
+            WTSConnectState = 8  # WTSInfoClass for connection state
+            
+            # Connection States
+            WTSActive = 0
+            WTSConnected = 1
+            WTSConnectQuery = 2
+            WTSShadow = 3
+            WTSDisconnected = 4
+            WTSIdle = 5
+            WTSListen = 6
+            WTSReset = 7
+            WTSDown = 8
+            WTSInit = 9
+
+            kernel32 = ctypes.windll.kernel32
+            wtsapi32 = ctypes.windll.wtsapi32
+            
+            # Get the physical console session ID
+            session_id = kernel32.WTSGetActiveConsoleSessionId()
+            if session_id == 0xFFFFFFFF:
+                # No console session attached - effectively locked/headless
+                return True
+                
+            # Query the connection state of that session
+            ppBuffer = ctypes.c_void_p()
+            pBytes = ctypes.c_ulong()
+            
+            if wtsapi32.WTSQuerySessionInformationW(
+                WTS_CURRENT_SERVER_HANDLE,
+                session_id,
+                WTSConnectState,
+                ctypes.byref(ppBuffer),
+                ctypes.byref(pBytes)
+            ):
+                try:
+                    # Dereference the pointer to get the state/int value
+                    # The buffer contains a C int (4 bytes)
+                    state = ctypes.cast(ppBuffer, ctypes.POINTER(ctypes.c_int)).contents.value
+                    
+                    # Log state for debugging (optional/verbose)
+                    # print(f"Session {session_id} state: {state}")
+                    
+                    # WTSActive (0) is the ONLY state where the user is actually using the desktop
+                    if state == WTSActive:
+                        return False
+                    else:
+                        # WTSConnected(1) = Locked/SwitchUser
+                        # WTSDisconnected(4) = Logged out
+                        return True
+                finally:
+                    wtsapi32.WTSFreeMemory(ppBuffer)
+            
+            # Detection failed - assume unlocked to avoid false positives? 
+            # OR assume locked for safety?
+            # Existing behavior was "safe assumption -> False", but for lock enforcement we need accuracy.
+            # If we fail to query, let's look for OpenInputDesktop as fallback for non-service non-session 0
+            return SessionTracker._is_screen_locked_fallback()
+            
+        except Exception as e:
+            # Fallback
+            return SessionTracker._is_screen_locked_fallback()
+
+    @staticmethod
+    def _is_screen_locked_fallback() -> bool:
+        """Legacy fallback check using OpenInputDesktop."""
+        import ctypes
         try:
             user32 = ctypes.windll.user32
             # DESKTOP_SWITCHDESKTOP = 0x0100
-            # If we fail to open desktop with this right, it usually means it's locked/UAC
             hDesktop = user32.OpenInputDesktop(0, False, 0x0100)
-            
             if hDesktop == 0:
-                # Could not open input desktop - assume locked
                 return True
-                
             user32.CloseDesktop(hDesktop)
             return False
-            
-        except Exception:
-            # Fallback safe assumption
+        except:
             return False
