@@ -1,0 +1,410 @@
+# FamilyEye - AI Context File (llms.txt)
+# This file provides essential context about the project for AI agents (LLMs, Cursor, Copilot, etc.)
+
+================================================================================
+PROJECT OVERVIEW
+================================================================================
+
+Name: FamilyEye (Parental Control Enterprise)
+Type: Complete parental control solution for families
+License: GPLv3 (code), CC BY-NC-SA 4.0 (images)
+Repository: Monorepo structure
+
+Purpose:
+- Multi-platform parental control system
+- Real-time monitoring and enforcement
+- Screen time management
+- Advanced content analysis (Smart Shield)
+- Offline-first architecture
+
+================================================================================
+TECH STACK
+================================================================================
+
+BACKEND:
+- Framework: FastAPI 0.104.1
+- Database: SQLite (default), SQLAlchemy 2.0.23 ORM
+- Authentication: JWT (python-jose), bcrypt (passlib)
+- WebSocket: websockets 12.0
+- HTTP Client: httpx 0.28.1
+- Testing: pytest, pytest-asyncio
+- Python: 3.8+ (production uses 3.10+)
+
+FRONTEND:
+- Framework: React 18.2.0
+- Router: React Router 6.20.0
+- Build Tool: Vite 5.0.8
+- HTTP Client: Axios 1.6.2
+- Charts: Recharts 3.6.0
+- Icons: lucide-react 0.562.0
+- Testing: Vitest 2.1.9
+- Node.js: 18+
+
+WINDOWS AGENT:
+- Language: Python 3.x
+- Key Libraries:
+  - psutil 5.9.0+ (process monitoring)
+  - pywin32 306+ (Windows API)
+  - requests 2.31.0+ (HTTP)
+  - websockets 12.0+ (real-time)
+  - colorama 0.4.6+ (logging colors)
+
+ANDROID AGENT:
+- Language: Kotlin
+- UI: Jetpack Compose
+- DI: Hilt
+- Database: Room
+- Storage: DataStore
+- Networking: OkHttp + Retrofit
+- WebSocket: OkHttp WebSocket
+- Background: WorkManager + Foreground Service
+- Min SDK: 29 (Android 10)
+- Target SDK: 35 (Android 15)
+
+================================================================================
+PROJECT STRUCTURE
+================================================================================
+
+Parential-Control_Enterprise/
+├── .github/
+│   └── workflows/          # CI/CD (android.yml, backend.yml, frontend.yml, release.yml)
+├── backend/
+│   ├── app/
+│   │   ├── api/            # REST endpoints
+│   │   │   ├── auth.py      # Authentication (JWT)
+│   │   │   ├── devices/     # Device management
+│   │   │   ├── rules.py     # Rules management
+│   │   │   ├── reports/     # Statistics endpoints
+│   │   │   ├── websocket.py # Real-time WebSocket
+│   │   │   ├── shield.py    # Smart Shield
+│   │   │   └── trust.py     # SSL certificates
+│   │   ├── services/        # Business logic
+│   │   │   ├── pairing_service.py
+│   │   │   ├── stats_service.py
+│   │   │   ├── summary_service.py
+│   │   │   └── insights_service.py
+│   │   ├── models.py        # SQLAlchemy models
+│   │   ├── schemas.py       # Pydantic schemas
+│   │   ├── config.py        # Configuration
+│   │   ├── database.py      # DB connection
+│   │   └── main.py          # FastAPI app
+│   ├── tests/               # Pytest tests
+│   ├── run_https.py         # HTTPS server launcher
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── DeviceList.jsx
+│   │   │   ├── RuleEditor.jsx
+│   │   │   ├── Reports.jsx
+│   │   │   └── charts/      # Chart components
+│   │   ├── services/
+│   │   │   ├── api.js       # API client
+│   │   │   └── websocket.js # WebSocket service
+│   │   ├── hooks/           # Custom React hooks
+│   │   └── utils/           # Utility functions
+│   ├── package.json
+│   └── vite.config.js
+├── clients/
+│   ├── android/             # Android Agent (Kotlin)
+│   │   └── app/src/main/java/com/familyeye/agent/
+│   └── windows/             # Windows Agent (Python)
+│       ├── agent/
+│       │   ├── main.py      # Main agent (Windows Service)
+│       │   ├── monitor/     # App monitoring
+│       │   ├── enforcer/    # Rule enforcement
+│       │   └── websocket/   # WebSocket client
+│       └── child_agent.py   # UI agent (user session)
+├── docs/                    # Documentation
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   ├── DEVELOPMENT.md
+│   └── DEPLOYMENT.md
+├── installer/               # Inno Setup installers
+│   ├── agent/               # Windows Agent installer
+│   └── server/              # Backend installer
+├── certs/                   # SSL certificates (generated)
+├── .cursorrules             # Cursor AI instructions
+├── LICENSE                  # GPLv3
+└── LICENSE_IMAGES           # CC BY-NC-SA 4.0
+
+================================================================================
+ARCHITECTURE PATTERNS
+================================================================================
+
+BACKEND:
+- FastAPI with dependency injection
+- SQLAlchemy ORM with models
+- Pydantic schemas for validation
+- Service layer pattern (business logic in services/)
+- RESTful API design
+- WebSocket for real-time updates
+- JWT authentication for parents
+- API Key authentication for agents
+
+FRONTEND:
+- React functional components with hooks
+- Custom hooks for data fetching (useDevices, useRules, useQuickActions)
+- Component-based architecture
+- Service layer (api.js, websocket.js)
+- React Router for navigation
+- Axios for HTTP requests
+
+WINDOWS AGENT:
+- Session 0 Service Architecture:
+  - Main agent runs as Windows Service (Session 0)
+  - ChildAgent runs in user session (Session 1+)
+  - IPC via Named Pipes
+- Modular structure:
+  - monitor/ - App monitoring
+  - enforcer/ - Rule enforcement
+  - websocket/ - Real-time communication
+- Threading for concurrent operations
+- Offline queue for reports
+
+ANDROID AGENT:
+- MVVM architecture
+- Repository pattern for data
+- Dependency Injection (Hilt)
+- Service-based background processing
+- Device Owner mode for MDM capabilities
+- Accessibility Service for app detection
+
+================================================================================
+CODING STANDARDS
+================================================================================
+
+PYTHON:
+- PEP 8 style guide
+- Type hints where possible
+- Docstrings for functions/classes
+- Use pathlib.Path for file operations
+- Logging to C:\ProgramData\FamilyEye\Agent\Logs (Windows agent)
+- Named Pipe IPC between Session 0 and user session
+- UI elements ONLY in child_agent.py
+
+JAVASCRIPT/REACT:
+- ES6+ modern JavaScript
+- Functional components (no class components)
+- React Hooks (useState, useEffect, custom hooks)
+- CSS Modules for component styling
+- No console.log/debug/warn in production (only console.error for critical errors)
+- Axios for HTTP (configured in services/api.js)
+
+KOTLIN:
+- Kotlin coding conventions
+- Null safety (use ? and !! appropriately)
+- Data classes for DTOs
+- Sealed classes for state management
+- Coroutines for async operations
+- Extension functions for utilities
+
+================================================================================
+KEY CONVENTIONS
+================================================================================
+
+FILE NAMING:
+- Python: snake_case (main.py, api_client.py)
+- JavaScript: camelCase (DeviceList.jsx, useDevices.js)
+- Kotlin: PascalCase for classes, camelCase for functions
+
+IMPORTS:
+- Backend: Relative imports within app/ (from ..api.auth import ...)
+- Frontend: Absolute imports from src/ (import api from './services/api')
+- Windows Agent: Package imports (from .monitor import AppMonitor)
+
+CONFIGURATION:
+- Backend: Environment variables + config.py
+- Windows Agent: config.json (runtime, not in repo)
+- Android Agent: DataStore for preferences, Room for database
+
+LOGGING:
+- Backend: Python logging module
+- Windows Agent: Custom logger with colors (logger.py)
+- Frontend: console.error only for critical errors
+- Android Agent: Timber logging
+
+================================================================================
+BUILD & DEPLOYMENT
+================================================================================
+
+BACKEND:
+- Run: python run_https.py (generates SSL certs automatically)
+- Service: python service_wrapper.py install/start
+- Tests: pytest tests/
+
+FRONTEND:
+- Dev: npm run dev (Vite dev server)
+- Build: npm run build (output: dist/)
+- Tests: npm test (Vitest)
+
+WINDOWS AGENT:
+- Dev: python -m agent.main
+- Build: python installer/agent/build_agent.py
+- Installer: iscc installer/agent/setup_agent_2.3.0.iss
+- Service: Installed as Windows Service
+
+ANDROID AGENT:
+- Build: ./gradlew assembleDebug (in clients/android)
+- APK: clients/android/app/build/outputs/apk/debug/app-debug.apk
+- Device Owner: Requires ADB provisioning or factory reset
+
+================================================================================
+API STRUCTURE
+================================================================================
+
+BASE URL: http://localhost:8000 (dev) or https://domain:8000 (prod)
+
+AUTHENTICATION:
+- Parents: POST /api/auth/login → JWT token → Bearer token in header
+- Agents: API Key + Device ID in request body
+
+KEY ENDPOINTS:
+- POST /api/auth/login - Parent login
+- POST /api/devices/pairing/token - Generate pairing token
+- POST /api/devices/pairing/pair - Pair device (agent)
+- GET /api/devices/ - List devices (parent)
+- POST /api/rules/ - Create rule (parent)
+- POST /api/rules/agent/fetch - Fetch rules (agent)
+- POST /api/reports/agent/report - Report usage (agent)
+- WS /api/ws/{user_id} - WebSocket for real-time updates
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+TABLES:
+- users: Parents and children (email, password_hash, role)
+- devices: Paired devices (name, device_type, device_id, api_key, parent_id)
+- rules: Rules for devices (rule_type, app_name, time_limit, schedule, enabled)
+- usage_logs: Usage statistics (device_id, app_name, duration, timestamp)
+- pairing_tokens: Temporary pairing tokens (token, parent_id, expires_at, used)
+
+RELATIONSHIPS:
+- users (parent) → devices (parent_id)
+- devices → rules (device_id)
+- devices → usage_logs (device_id)
+
+================================================================================
+SECURITY NOTES
+================================================================================
+
+AUTHENTICATION:
+- Passwords: bcrypt hash (fallback pbkdf2_sha256)
+- JWT: 24h expiration for parents
+- API Keys: UUID, unique per device
+- SSL: Self-signed certificates (auto-generated), CA cert for trust
+
+COMMUNICATION:
+- HTTPS: Required in production (run_https.py)
+- WebSocket: WSS in production
+- CORS: Configurable, restrict in production
+
+AGENT SECURITY:
+- Windows: Runs as Windows Service (elevated privileges)
+- Android: Device Owner mode (requires factory reset or ADB)
+- Offline queue: Reports cached when offline, synced on reconnect
+
+================================================================================
+TESTING
+================================================================================
+
+BACKEND:
+- Framework: pytest
+- Location: backend/tests/
+- Fixtures: conftest.py (database session, test user, test device)
+- Run: pytest tests/
+
+FRONTEND:
+- Framework: Vitest
+- Location: frontend/src/components/*.test.jsx
+- Setup: frontend/src/test/setup.js
+- Run: npm test
+
+ANDROID:
+- Unit tests: clients/android/app/src/test/
+- Instrumented tests: clients/android/app/src/androidTest/
+- Framework: JUnit, MockK
+
+================================================================================
+IMPORTANT PATTERNS
+================================================================================
+
+OFFLINE-FIRST:
+- Agents cache rules and reports locally
+- Sync when connection restored
+- Windows agent: report_queue.json, usage_cache.json
+- Android agent: Room database + DataStore
+
+REAL-TIME:
+- WebSocket for frontend updates
+- WebSocket for agent commands (screenshot, lock, refresh)
+- Polling fallback if WebSocket fails
+
+TIME SYNCHRONIZATION:
+- Backend provides UTC time
+- Agents sync time on connection
+- Daily reset based on local time
+- Usage tracking uses monotonic time for accuracy
+
+DEVICE OWNER (Android):
+- Required for full MDM capabilities
+- Set via: adb shell dpm set-device-owner
+- Prevents uninstall, enables advanced controls
+- Requires factory reset or ADB provisioning
+
+================================================================================
+COMMON TASKS
+================================================================================
+
+ADD NEW API ENDPOINT:
+1. Create router in backend/app/api/
+2. Add endpoint with decorator
+3. Register in backend/app/main.py
+4. Update docs/API.md
+
+ADD NEW RULE TYPE:
+1. Add rule_type to Rule model
+2. Implement in clients/windows/agent/enforcer/core.py
+3. Add UI in frontend/src/components/RuleEditor.jsx
+4. Update API endpoint
+
+ADD NEW FRONTEND COMPONENT:
+1. Create in frontend/src/components/
+2. Add CSS file
+3. Import and use in App.jsx or parent component
+4. Update docs/FRONTEND.md if significant
+
+PAIR NEW DEVICE:
+1. Parent creates pairing token (POST /api/devices/pairing/token)
+2. Agent sends pairing request (POST /api/devices/pairing/pair)
+3. Backend creates device, returns api_key
+4. Agent saves config.json with api_key
+
+================================================================================
+KNOWN LIMITATIONS
+================================================================================
+
+- SQLite database (single-file, not for high concurrency)
+- Self-signed SSL certificates (user must trust CA)
+- Windows agent requires admin privileges
+- Android Device Owner requires factory reset or ADB
+- No multi-tenant support (single parent account)
+- In-memory WebSocket connections (no persistence)
+
+================================================================================
+FUTURE IMPROVEMENTS
+================================================================================
+
+- PostgreSQL/MySQL for production database
+- Redis for caching
+- Message queue for async processing
+- Multi-tenant architecture
+- Cloud sync
+- Mobile app for parents
+- Linux agent support
+
+================================================================================
+END OF CONTEXT
+================================================================================
