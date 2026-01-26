@@ -6,6 +6,7 @@
 [![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
 [![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
 [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
+[![Device Owner: Supported](https://img.shields.io/badge/🤖_Device%20Owner-Supported-purple)](docs/AGENT.md)
 
 **FamilyEye je open-source projekt pro osobní nekomerční použití.**
 Komunitní příspěvky (bug fixy, nové funkce) jsou vřele vítány! Podívejte se do [CONTRIBUTING.md](CONTRIBUTING.md).
