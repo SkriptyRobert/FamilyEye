@@ -9,6 +9,7 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       
@@ -16,17 +17,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
       
       - name: Install dependencies
+        working-directory: backend
         run: |
-          cd backend
           pip install -r requirements.txt
           pip install pytest pytest-cov
       
       - name: Run backend tests
         working-directory: backend
         run: |
-          python -m pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
+          python -m pytest tests/ -x --cov=app --cov-report=xml --tb=short
         env:
           DATABASE_URL: "sqlite:///:memory:"
           BACKEND_URL: "http://localhost:8000"
@@ -42,6 +45,7 @@ jobs:
 
   android-unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       
@@ -50,14 +54,25 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
+      
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       
       - name: Grant execute permission for gradlew
         run: chmod +x clients/android/gradlew
       
       - name: Run Android unit tests
+        working-directory: clients/android
         run: |
-          cd clients/android
-          ./gradlew test --no-daemon
+          ./gradlew test --no-daemon --max-workers=2 --parallel
       
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -68,6 +83,7 @@ jobs:
 
   android-instrumented-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       
@@ -76,13 +92,24 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
+      
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       
       - name: Grant execute permission for gradlew
         run: chmod +x clients/android/gradlew
       
       - name: Run Android instrumented tests
+        working-directory: clients/android
         run: |
-          cd clients/android
           ./gradlew connectedAndroidTest --no-daemon || echo "Instrumented tests require emulator - skipping"
         continue-on-error: true
       
@@ -95,6 +122,7 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       
@@ -106,14 +134,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        working-directory: frontend
+        run: npm ci
       
       - name: Run frontend tests
-        run: |
-          cd frontend
-          npm test -- --coverage --watchAll=false
+        working-directory: frontend
+        run: npm test -- --coverage --watchAll=false --bail
         continue-on-error: true
 
   test-summary:
