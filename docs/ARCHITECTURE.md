@@ -2,10 +2,11 @@
 
 ## Přehled
 
-Systém se skládá ze tří hlavních komponent:
+Systém se skládá ze čtyř hlavních komponent:
 - **Backend Server** (FastAPI) - API, databáze, autentizace
 - **Frontend Dashboard** (React) - Webové rozhraní pro rodiče
-- **Windows Agent** - Monitorování a vynucování pravidel na zařízení
+- **Windows Agent** - Monitorování a vynucování pravidel na Windows zařízeních
+- **Android Agent** - Monitorování a vynucování pravidel na Android zařízeních s Device Owner ochranou a Smart Shield
 
 ## Architektonický diagram
 
@@ -23,16 +24,25 @@ Systém se skládá ze tří hlavních komponent:
 │  - API          │
 │  - Database     │
 │  - WebSocket    │
+│  - Smart Shield │
 └────────┬────────┘
          │
          │ HTTPS
          │
-┌────────▼────────┐
-│  Windows Agent  │
-│  - Monitor      │
-│  - Enforcer     │
-│  - Reporter     │
-└─────────────────┘
+    ┌────┴────┐
+    ▼         ▼
+┌─────────┐ ┌──────────┐
+│ Windows │ │ Android  │
+│ Agent   │ │ Agent    │
+│         │ │          │
+│ Monitor │ │ Monitor  │
+│ Enforcer│ │ Enforcer │
+│ Reporter│ │ Reporter │
+│         │ │ Smart    │
+│         │ │ Shield   │
+│         │ │ Device   │
+│         │ │ Owner    │
+└─────────┘ └──────────┘
 ```
 
 ## Komponenty
@@ -44,8 +54,8 @@ Systém se skládá ze tří hlavních komponent:
 **Hlavní moduly**:
 - `main.py` - FastAPI aplikace, routing
 - `models.py` - SQLAlchemy modely
-- `api/` - API endpointy (auth, devices, rules, reports, websocket, trust)
-- `services/` - Business logika (pairing_service)
+- `api/` - API endpointy (auth, devices, rules, reports, websocket, trust, shield, files)
+- `services/` - Business logika (pairing_service, app_filter)
 - `database.py` - Databázové připojení
 - `config.py` - Konfigurace
 
@@ -55,6 +65,7 @@ Systém se skládá ze tří hlavních komponent:
 - SQLite (výchozí databáze)
 - JWT autentizace
 - WebSocket pro real-time komunikaci
+- Smart Shield API pro detekci obsahu
 
 ### Frontend Dashboard
 
@@ -95,6 +106,41 @@ Systém se skládá ze tří hlavních komponent:
 - psutil (monitorování procesů)
 - pywin32 (Windows API)
 - requests (HTTP komunikace)
+
+### Android Agent
+
+**Umístění**: `clients/android/app/src/main/java/com/familyeye/agent/`
+
+**Hlavní moduly**:
+- `service/FamilyEyeService.kt` - Hlavní foreground služba
+- `service/AppDetectorService.kt` - Accessibility Service pro detekci aplikací
+- `service/EnforcementService.kt` - Vynucování pravidel
+- `service/RuleEnforcer.kt` - Logika vynucování pravidel
+- `service/UsageTracker.kt` - Sledování použití
+- `service/Reporter.kt` - Odesílání statistik
+- `scanner/ContentScanner.kt` - Smart Shield skenování obsahu
+- `scanner/KeywordDetector.kt` - Aho-Corasick detekce klíčových slov
+- `device/DeviceOwnerPolicyEnforcer.kt` - Device Owner ochrana
+- `receiver/BootReceiver.kt` - Boot receiver pro automatické spuštění
+- `receiver/RestartReceiver.kt` - Restart receiver pro obnovení služby
+
+**Technologie**:
+- Kotlin
+- Android SDK
+- Device Owner API
+- Accessibility Service API
+- WorkManager (persistence)
+- JobScheduler (persistence)
+- AlarmManager (persistence)
+- Room Database (lokální cache)
+- OkHttp (HTTP komunikace)
+- WebSocket (real-time komunikace)
+
+**Speciální funkce**:
+- **Device Owner** - Nejvyšší úroveň ochrany, aplikaci nelze odinstalovat
+- **Smart Shield** - Detekce škodlivého obsahu pomocí Aho-Corasick algoritmu
+- **5 vrstev persistence** - Watchdog, JobScheduler, WorkManager, AlarmManager, KeepAlive
+- **Direct Boot** - Funguje i před odemknutím zařízení PINem
 
 ## Tok dat
 
@@ -142,6 +188,26 @@ Frontend → WebSocket /api/ws/{user_id} → Backend
 Backend → Broadcast updates → Frontend
 ```
 
+### 6. Smart Shield detekce (Android)
+
+```
+Android Agent → ContentScanner → KeywordDetector
+Android Agent → Screenshot capture
+Android Agent → POST /api/shield/alert → Backend
+Backend → Uloží ShieldAlert → Database
+Backend → WebSocket notify → Frontend
+Frontend → Zobrazí upozornění
+```
+
+### 7. Device Owner ochrana (Android)
+
+```
+Android Agent → DeviceOwnerPolicyEnforcer
+Android Agent → setUninstallBlocked(true)
+Android Agent → applyBaselineRestrictions()
+Android Agent → applySettingsProtection()
+```
+
 ## Bezpečnost
 
 ### Autentizace
@@ -171,6 +237,8 @@ Backend → Broadcast updates → Frontend
 - `rules` - Pravidla
 - `usage_logs` - Statistiky použití
 - `pairing_tokens` - Dočasné tokeny pro párování
+- `shield_keywords` - Klíčová slova pro Smart Shield
+- `shield_alerts` - Detekce Smart Shield
 
 Viz [DATABASE.md](./DATABASE.md) pro detailní schéma.
 
@@ -191,10 +259,12 @@ Viz [DATABASE.md](./DATABASE.md) pro detailní schéma.
 
 ## Rozšíření
 
-### Přidání nové platformy (např. Android)
+### Přidání nové platformy
 
-1. Vytvořit `clients/android/agent/`
-2. Implementovat stejné rozhraní jako Windows agent
+Android agent je již implementován. Pro přidání další platformy (např. iOS, macOS):
+
+1. Vytvořit `clients/{platform}/agent/`
+2. Implementovat stejné rozhraní jako existující agenty
 3. Přidat `device_type` do párování
 4. Aktualizovat frontend pro nový typ zařízení
 

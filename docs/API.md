@@ -488,6 +488,165 @@ Informace o SSL konfiguraci.
 }
 ```
 
+### Smart Shield
+
+#### GET /api/shield/keywords/{device_id}
+
+Získání všech klíčových slov pro zařízení.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "device_id": 1,
+    "keyword": "drogy",
+    "category": "drugs",
+    "severity": "high",
+    "enabled": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### POST /api/shield/keywords
+
+Přidání nového klíčového slova.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Request**:
+```json
+{
+  "device_id": 1,
+  "keyword": "drogy",
+  "category": "drugs",
+  "severity": "high"
+}
+```
+
+**Response**: ShieldKeywordResponse
+
+#### DELETE /api/shield/keywords/{keyword_id}
+
+Smazání klíčového slova.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response**: `{"status": "success"}`
+
+#### GET /api/shield/alerts/{device_id}
+
+Získání všech alertů pro zařízení.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Query params**: 
+- `limit` (default: 50, max: 200)
+- `offset` (default: 0)
+- `category` (volitelné, filtr podle kategorie)
+- `severity` (volitelné, filtr podle severity)
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "device_id": 1,
+    "keyword_id": 1,
+    "keyword": "drogy",
+    "category": "drugs",
+    "severity": "high",
+    "package_name": "com.chrome.browser",
+    "screenshot_url": "https://.../screenshot.jpg",
+    "context_text": "Kde koupit drogy...",
+    "detected_at": "2024-01-01T12:00:00Z"
+  }
+]
+```
+
+#### POST /api/shield/alert
+
+Agent endpoint pro odeslání alertu (voláno agentem).
+
+**Request**:
+```json
+{
+  "device_id": "uuid",
+  "api_key": "uuid",
+  "keyword_id": 1,
+  "keyword": "drogy",
+  "category": "drugs",
+  "severity": "high",
+  "package_name": "com.chrome.browser",
+  "screenshot_url": "https://.../screenshot.jpg",
+  "context_text": "Kde koupit drogy..."
+}
+```
+
+**Response**:
+```json
+{
+  "status": "success",
+  "alert_id": 1
+}
+```
+
+#### POST /api/shield/agent/keywords
+
+Agent endpoint pro načtení klíčových slov (voláno agentem).
+
+**Request**:
+```json
+{
+  "device_id": "uuid",
+  "api_key": "uuid"
+}
+```
+
+**Response**: List[ShieldKeywordResponse]
+
+### Files
+
+#### POST /api/files/upload
+
+Nahrání souboru (screenshot) - voláno agentem.
+
+**Headers**: 
+- `X-Device-ID: uuid`
+- `X-API-Key: uuid`
+
+**Request**: Multipart form data
+- `file`: Soubor (obrázek)
+
+**Response**:
+```json
+{
+  "url": "https://.../uploads/screenshots/{device_id}/{filename}",
+  "filename": "screenshot_20240101_120000.jpg"
+}
+```
+
+#### GET /api/files/screenshots/{device_id}/{filename}
+
+Stažení screenshotu.
+
+**Headers**: `Authorization: Bearer <token>` (volitelné, lze použít i query param `token`)
+
+**Query params**: `token` (volitelné, JWT token pro přístup přes img tag)
+
+**Response**: Obrázek (image/jpeg)
+
+#### DELETE /api/files/screenshots/{device_id}/{filename}
+
+Smazání screenshotu.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response**: `{"status": "success"}`
+
 ## Error responses
 
 ### 400 Bad Request
