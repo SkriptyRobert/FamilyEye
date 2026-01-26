@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import com.familyeye.agent.service.FamilyEyeService
 import io.mockk.*
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,7 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.P])
+@Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
 class BootReceiverTest {
 
     private lateinit var context: Context
@@ -21,9 +22,14 @@ class BootReceiverTest {
 
     @Before
     fun setup() {
-        context = RuntimeEnvironment.getApplication()
+        context = spyk(RuntimeEnvironment.getApplication())
         receiver = BootReceiver()
-        mockkObject(FamilyEyeService.Companion)
+        mockkObject(FamilyEyeService)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
     }
 
     @Test

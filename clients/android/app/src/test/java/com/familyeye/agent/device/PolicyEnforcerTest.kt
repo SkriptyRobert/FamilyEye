@@ -13,7 +13,7 @@ import org.robolectric.annotation.Config
 import timber.log.Timber
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.P])
+@Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
 class PolicyEnforcerTest {
 
     private lateinit var context: Context
@@ -23,9 +23,9 @@ class PolicyEnforcerTest {
     @Before
     fun setup() {
         context = spyk(RuntimeEnvironment.getApplication())
-        dpm = spyk(context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager)
+        dpm = mockk(relaxed = true)
         
-        // Mock getSystemService to return our spyk'd DPM
+        // Mock getSystemService to return our mock DPM
         every { context.getSystemService(Context.DEVICE_POLICY_SERVICE) } returns dpm
         
         enforcer = DeviceOwnerPolicyEnforcer(context)

@@ -5,6 +5,7 @@ import com.familyeye.agent.service.RuleEnforcer
 import com.familyeye.agent.ui.screens.BlockType
 import com.familyeye.agent.utils.PackageMatcher
 import io.mockk.*
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -14,7 +15,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+@Config(sdk = [28], manifest = Config.NONE)
 class EnforcementServiceTest {
 
     private lateinit var context: Context
@@ -25,11 +26,12 @@ class EnforcementServiceTest {
 
     @Before
     fun setup() {
-        context = RuntimeEnvironment.getApplication()
+        context = spyk(RuntimeEnvironment.getApplication())
         ruleEnforcer = mockk(relaxed = true)
         selfProtectionHandler = mockk(relaxed = true)
         whitelistManager = mockk(relaxed = true)
 
+        mockkObject(PackageMatcher)
         every { context.packageName } returns "com.familyeye.agent"
 
         enforcementService = EnforcementService(
@@ -38,6 +40,11 @@ class EnforcementServiceTest {
             selfProtectionHandler,
             whitelistManager
         )
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
     }
 
     @Test

@@ -11,6 +11,8 @@ import io.mockk.*
 import io.mockk.coEvery
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -22,7 +24,7 @@ import timber.log.Timber
 import com.familyeye.agent.service.AppDetectorService
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28])
+@Config(sdk = [28], manifest = Config.NONE)
 class UsageTrackerTest {
 
     private lateinit var context: Context
@@ -41,7 +43,7 @@ class UsageTrackerTest {
 
     @Before
     fun setup() {
-        context = RuntimeEnvironment.getApplication()
+        context = spyk(RuntimeEnvironment.getApplication())
         usageLogDao = mockk(relaxed = true)
         configRepository = mockk(relaxed = true)
         ruleEnforcer = mockk(relaxed = true)
@@ -52,6 +54,8 @@ class UsageTrackerTest {
         blocker = mockk(relaxed = true)
         usageRepository = mockk(relaxed = true)
         powerManager = mockk(relaxed = true)
+
+        mockkObject(AppDetectorService)
 
         every { context.getSystemService(Context.POWER_SERVICE) } returns powerManager
         every { powerManager.isInteractive } returns true
@@ -72,6 +76,11 @@ class UsageTrackerTest {
             blocker,
             usageRepository
         )
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
     }
 
     @Test

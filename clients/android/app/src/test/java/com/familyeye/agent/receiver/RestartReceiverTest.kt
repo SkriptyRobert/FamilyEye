@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import com.familyeye.agent.service.FamilyEyeService
 import io.mockk.*
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,7 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [Build.VERSION_CODES.P])
+@Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
 class RestartReceiverTest {
 
     private lateinit var context: Context
@@ -24,8 +25,13 @@ class RestartReceiverTest {
         context = spyk(RuntimeEnvironment.getApplication())
         receiver = RestartReceiver()
         
-        // Mock the static FamilyEyeService.start method
-        mockkObject(FamilyEyeService.Companion)
+        // Mock the static FamilyEyeService class
+        mockkObject(FamilyEyeService)
+    }
+
+    @After
+    fun tearDown() {
+        unmockkAll()
     }
 
     @Test
