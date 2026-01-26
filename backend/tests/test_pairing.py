@@ -11,6 +11,32 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from app.services.pairing_service import create_device_from_pairing, generate_pairing_token
 from app.models import PairingToken, Device, User
 
+
+def test_generate_pairing_token_with_db_session(db_session, test_user):
+    """Test pairing token generation with real database session."""
+    token = generate_pairing_token(test_user.id, db_session)
+    
+    assert token.parent_id == test_user.id
+    assert token.token is not None
+    assert len(token.token) > 0
+    assert token.used is False
+    
+    # Compare datetimes - handle timezone-aware vs naive
+    now = datetime.now(timezone.utc)
+    expires = token.expires_at
+    if expires.tzinfo is None:
+        # If naive, assume UTC
+        expires = expires.replace(tzinfo=timezone.utc)
+    assert expires > now
+    
+    # Verify token is in database
+    from app.models import PairingToken
+    saved_token = db_session.query(PairingToken).filter(
+        PairingToken.token == token.token
+    ).first()
+    assert saved_token is not None
+    assert saved_token.parent_id == test_user.id
+
 def test_generate_pairing_token():
     db = MagicMock()
     parent_id = 42

@@ -2,8 +2,9 @@
 
 > **Complete parental control solution for families**
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
-[![Status: Open Source (Non-Commercial)](https://img.shields.io/badge/Status-Open%20Source%20(Non--Commercial)-orange)](README.md)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
+[![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
 [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
 
 **FamilyEye je open-source projekt pro osobní nekomerční použití.**
@@ -130,14 +131,19 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email security@familyeye.app (do not open public issues).
 
-## 📄 License (Non-Commercial)
+## 📄 License
 
-This project is licensed under **CC BY-NC-SA 4.0** (Attribution-NonCommercial-ShareAlike).
+### Code License
+This project's **source code** is licensed under **GNU General Public License v3.0 (GPLv3)**.
 See [LICENSE](LICENSE) file for details.
+
+### Images License
+All **images, graphics, and visual assets** in this repository are licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+See [LICENSE_IMAGES](LICENSE_IMAGES) file for details.
 
 **Author:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com
 
-**For commercial use (companies, paid services), please contact us for an exception.**
+**Note:** Images are for non-commercial use only. For commercial use of images, please contact the author.
 
 ---
 

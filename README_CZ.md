@@ -2,8 +2,9 @@
 
 > **Kompletní řešení rodičovské kontroly**
 
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_CZ)
-[![Status: Open Source (Non-Commercial)](https://img.shields.io/badge/Status-Open%20Source%20(Non--Commercial)-orange)](README_CZ.md)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
+[![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README_CZ.md)
 [![Language: English](https://img.shields.io/badge/Lang-English-blue)](README.md)
 
 **FamilyEye je open-source projekt pro osobní nekomerční použití.**
@@ -130,14 +131,19 @@ Příspěvky jsou vítány! Prosím podívejte se do [CONTRIBUTING_CZ.md](CONTRI
 
 Pro bezpečnostní zranitelnosti viz [SECURITY_CZ.md](SECURITY_CZ.md) nebo napište na **robert.pesout@gmail.com** (neotvírejte veřejné issues).
 
-## 📄 Licence (Nekomerční)
+## 📄 Licence
 
-Tento projekt je licencován pod **CC BY-NC-SA 4.0** (Uveďte autora-Neužívejte komerčně-Zachovejte licenci).
-Viz soubor [LICENSE_CZ](LICENSE_CZ) pro detaily.
+### Licence kódu
+Zdrojový kód tohoto projektu je licencován pod **GNU General Public License v3.0 (GPLv3)**.
+Viz soubor [LICENSE](LICENSE) pro detaily.
+
+### Licence obrázků
+Všechny obrázky, grafiky a vizuální materiály v tomto repozitáři jsou licencovány pod **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+Viz soubor [LICENSE_IMAGES](LICENSE_IMAGES) pro detaily.
 
 **Autor:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com
 
-**Pro komerční použití (firmy, placené služby) nás kontaktujte pro udělení výjimky.**
+**Poznámka:** Obrázky jsou pouze pro nekomerční použití. Pro komerční použití obrázků kontaktujte autora.
 
 ---
 

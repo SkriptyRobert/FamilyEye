@@ -37,8 +37,11 @@ screenshot*.png
 .DS_Store
 Thumbs.db
 
-# Dev scripts (keep locally, not in production release)
-/dev/
+# Dev scripts and temporary files (keep locally, not in production release)
+# Note: /dev/ directory is kept in repo for reference but contains development files
+# /dev/
+*.tmp
+*.temp
 
 # Runtime data - Windows Agent
 clients/windows/agent/report_queue.json
@@ -51,8 +54,11 @@ backend/uploads/
 backend/app.log
 uploads/
 
-# Android build logs
+# Android build logs and temporary files
 clients/android/build_log*.txt
+clients/android/build_*.txt
+clients/android/compile_*.txt
+*.apk
 
 # Derived/resolved documentation
 *.resolved

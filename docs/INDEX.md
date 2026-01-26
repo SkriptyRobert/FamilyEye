@@ -17,10 +17,9 @@ Systém rodičovské kontroly pro Windows s webovým dashboardem a agentem pro m
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Instalace, konfigurace, nasazení
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Vývojové prostředí, build, testování
 
-### Specifikace a nástroje
+### Specifikace
 
-- **[UX_REDESIGN_SPEC.md](./UX_REDESIGN_SPEC.md)** - UX/UI redesign specifikace, design guidelines
-- **[GITHUB.md](./GITHUB.md)** - GitHub limity, doporučení, best practices
+- **[TIME_SYNC_DIAGRAM.md](./TIME_SYNC_DIAGRAM.md)** - Diagram synchronizace času mezi agentem a backendem
 
 ## Rychlý start
 
