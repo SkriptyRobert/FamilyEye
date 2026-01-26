@@ -11,6 +11,7 @@ import io.mockk.*
 import io.mockk.coEvery
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,9 +20,6 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import timber.log.Timber
 import com.familyeye.agent.service.AppDetectorService
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -92,7 +90,7 @@ class UsageTrackerTest {
         val lastCheckTime = usageTracker.getDiagnostics()["lastCheckTime"] as Long
 
         // Verify it was reset (should be close to now, not storedTime)
-        assertTrue(lastCheckTime >= now - 1000, "lastCheckTime should be reset to NOW when gap > 60s")
+        assertTrue("lastCheckTime should be reset to NOW when gap > 60s", lastCheckTime >= now - 1000)
     }
 
     @Test
@@ -112,7 +110,7 @@ class UsageTrackerTest {
         val lastCheckTime = usageTracker.getDiagnostics()["lastCheckTime"] as Long
 
         // Verify it was preserved (should be close to storedTime)
-        assertTrue(lastCheckTime <= storedTime + 1000, "lastCheckTime should be preserved when gap < 60s")
+        assertTrue("lastCheckTime should be preserved when gap < 60s", lastCheckTime <= storedTime + 1000)
     }
 
     @Test
@@ -142,7 +140,7 @@ class UsageTrackerTest {
         // When screen is off, tracking should be skipped
         // lastCheckTime should be updated but no usage logged
         val diagnostics = usageTracker.getDiagnostics()
-        assertFalse(powerManager.isInteractive, "Screen should be off")
+        assertFalse("Screen should be off", powerManager.isInteractive)
     }
 
     @Test
@@ -156,7 +154,7 @@ class UsageTrackerTest {
         // When overlay is showing, tracking should be skipped
         val diagnostics = usageTracker.getDiagnostics()
         // Verify overlay check is working
-        assertTrue(blockOverlayManager.isShowing(), "Overlay should be showing")
+        assertTrue("Overlay should be showing", blockOverlayManager.isShowing())
     }
 
     @Test
@@ -189,7 +187,7 @@ class UsageTrackerTest {
         val usage = usageTracker.getUsageToday(packageName)
 
         // Should return max of local and remote
-        assertEquals(150, usage, "Should return max of local and remote usage")
+        assertEquals("Should return max of local and remote usage", 150, usage)
     }
 
     @Test
@@ -205,6 +203,6 @@ class UsageTrackerTest {
         val total = usageTracker.getTotalUsageToday()
 
         // Should return max of local and remote
-        assertEquals(300, total, "Should return max of local and remote total usage")
+        assertEquals("Should return max of local and remote total usage", 300, total)
     }
 }
