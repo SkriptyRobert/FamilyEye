@@ -26,10 +26,8 @@ frontend/src/
 │   └── api.js            # API klient
 └── utils/
     ├── auth.js           # Autentizace
-    ├── appConfigLoader.js # Konfigurace
     ├── date.js           # Formátování datumů
-    ├── formatting.js     # Formátování
-    └── userBlacklist.js  # Blacklist aplikací
+    └── formatting.js     # Formátování
 ```
 
 ## Spuštění
@@ -179,7 +177,7 @@ Výstup: `frontend/dist/`
 
 ### app-config.json
 
-**Umístění**: `frontend/public/app-config.json`
+**Umístění**: `backend/app/config/app-config.json`
 
 **Struktura**:
 ```json
@@ -189,7 +187,7 @@ Výstup: `frontend/dist/`
 }
 ```
 
-**Načítání**: `utils/appConfigLoader.js`
+**Načítání**: Backend servuje konfiguraci přes API endpoint
 
 ## Styling
 

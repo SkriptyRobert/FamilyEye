@@ -63,7 +63,7 @@ Databáze se vytvoří automaticky při prvním spuštění.
 
 **HTTP (vývoj)**:
 ```bash
-python run_server.py
+python run_https.py
 ```
 
 **HTTPS (produkce)**:
@@ -106,19 +106,16 @@ pip install -r requirements.txt
 
 #### 2. Párování zařízení
 
-```bash
-python pair_device.py
-```
+Párování se provádí přes frontend dashboard nebo přímo přes API endpoint `/api/devices/pairing/pair`. 
 
-Zadejte:
-- Backend URL (např. `https://192.168.1.100:8000`)
-- Pairing token (z dashboardu)
-- Název zařízení
+Pro manuální párování použijte:
+- Frontend: Otevřete dashboard a použijte QR kód nebo manuální token
+- API: POST request na `/api/devices/pairing/pair` s pairing tokenem
 
 #### 3. Spuštění
 
 ```bash
-python run_agent.py
+python -m agent.main
 ```
 
 #### 4. Windows služba

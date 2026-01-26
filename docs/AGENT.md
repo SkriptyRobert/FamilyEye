@@ -10,12 +10,18 @@ Agent běží na Windows zařízení a monitoruje použití, vynucuje pravidla a
 clients/windows/agent/
 ├── main.py              # Hlavní agent, orchestrace
 ├── config.py            # Konfigurace
-├── monitor.py           # Monitorování aplikací
-├── enforcer.py          # Vynucování pravidel
+├── monitor/             # Monitorování aplikací
+│   ├── core.py
+│   ├── process_tracking.py
+│   └── ...
+├── enforcer/            # Vynucování pravidel
+│   ├── core.py
+│   ├── app_blocking.py
+│   └── ...
 ├── reporter.py          # Odesílání statistik
 ├── network_control.py   # Kontrola sítě
 ├── notifications.py     # Windows notifikace
-├── boot_protection.py    # Ochrana při startu
+├── boot_protection.py   # Ochrana při startu
 └── logger.py            # Logging
 ```
 
@@ -28,19 +34,18 @@ cd clients/windows
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python run_agent.py
+python -m agent.main
 ```
 
 ### Párování
 
-```bash
-python pair_device.py
-```
+Párování se provádí přes frontend dashboard nebo přímo přes API endpoint `/api/devices/pairing/pair`.
 
-Zadá se:
-- Backend URL
-- Pairing token (z dashboardu)
-- Název zařízení
+Pro manuální párování použijte:
+- Frontend: Otevřete dashboard a použijte QR kód nebo manuální token
+- API: POST request na `/api/devices/pairing/pair` s pairing tokenem, device_name, device_type, mac_address a device_id
+
+Párování vytvoří zařízení v databázi a vrátí `device_id` a `api_key`, které se uloží do `config.json`.
 
 ## Konfigurace
 
@@ -88,7 +93,9 @@ Zadá se:
 2. `run()` - Hlavní smyčka
 3. `stop()` - Zastavení všech threadů
 
-### Monitor (`monitor.py`)
+### Monitor (`monitor/`)
+
+**Hlavní modul**: `monitor/core.py`
 
 **Třída**: `AppMonitor`
 
@@ -115,7 +122,9 @@ Zadá se:
 - `chrome_crashpad` → `chrome`
 - atd.
 
-### Enforcer (`enforcer.py`)
+### Enforcer (`enforcer/`)
+
+**Hlavní modul**: `enforcer/core.py`
 
 **Třída**: `RuleEnforcer`
 
@@ -338,14 +347,14 @@ Zadá se:
 
 ### Přidání nového typu pravidla
 
-1. Přidat logiku do `enforcer.py`
-2. Přidat do `_update_blocked_apps()`
-3. Přidat do `update()` smyčky
+1. Přidat logiku do `enforcer/core.py`
+2. Přidat do `_update_blocked_apps()` v `enforcer/app_blocking.py`
+3. Přidat do `update()` smyčky v `enforcer/core.py`
 4. Aktualizovat backend API
 
 ### Přidání nové detekce
 
-1. Přidat do `monitor.py`
+1. Přidat do `monitor/core.py` nebo `monitor/process_tracking.py`
 2. Aktualizovat `update()` metodu
 3. Přidat do helper mapping (pokud potřeba)
 

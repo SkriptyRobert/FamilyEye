@@ -84,8 +84,8 @@ Systém se skládá ze tří hlavních komponent:
 
 **Hlavní moduly**:
 - `main.py` - Hlavní agent, orchestrace
-- `monitor.py` - Monitorování aplikací
-- `enforcer.py` - Vynucování pravidel
+- `monitor/` - Monitorování aplikací
+- `enforcer/` - Vynucování pravidel
 - `reporter.py` - Odesílání statistik
 - `network_control.py` - Kontrola sítě
 - `config.py` - Konfigurace agenta

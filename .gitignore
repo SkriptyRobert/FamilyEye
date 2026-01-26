@@ -81,7 +81,26 @@ clients/android/gradle_error*.txt
 clients/android/*_log.txt
 clients/android/*_logs.txt
 clients/android/device_log.txt
+clients/android/test_log.txt
+clients/android/build_log*.txt
+clients/android/build_*.txt
+clients/android/compile_*.txt
+clients/android/debug_logs.txt
+clients/android/accessibility_logs.txt
+clients/android/familyeye_logs.txt
+clients/android/raw_logs.txt
+clients/android/full_logs.txt
+clients/android/physical_device_log.txt
+clients/android/tests/manual/*_log*.txt
 
 # Database WAL files
 *.db-shm
 *.db-wal
+
+# PyInstaller build artifacts
+installer/agent/build_child/
+*.toc
+*.pkg
+*.pyz
+warn-*.txt
+xref-*.html

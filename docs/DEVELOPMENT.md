@@ -22,7 +22,7 @@ cd backend
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python run_server.py
+python run_https.py
 ```
 
 #### Frontend
@@ -40,7 +40,7 @@ cd clients/windows
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python run_agent.py
+python -m agent.main
 ```
 
 ## Struktura projektu
@@ -53,7 +53,7 @@ Parental-Control_Enterprise/
 │   │   ├── services/    # Business logika
 │   │   └── ...
 │   ├── requirements.txt
-│   └── run_server.py
+│   └── run_https.py
 ├── frontend/            # React frontend
 │   ├── src/
 │   │   ├── components/  # React komponenty
@@ -125,9 +125,9 @@ import NewComponent from './components/NewComponent'
    - Validace v `RuleCreate` schématu
    - Logika v endpointu
 
-2. **Přidat do agenta** (`clients/windows/agent/enforcer.py`):
-   - Logika v `_update_blocked_apps()`
-   - Vynucování v `update()`
+2. **Přidat do agenta** (`clients/windows/agent/enforcer/core.py`):
+   - Logika v `_update_blocked_apps()` v `enforcer/app_blocking.py`
+   - Vynucování v `update()` v `enforcer/core.py`
 
 3. **Přidat do frontendu** (`frontend/src/components/RuleEditor.jsx`):
    - UI pro vytvoření pravidla
@@ -176,7 +176,7 @@ class NewModelResponse(BaseModel):
 pytest tests/
 
 # Manuální testování API
-python verify_api.py
+# Použijte curl, Postman nebo frontend pro testování API endpointů
 ```
 
 ### Frontend
@@ -193,7 +193,7 @@ npm run build
 
 ```bash
 # Spuštění agenta
-python run_agent.py
+python -m agent.main
 
 # Testování s backendem
 # Spustit backend a agent, ověřit komunikaci
