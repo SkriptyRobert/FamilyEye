@@ -525,13 +525,9 @@ class FamilyEyeService : Service(), ScreenStateListener {
 
     /**
      * Phase 3: Periodic security monitoring and health watchdog.
-     * Checks for:
-     * - Accessibility Service binding (zombie state detection)
-     * - WebSocket connectivity
-     * - System-level tampering attempts (Developer Options, ADB)
-     * 
-     * IMPROVED: Now runs every 10 seconds (was 60s) for faster recovery.
      */
+    private val lastReportedIssues = mutableMapOf<String, Boolean>()
+
     private fun startSecurityMonitoring() {
         serviceScope.launch {
             var selfRepairAttemptTime = 0L
@@ -540,46 +536,43 @@ class FamilyEyeService : Service(), ScreenStateListener {
                 try {
                     // --- Watchdog Checks ---
                     val isAccessibilityRunning = AppDetectorService.instance != null
-                    val isWebSocketConnected = webSocketClient.isConnected.value
                     
                     if (!isAccessibilityRunning) {
                         val currentTime = System.currentTimeMillis()
-                        
                         if (selfRepairAttemptTime == 0L) {
-                            // First attempt - try soft repair
                             Timber.e("CRITICAL: Accessibility NOT running! Attempting Self-Repair...")
                             triggerSelfRepair()
                             selfRepairAttemptTime = currentTime
-                        } else if (currentTime - selfRepairAttemptTime > AgentConstants.SELF_REPAIR_TIMEOUT_MS) {
-                            // Self-repair didn't work - BUT DO NOT KILL PROCESS
-                            // The app is better alive without Accessibility than dead in a restart loop
-                            Timber.e("Self-repair timed out after ${AgentConstants.SELF_REPAIR_TIMEOUT_MS}ms - Retrying soft repair next cycle")
-                            // forceNuclearRestart() // DISABLE NUCLEAR RESTART
-                            selfRepairAttemptTime = 0L  // Reset for next cycle to try KeepAlive again
-                        } else {
-                            Timber.w("Waiting for self-repair... (${currentTime - selfRepairAttemptTime}ms elapsed)")
                         }
                     } else {
-                        // Service recovered - reset timer
-                        if (selfRepairAttemptTime != 0L) {
-                            Timber.i("Self-repair SUCCESSFUL - Accessibility Service recovered!")
-                            selfRepairAttemptTime = 0L
+                        selfRepairAttemptTime = 0L
+                    }
+                    
+                    // --- Security Checks (Debounced) ---
+                    val currentIssues = selfProtectionHandler.checkSystemTampering()
+                    
+                    // Detect added/changed issues
+                    for ((issueType, active) in currentIssues) {
+                        if (lastReportedIssues[issueType] != active) {
+                            if (active) {
+                                Timber.w("Security issue detected: $issueType - reporting to backend")
+                                reportSecurityAlert(issueType)
+                            }
+                            lastReportedIssues[issueType] = active
                         }
                     }
                     
-                    Timber.d("Watchdog: AC=$isAccessibilityRunning, WS=$isWebSocketConnected")
-                    
-                    // --- Security Checks ---
-                    val issues = selfProtectionHandler.checkSystemTampering()
-                    
-                    for ((issueType, _) in issues) {
-                        Timber.w("Security issue detected: $issueType - reporting to backend")
-                        reportSecurityAlert(issueType)
+                    // Detect resolved issues
+                    val resolved = lastReportedIssues.keys.filter { it !in currentIssues.keys }
+                    resolved.forEach { issueType ->
+                        Timber.i("Security issue resolved: $issueType")
+                        lastReportedIssues.remove(issueType)
                     }
+
                 } catch (e: Exception) {
                     Timber.e(e, "Error in security monitoring")
                 }
-                delay(AgentConstants.SECURITY_CHECK_INTERVAL_MS) // 10 seconds (was 60s)
+                delay(AgentConstants.SECURITY_CHECK_INTERVAL_MS)
             }
         }
     }

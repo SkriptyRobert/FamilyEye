@@ -15,7 +15,7 @@ class ContentScanner @Inject constructor(
 ) {
     private val scannerScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var lastScanTime = 0L
-    private val SCAN_INTERVAL_MS = 2000L // Min interval between scans (Battery Saver)
+    private val SCAN_INTERVAL_MS = com.familyeye.agent.config.AgentConstants.CONTENT_SCAN_INTERVAL_MS
     
     // Ignore these high-refresh apps to save battery
     private val IGNORED_PACKAGES = setOf(

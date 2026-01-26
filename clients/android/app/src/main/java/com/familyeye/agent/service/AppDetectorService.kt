@@ -68,7 +68,8 @@ class AppDetectorService : AccessibilityService() {
         "org.mozilla.firefox",
         "com.microsoft.emmx",
         "com.opera.browser",
-        "com.brave.browser"
+        "com.brave.browser",
+        "com.google.android.googlequicksearchbox" // Google App / Search Bar
     )
 
     override fun onCreate() {
@@ -90,9 +91,7 @@ class AppDetectorService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         val info = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                         AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
-                         AccessibilityEvent.TYPE_VIEW_SCROLLED
+            eventTypes = AccessibilityEvent.TYPES_ALL_MASK
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
@@ -157,10 +156,22 @@ class AppDetectorService : AccessibilityService() {
             }
         }
         
-        // 2. Handle Content Changes (Browsers only)
+        // 2. Handle Text Input (Typing in ANY app - Messenger, WhatsApp, etc.)
+        else if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+            // Scan immediately on typing (subject to ContentScanner's internal debounce)
+             if (::contentScanner.isInitialized) {
+                // Use event source as root for efficiency if possible, or window root
+                val root = event.source ?: try { rootInActiveWindow } catch (e: Exception) { null }
+                contentScanner.processScreen(root, packageName)
+            }
+        }
+        
+        // 3. Handle Content Changes (Browsers/Feeds only)
         else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED || 
                  event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             
+            // Only scan full screen content changes for browsers/search apps
+            // This saves battery by ignoring game updates or video players
             if (BROWSER_PACKAGES.contains(packageName)) {
                 if (::contentScanner.isInitialized) {
                     val root = try { rootInActiveWindow } catch (e: Exception) { null }
