@@ -24,8 +24,70 @@ class SetupWizardViewModel @Inject constructor(
     private val configRepository: AgentConfigRepository
 ) : ViewModel() {
 
+    enum class SetupStep {
+        WELCOME,
+        PIN_SETUP,
+        PERMISSIONS,
+        OEM_CONFIG,
+        DEVICE_OWNER_PREP,
+        DEVICE_OWNER_PC,
+        PAIRING,
+        COMPLETE
+    }
+
+    private val _currentStep = MutableStateFlow(SetupStep.WELCOME)
+    val currentStep: StateFlow<SetupStep> = _currentStep.asStateFlow()
+
     private val _isSetupComplete = MutableStateFlow(false)
     val isSetupComplete: StateFlow<Boolean> = _isSetupComplete.asStateFlow()
+
+    fun nextStep(hasOemIssues: Boolean, isDeviceOwner: Boolean) {
+        val current = _currentStep.value
+        _currentStep.value = when (current) {
+            SetupStep.WELCOME -> SetupStep.PIN_SETUP
+            SetupStep.PIN_SETUP -> SetupStep.PERMISSIONS
+            SetupStep.PERMISSIONS -> {
+                if (hasOemIssues) SetupStep.OEM_CONFIG
+                else if (isDeviceOwner) SetupStep.PAIRING
+                else SetupStep.DEVICE_OWNER_PREP
+            }
+            SetupStep.OEM_CONFIG -> {
+                if (isDeviceOwner) SetupStep.PAIRING
+                else SetupStep.DEVICE_OWNER_PREP
+            }
+            SetupStep.DEVICE_OWNER_PREP -> SetupStep.DEVICE_OWNER_PC
+            SetupStep.DEVICE_OWNER_PC -> SetupStep.PAIRING
+            SetupStep.PAIRING -> SetupStep.COMPLETE
+            SetupStep.COMPLETE -> SetupStep.COMPLETE
+        }
+    }
+
+    fun previousStep(hasOemIssues: Boolean) {
+        val current = _currentStep.value
+        _currentStep.value = when (current) {
+            SetupStep.WELCOME -> SetupStep.WELCOME
+            SetupStep.PIN_SETUP -> SetupStep.WELCOME
+            SetupStep.PERMISSIONS -> SetupStep.PIN_SETUP
+            SetupStep.OEM_CONFIG -> SetupStep.PERMISSIONS
+            SetupStep.DEVICE_OWNER_PREP -> {
+                if (hasOemIssues) SetupStep.OEM_CONFIG
+                else SetupStep.PERMISSIONS
+            }
+            SetupStep.DEVICE_OWNER_PC -> SetupStep.DEVICE_OWNER_PREP
+            SetupStep.PAIRING -> {
+                // If we came from PC step (user is DO) or skipped DO prep
+                // This is a bit tricky, but usually we go back to the prep/pc flow
+                SetupStep.DEVICE_OWNER_PREP 
+            }
+            SetupStep.COMPLETE -> SetupStep.PAIRING
+        }
+    }
+
+    fun skipDeviceOwner() {
+        if (_currentStep.value == SetupStep.DEVICE_OWNER_PREP) {
+            _currentStep.value = SetupStep.PAIRING
+        }
+    }
 
     fun savePin(pin: String) {
         viewModelScope.launch {

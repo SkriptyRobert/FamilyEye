@@ -14,8 +14,8 @@ android {
         applicationId = "com.familyeye.agent"
         minSdk = 29  // Android 10
         targetSdk = 35  // Android 15
-        versionCode = 33
-        versionName = "2.4.0"
+        versionCode = 27
+        versionName = "1.0.27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

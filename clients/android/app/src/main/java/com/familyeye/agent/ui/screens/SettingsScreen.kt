@@ -28,6 +28,7 @@ import com.familyeye.agent.ui.viewmodel.MainViewModel
 import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.components.PermissionItem
 import com.familyeye.agent.ui.screens.OemSetupWarningCard
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,8 +97,24 @@ fun SettingsScreen(
                         label = "Správce zařízení", 
                         isGranted = hasDeviceAdmin,
                         onClick = {
-                            if (hasDeviceAdmin) {
-                                // Already granted - open Device Admin list so user can remove it
+                            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                            val isDeviceOwner = dpm.isDeviceOwnerApp(context.packageName)
+
+                            if (isDeviceOwner) {
+                                // Device Owner is active - special handling
+                                android.widget.Toast.makeText(context, "Aplikace je Správce zařízení (Device Owner)", android.widget.Toast.LENGTH_SHORT).show()
+                                // For now, we open settings, but ideally we should have a "Remove DO" button here if that was the intent.
+                                // But DO cannot be easily removed by user unless we clear it programmatically.
+                                try {
+                                    // If user wants to remove, we can offer to clear it here?
+                                    // But usually we just open settings.
+                                    val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                            } else if (hasDeviceAdmin) {
+                                // Already granted as standard Admin - open Device Admin list
                                 val intent = Intent().apply {
                                     component = android.content.ComponentName(
                                         "com.android.settings",
@@ -107,7 +124,6 @@ fun SettingsScreen(
                                 try {
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
-                                    // Fallback for devices with different settings package
                                     val fallbackIntent = Intent(Settings.ACTION_SECURITY_SETTINGS)
                                     context.startActivity(fallbackIntent)
                                 }
@@ -198,9 +214,24 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Unpair Button
+            // Unpair & Deactivate Button
             OutlinedButton(
-                onClick = { viewModel.unpair() },
+                onClick = { 
+                    // 1. Remove Device Admin if active
+                    try {
+                        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                        val componentName = android.content.ComponentName(context, com.familyeye.agent.receiver.FamilyEyeDeviceAdmin::class.java)
+                        if (dpm.isAdminActive(componentName)) {
+                            dpm.removeActiveAdmin(componentName)
+                            android.widget.Toast.makeText(context, "Ochrana deaktivována", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to remove active admin")
+                    }
+                    
+                    // 2. Procced with Unpair
+                    viewModel.unpair() 
+                },
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
@@ -208,7 +239,9 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Outlined.ExitToApp, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Odpárovat zařízení")
+                // If admin is active, show "Deactivate", else "Unpair"
+                val text = if (hasDeviceAdmin) "Deaktivovat a Odpárovat" else "Odpárovat zařízení"
+                Text(text)
             }
             
             Spacer(modifier = Modifier.height(16.dp))

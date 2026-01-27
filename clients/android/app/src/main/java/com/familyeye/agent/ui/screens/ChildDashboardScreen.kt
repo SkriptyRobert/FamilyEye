@@ -108,7 +108,7 @@ fun ChildDashboardScreen(
             Spacer(modifier = Modifier.weight(1.2f)) // Bottom balance
             
             Text(
-                text = "v1.0.9",
+                text = "v2.4.0",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.padding(bottom = 8.dp)
