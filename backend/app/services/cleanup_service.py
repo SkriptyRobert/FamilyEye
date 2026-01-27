@@ -63,9 +63,7 @@ def cleanup_device_data(db: Session, device_id: int):
         if rel_path:
              delete_file_safely(rel_path)
 
-    # 2. Delete DB Records (Cascades usually handle this, but explicit is safer for files)
-    # The actual DB deletion will be handled by cascade or caller if they delete the Device object.
-    # But here we just scrub files.
+    # DB deletion via cascade/caller; this function only scrubs files.
     
     # 3. Clear caches
     try:
@@ -87,20 +85,12 @@ def cleanup_old_data(db: Session, retention_days_logs: int = None, retention_day
     logger.info("Starting automated cleanup of old data...")
     now = datetime.now(timezone.utc)
     
-    # 1. Cleanup Orphaned Usage Logs (Logs without existing device)
-    # Note: Cascades should handle this, but this is a safety net.
-    # We do NOT delete old logs for active devices (as requested).
+    # 1. Orphaned usage logs (device_id not in Devices). Safety net; cascade does most work.
+    # Do NOT delete logs for active devices.
     from sqlalchemy.sql import exists
     
-    # Simple orphan cleanup: Delete usage logs where device_id is not in Devices
-    # This might be slow on huge tables, so we rely on cascade mostly.
-    # But let's keep it safe:
-    # deleted_logs = db.query(UsageLog).filter(~exists().where(Device.id == UsageLog.device_id)).delete(synchronize_session=False)
-    # Actually, simpler:
+    # Orphan cleanup; heavy tables rely on cascade.
     deleted_logs = 0
-    # Uncomment if we suspect orphans:
-    # subquery = db.query(Device.id)
-    # deleted_logs = db.query(UsageLog).filter(UsageLog.device_id.notin_(subquery)).delete(synchronize_session=False)
 
     
     # 2. Cleanup Old Shield Alerts & Screenshots

@@ -13,9 +13,7 @@ class SessionTracker:
         self.process_start_times: Dict[str, float] = {}  # app_name -> timestamp (ISO)
         self.kill_history: List[Dict] = []
         
-        # We need a lock, but Python's GIL often suffices for simple dict ops.
-        # However, for consistency with previous Monitor, we assume caller handles sync OR we use threading.Lock.
-        # The main Core module will likely hold the big lock.
+        # Sync: caller or Core holds lock; GIL often enough for simple dict ops.
         
     def track_app_session(self, app_name: str):
         """Track when an app session starts (for session duration)."""
@@ -81,8 +79,7 @@ class SessionTracker:
     def clear_daily_stats(self):
         """Clear daily session stats."""
         self.app_session_start.clear()
-        # Keep process_start_times? Yes, usually relevant for "first seen today". 
-        # But if it's a new day, we should probably clear it.
+        # Clear process_start_times (new day).
         self.process_start_times.clear()
 
     @staticmethod
@@ -151,9 +148,6 @@ class SessionTracker:
                     # The buffer contains a C int (4 bytes)
                     state = ctypes.cast(ppBuffer, ctypes.POINTER(ctypes.c_int)).contents.value
                     
-                    # Log state for debugging (optional/verbose)
-                    # print(f"Session {session_id} state: {state}")
-                    
                     # WTSActive (0) is the ONLY state where the user is actually using the desktop
                     if state == WTSActive:
                         return False
@@ -164,10 +158,7 @@ class SessionTracker:
                 finally:
                     wtsapi32.WTSFreeMemory(ppBuffer)
             
-            # Detection failed - assume unlocked to avoid false positives? 
-            # OR assume locked for safety?
-            # Existing behavior was "safe assumption -> False", but for lock enforcement we need accuracy.
-            # If we fail to query, let's look for OpenInputDesktop as fallback for non-service non-session 0
+            # Detection failed: fallback for lock enforcement accuracy (non-service / session 0).
             return SessionTracker._is_screen_locked_fallback()
             
         except Exception as e:
