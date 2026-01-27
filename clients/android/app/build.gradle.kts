@@ -14,8 +14,8 @@ android {
         applicationId = "com.familyeye.agent"
         minSdk = 29  // Android 10
         targetSdk = 35  // Android 15
-        versionCode = 27
-        versionName = "1.0.27"
+        versionCode = 28
+        versionName = "2.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation("androidx.compose.animation:animation")
     
     // Hilt
     implementation(libs.hilt.android)

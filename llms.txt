@@ -243,13 +243,21 @@ FRONTEND:
 WINDOWS AGENT:
 - Dev: python -m agent.main
 - Build: python installer/agent/build_agent.py
-- Installer: iscc installer/agent/setup_agent_2.3.0.iss
+- Installer: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/agent/setup_agent_2.4.0.iss"
 - Service: Installed as Windows Service
 
 ANDROID AGENT:
-- Build: ./gradlew assembleDebug (in clients/android)
-- APK: clients/android/app/build/outputs/apk/debug/app-debug.apk
-- Device Owner: Requires ADB provisioning or factory reset
+- Build: cd clients/android && ./gradlew.bat assembleDebug (on Windows) or ./gradlew assembleDebug (on Unix)
+- APK Location: clients/android/app/build/outputs/apk/debug/app-debug.apk
+- Setup Flow: Requires Pairing Token from Dashboard -> PIN Setup -> Permissions -> (Optional) Device Owner
+- 🤖 Device Owner Activation:
+  1. Wipe all accounts from device (Settings -> Accounts).
+  2. Connect via USB (Developer Options -> USB Debugging).
+  3. Run: `adb shell dpm set-device-owner com.familyeye.agent/.receiver.FamilyEyeDeviceAdmin`
+- 🛡️ Emergency Recovery (v1.0.27+):
+  - "Deactivate & Unpair" button in Admin Settings allows programmatic removal of Admin/DO rights.
+  - Prevents "sticky" installations during development.
+- Troubleshooting: If build fails, check `clients/android/app/src/main/java/com/familyeye/agent/ui/screens/SetupWizardScreen.kt` for syntax errors.
 
 ================================================================================
 API STRUCTURE
@@ -394,18 +402,6 @@ KNOWN LIMITATIONS
 - Android Device Owner requires factory reset or ADB
 - No multi-tenant support (single parent account)
 - In-memory WebSocket connections (no persistence)
-
-================================================================================
-FUTURE IMPROVEMENTS
-================================================================================
-
-- PostgreSQL/MySQL for production database
-- Redis for caching
-- Message queue for async processing
-- Multi-tenant architecture
-- Cloud sync
-- Mobile app for parents
-- Linux agent support
 
 ================================================================================
 END OF CONTEXT

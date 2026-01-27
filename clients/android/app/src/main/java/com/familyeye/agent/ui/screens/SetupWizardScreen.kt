@@ -19,6 +19,7 @@ import com.familyeye.agent.receiver.FamilyEyeDeviceAdmin
 import com.familyeye.agent.ui.viewmodel.SetupWizardViewModel
 import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.screens.setup.*
+import androidx.compose.animation.*
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalAnimationApi::class)
 @Composable

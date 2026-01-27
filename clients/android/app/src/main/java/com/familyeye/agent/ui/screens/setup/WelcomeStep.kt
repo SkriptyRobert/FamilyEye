@@ -50,7 +50,7 @@ fun WelcomeStep(onNext: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
         
         Text(
-            text = "verze 1.0.26 (Final Shield)",
+            text = "verze 2.4.0 (Enterprise)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
