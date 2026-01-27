@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import { RefreshCw, X, Shield, Plus } from 'lucide-react'
-import { 
-  RuleCard, 
-  HiddenAppsSection, 
-  AppPicker, 
+import {
+  RuleCard,
+  HiddenAppsSection,
+  AppPicker,
   ScheduleForm,
   INITIAL_FORM_DATA,
-  SYSTEM_APP_PATTERNS 
+  SYSTEM_APP_PATTERNS
 } from './rules'
 import './RuleEditor.css'
 
@@ -40,21 +40,35 @@ const RuleEditor = ({ deviceId }) => {
   }, [selectedDeviceId])
 
   const fetchHiddenApps = () => {
+    if (!selectedDeviceId) {
+      setHiddenApps([])
+      return
+    }
     try {
-      const stored = localStorage.getItem('familyeye_user_blacklist')
-      setHiddenApps(stored ? JSON.parse(stored) : [])
+      const stored = localStorage.getItem('familyeye_hidden_apps_v2')
+      if (stored) {
+        const data = JSON.parse(stored)
+        setHiddenApps(data[selectedDeviceId] || [])
+      } else {
+        setHiddenApps([])
+      }
     } catch (e) {
       console.error('Failed to load hidden apps:', e)
     }
   }
 
   const handleRestoreApp = (appName) => {
+    if (!selectedDeviceId) return
+
     try {
-      const stored = localStorage.getItem('familyeye_user_blacklist')
-      let list = stored ? JSON.parse(stored) : []
-      list = list.filter(item => item !== appName.toLowerCase())
-      localStorage.setItem('familyeye_user_blacklist', JSON.stringify(list))
-      setHiddenApps(list)
+      const stored = localStorage.getItem('familyeye_hidden_apps_v2')
+      let data = stored ? JSON.parse(stored) : {}
+
+      if (data[selectedDeviceId]) {
+        data[selectedDeviceId] = data[selectedDeviceId].filter(item => item !== appName.toLowerCase())
+        localStorage.setItem('familyeye_hidden_apps_v2', JSON.stringify(data))
+        setHiddenApps(data[selectedDeviceId])
+      }
     } catch (e) {
       console.error('Failed to restore app:', e)
     }
@@ -124,15 +138,15 @@ const RuleEditor = ({ deviceId }) => {
 
     // Validation
     if ((formData.rule_type === 'app_block' || formData.rule_type === 'time_limit') && selectedApps.length === 0) {
-      alert('Prosim vyberte alespon jednu aplikaci')
+      alert('Prosím vyberte alespoň jednu aplikaci')
       return
     }
     if (formData.rule_type === 'schedule' && scheduleTarget === 'apps' && selectedApps.length === 0) {
-      alert('Prosim vyberte alespon jednu aplikaci')
+      alert('Prosím vyberte alespoň jednu aplikaci')
       return
     }
     if (formData.rule_type === 'web_block' && !formData.website_url.trim()) {
-      alert('Prosim zadejte URL webu')
+      alert('Prosím zadejte URL webu')
       return
     }
 
@@ -157,7 +171,7 @@ const RuleEditor = ({ deviceId }) => {
       fetchRules()
     } catch (err) {
       console.error('Error saving rule:', err)
-      alert('Chyba pri ukladani pravidla')
+      alert('Chyba při ukládání pravidla')
     }
   }
 
@@ -216,12 +230,12 @@ const RuleEditor = ({ deviceId }) => {
 
   // Render
   if (loading && devices.length === 0) {
-    return <div className="loading">Nacitani...</div>
+    return <div className="loading">Načítání...</div>
   }
 
   const currentDevice = devices.find(d => d.id === selectedDeviceId)
-  const showAppPicker = formData.rule_type !== 'daily_limit' && 
-    formData.rule_type !== 'web_block' && 
+  const showAppPicker = formData.rule_type !== 'daily_limit' &&
+    formData.rule_type !== 'web_block' &&
     formData.rule_type !== 'website_block' &&
     !(formData.rule_type === 'schedule' && scheduleTarget === 'device')
 
@@ -230,7 +244,7 @@ const RuleEditor = ({ deviceId }) => {
       {/* Header */}
       <div className="rule-editor-header">
         <div className="header-title-group">
-          <h2>Sprava pravidel</h2>
+          <h2>Správa pravidel</h2>
           <span className="rules-count-badge">{rules.length}</span>
         </div>
         <div className="header-actions">
@@ -239,7 +253,7 @@ const RuleEditor = ({ deviceId }) => {
             onChange={(e) => setSelectedDeviceId(parseInt(e.target.value))}
             className="device-select"
           >
-            <option value="">Vyberte zarizeni</option>
+            <option value="">Vyberte zařízení</option>
             {devices.map((device) => (
               <option key={device.id} value={device.id}>{device.name}</option>
             ))}
@@ -253,7 +267,7 @@ const RuleEditor = ({ deviceId }) => {
               className={`add-rule-btn ${showForm ? 'active' : ''}`}
             >
               {showForm ? <X size={18} /> : <Plus size={18} />}
-              <span>{showForm ? 'Zrusit' : 'Nove pravidlo'}</span>
+              <span>{showForm ? 'Zrušit' : 'Nové pravidlo'}</span>
             </button>
           </div>
         </div>
@@ -272,22 +286,22 @@ const RuleEditor = ({ deviceId }) => {
                   className="input"
                 >
                   <option value="app_block">Blokovat aplikaci</option>
-                  <option value="time_limit">Absolutni denni limit (pro aplikaci)</option>
-                  <option value="daily_limit">Celkovy denni limit zarizeni</option>
+                  <option value="time_limit">Absolutní denní limit (pro aplikaci)</option>
+                  <option value="daily_limit">Celkový denní limit zařízení</option>
                   {currentDevice?.device_type !== 'android' && (
                     <option value="web_block">Blokovat web</option>
                   )}
-                  <option value="schedule">Casovy rozvrh (blokovat vse v case)</option>
+                  <option value="schedule">Časový rozvrh (blokovat vše v čase)</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Nazev pravidla (volitelne)</label>
+                <label>Název pravidla (volitelné)</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="napr. Skola, Vikend, Trenink"
+                  placeholder="např. Škola, Víkend, Trénink"
                   className="input"
                 />
               </div>
@@ -295,12 +309,12 @@ const RuleEditor = ({ deviceId }) => {
               {/* Web URL input */}
               {(formData.rule_type === 'website_block' || formData.rule_type === 'web_block') && (
                 <div className="form-group">
-                  <label>Webova adresa</label>
+                  <label>Webová adresa</label>
                   <input
                     type="text"
                     value={formData.website_url}
                     onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-                    placeholder="napr. tiktok.com nebo jen tiktok"
+                    placeholder="např. tiktok.com nebo jen tiktok"
                     className="input"
                   />
                 </div>
@@ -309,7 +323,7 @@ const RuleEditor = ({ deviceId }) => {
               {/* App Picker */}
               {showAppPicker && (
                 <div className="form-group">
-                  <label>Nazev aplikace</label>
+                  <label>Název aplikace</label>
                   <AppPicker
                     selectedApps={selectedApps}
                     onAddApp={handleAddApp}
@@ -325,15 +339,15 @@ const RuleEditor = ({ deviceId }) => {
               {/* Time Limit */}
               {(formData.rule_type === 'time_limit' || formData.rule_type === 'daily_limit') && (
                 <div className="form-group">
-                  <label>Absolutni denni limit (minuty)</label>
+                  <label>Absolutní denní limit (minuty)</label>
                   <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85em' }}>
-                    Urcuje maximalni povoleny cas pro kazdy den. V prehledu lze tento cas operativne navysit.
+                    Určuje maximální povolený čas pro každý den. V přehledu lze tento čas operativně navýšit.
                   </small>
                   <input
                     type="number"
                     value={formData.time_limit}
                     onChange={(e) => setFormData({ ...formData, time_limit: e.target.value })}
-                    placeholder="pocet minut za den"
+                    placeholder="počet minut za den"
                     className="input"
                   />
                 </div>
@@ -364,14 +378,14 @@ const RuleEditor = ({ deviceId }) => {
                     onChange={(e) => setFormData({ ...formData, block_network: e.target.checked })}
                   />
                   <div>
-                    <span style={{ fontWeight: 'bold' }}>Blokovat sitovy pristup</span><br />
-                    <small>Zabrani aplikaci v pristupu k internetu uplne.</small>
+                    <span style={{ fontWeight: 'bold' }}>Blokovat síťový přístup</span><br />
+                    <small>Zabrání aplikaci v přístupu k internetu úplně.</small>
                   </div>
                 </label>
               )}
 
               <button type="submit" className="button button-success" style={{ marginTop: '15px' }}>
-                {editingRuleId ? 'Aktualizovat pravidlo' : 'Ulozit pravidlo'}
+                {editingRuleId ? 'Aktualizovat pravidlo' : 'Uložit pravidlo'}
               </button>
             </form>
           )}
@@ -379,15 +393,15 @@ const RuleEditor = ({ deviceId }) => {
           {/* Rules List */}
           <div className="rules-list">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0 }}>Aktivni pravidla ({rules.length})</h3>
+              <h3 style={{ margin: 0 }}>Aktivní pravidla ({rules.length})</h3>
             </div>
             {loading ? (
-              <div className="loading-small">Nacitani pravidel...</div>
+              <div className="loading-small">Načítání pravidel...</div>
             ) : rules.length === 0 ? (
               <div className="rules-empty-state">
                 <div className="empty-state-icon"><Shield size={48} /></div>
-                <h3>Zadna aktivni pravidla</h3>
-                <p>Pro toto zarizeni zatim nebyla nastavena zadna omezeni. Kliknete na tlacitko "Nove pravidlo" pro zacatek.</p>
+                <h3>Žádná aktivní pravidla</h3>
+                <p>Pro toto zařízení zatím nebyla nastavena žádná omezení. Klikněte na tlačítko "Nové pravidlo" pro začátek.</p>
               </div>
             ) : (
               <div className="rules-grid">

@@ -386,14 +386,39 @@ export const mapAppName = (appName, config = null) => {
  * @param {object} config - App configuration object
  * @returns {Array} - Filtered list without system apps
  */
-export const filterSystemApps = (apps, config = null) => {
+export const filterSystemApps = (apps, optionsOrConfig = null) => {
     if (!apps) return []
+
+    // Normalize arguments (backward compatibility)
+    let config = null
+    let deviceId = null
+
+    if (optionsOrConfig && optionsOrConfig.whitelist) {
+        // It's the old config object
+        config = optionsOrConfig
+    } else if (optionsOrConfig) {
+        // It's the new options object
+        config = optionsOrConfig.config
+        deviceId = optionsOrConfig.deviceId
+    }
 
     // Import user blacklist (lazy load)
     let userBlacklist = []
     try {
-        const stored = localStorage.getItem('familyeye_user_blacklist')
-        userBlacklist = stored ? JSON.parse(stored) : []
+        // V2: Per-device storage
+        // Format: { "deviceId": ["app1", "app2"] }
+        const storedV2 = localStorage.getItem('familyeye_hidden_apps_v2')
+
+        if (storedV2) {
+            const parsed = JSON.parse(storedV2)
+            // If deviceId is provided, get its specific blacklist
+            if (deviceId && parsed[deviceId]) {
+                userBlacklist = parsed[deviceId]
+            }
+        } else {
+            // Fallback: Check migration or empty
+            // We do NOT load V1 global blacklist to force clean separation
+        }
     } catch (e) {
         // Ignore parse errors
     }
@@ -406,9 +431,12 @@ export const filterSystemApps = (apps, config = null) => {
         const lowerName = appName.replace('.exe', '')
 
         // Check user blacklist first (manually hidden by 'eye' icon)
-        const normalizedBlacklist = userBlacklist.map(n => n.toLowerCase())
-        if (normalizedBlacklist.includes(appName) || normalizedBlacklist.includes(lowerName)) {
-            return false
+        // Only if we successfully resolved a device-specific list
+        if (userBlacklist.length > 0) {
+            const normalizedBlacklist = userBlacklist.map(n => n.toLowerCase())
+            if (normalizedBlacklist.includes(appName) || normalizedBlacklist.includes(lowerName)) {
+                return false
+            }
         }
 
         // Check WHITELIST first - these apps are ALWAYS shown

@@ -165,7 +165,7 @@ const StatusOverview = () => {
                         onAdjustLimit={onAdjustLimitWrapper}
                         onShowAllApps={setShowAllAppsModal}
                         onShowScreenshot={setShowScreenshotModal}
-                        onHideApp={handleHideApp}
+                        onHideApp={(appName) => handleHideApp(appName, device.id)}
                     />
                 ))}
             </div>

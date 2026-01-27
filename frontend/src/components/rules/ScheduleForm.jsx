@@ -18,7 +18,7 @@ const ScheduleForm = ({
 }) => {
   return (
     <div className="schedule-form">
-      <label>Rozvrh plati pro:</label>
+      <label>Rozvrh platí pro:</label>
       <div className="schedule-target-selector">
         <label className={`radio-option ${scheduleTarget === 'device' ? 'selected' : ''}`}>
           <input
@@ -29,7 +29,7 @@ const ScheduleForm = ({
             onChange={(e) => onScheduleTargetChange(e.target.value)}
           />
           <Monitor size={16} />
-          <span>Cele zarizeni</span>
+          <span>Celé zařízení</span>
         </label>
         <label className={`radio-option ${scheduleTarget === 'apps' ? 'selected' : ''}`}>
           <input
@@ -40,7 +40,7 @@ const ScheduleForm = ({
             onChange={(e) => onScheduleTargetChange(e.target.value)}
           />
           <Shield size={16} />
-          <span>Vybrane aplikace</span>
+          <span>Vybrané aplikace</span>
         </label>
       </div>
 
@@ -64,8 +64,8 @@ const ScheduleForm = ({
           />
         </div>
       </div>
-      
-      <label style={{ marginTop: '10px' }}>Dny v tydnu</label>
+
+      <label style={{ marginTop: '10px' }}>Dny v týdnu</label>
       <DayPicker
         selectedDays={selectedDays}
         onChange={onDaysChange}

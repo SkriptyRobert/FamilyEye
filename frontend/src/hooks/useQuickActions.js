@@ -251,17 +251,26 @@ export function useQuickActions(onSuccess = null) {
     }, [onSuccess, setFeedbackWithTimeout])
 
     /**
-     * Handle hiding app from list (local blacklist)
+     * Handle hiding app from list (local blacklist V2 - Per Device)
      */
-    const handleHideApp = useCallback((appName) => {
+    const handleHideApp = useCallback((appName, deviceId) => {
+        if (!deviceId) return
+
         try {
-            const stored = localStorage.getItem('familyeye_user_blacklist')
-            const list = stored ? JSON.parse(stored) : []
+            // V2 Storage: { deviceId1: [apps...], deviceId2: [apps...] }
+            const stored = localStorage.getItem('familyeye_hidden_apps_v2')
+            const data = stored ? JSON.parse(stored) : {}
+
+            // Initialize array for this device if missing
+            if (!data[deviceId]) {
+                data[deviceId] = []
+            }
+
             const normalizedName = appName.toLowerCase()
 
-            if (!list.includes(normalizedName)) {
-                list.push(normalizedName)
-                localStorage.setItem('familyeye_user_blacklist', JSON.stringify(list))
+            if (!data[deviceId].includes(normalizedName)) {
+                data[deviceId].push(normalizedName)
+                localStorage.setItem('familyeye_hidden_apps_v2', JSON.stringify(data))
 
                 // Force triggering external refetch/update if needed
                 if (onSuccess) {

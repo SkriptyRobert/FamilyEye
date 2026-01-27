@@ -15,7 +15,7 @@ const AppPicker = ({
   frequentApps = [],
   allApps = []
 }) => {
-  
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -38,7 +38,7 @@ const AppPicker = ({
         )
         .slice(0, 15)
         .map(app => ({
-          name: app.display_name || 'Neznama aplikace',
+          name: app.display_name || 'Neznámá aplikace',
           keyword: app.app_name || ''
         }))
     }
@@ -84,17 +84,17 @@ const AppPicker = ({
         value={inputValue}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={selectedApps.length > 0 ? "Pridat dalsi aplikaci..." : "Nazev (napr. Epic, Chrome, Minecraft)"}
+        placeholder={selectedApps.length > 0 ? "Přidat další aplikaci..." : "Název (např. Epic, Chrome, Minecraft)"}
         className="input"
       />
 
       <div className="suggested-apps" style={{ marginTop: '10px' }}>
         <small style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>
           {isSearchMode
-            ? <><Plus size={12} style={{ marginRight: '4px' }} /> Nalezene aplikace:</>
+            ? <><Plus size={12} style={{ marginRight: '4px' }} /> Nalezené aplikace:</>
             : frequentApps.length > 0
-              ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpouzivanejsi aplikace:</>
-              : 'Caste aplikace:'
+              ? <><BarChart3 size={12} style={{ marginRight: '4px' }} /> Nejpoužívanější aplikace:</>
+              : 'Časté aplikace:'
           }
         </small>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
@@ -104,7 +104,7 @@ const AppPicker = ({
               type="button"
               className={`tag-button ${selectedApps.includes(app.keyword?.toLowerCase() || '') ? 'selected' : ''}`}
               onClick={() => handleSuggestedClick(app)}
-              title={app.duration ? `Pouzito: ${Math.round(app.duration / 60)} min` : app.keyword}
+              title={app.duration ? `Použito: ${Math.round(app.duration / 60)} min` : app.keyword}
               disabled={selectedApps.includes(app.keyword?.toLowerCase() || '')}
             >
               {app.name}
@@ -112,7 +112,7 @@ const AppPicker = ({
           ))}
           {isSearchMode && suggestedApps.length === 0 && (
             <span style={{ fontSize: '0.85em', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-              Zadna aplikace nebyla nalezena. Muzete ji pridat tlacitkem Enter.
+              Žádná aplikace nebyla nalezena. Můžete ji přidat tlačítkem Enter.
             </span>
           )}
         </div>
