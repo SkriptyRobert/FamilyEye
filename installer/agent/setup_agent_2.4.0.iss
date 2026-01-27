@@ -12,7 +12,7 @@ DefaultGroupName=FamilyEye Agent
 DisableProgramGroupPage=yes
 
 OutputDir=output
-OutputBaseFilename=FamilyEyeAgent_Setup_2.3.0
+OutputBaseFilename=FamilyEyeAgent_Setup_2.4.0
 UninstallDisplayName=FamilyEye Agent
 
 Compression=lzma2/ultra64
@@ -32,7 +32,7 @@ AllowNoIcons=yes
 CloseApplications=yes
 RestartApplications=no
 ShowLanguageDialog=no
-VersionInfoVersion=2.3.0.0
+VersionInfoVersion=2.4.0.0
 
 CreateUninstallRegKey=yes
 Uninstallable=yes
