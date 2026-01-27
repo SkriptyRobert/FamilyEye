@@ -27,9 +27,7 @@ def get_current_device(
     device_id: str,
     db: Session = Depends(get_db)
 ) -> Device:
-    # This is a simplified dependency. 
-    # In reality, FastAPI dependency injection for Header/Query is needed.
-    # We will use explicit verification in the endpoint for simplicity with UploadFile.
+    # Simplified: explicit verification in endpoint (no Header/Query DI for UploadFile).
     return verify_device_api_key(device_id, api_key, db)
 
 async def get_current_parent_allow_query(
@@ -88,16 +86,11 @@ async def get_screenshot(
         Device.parent_id == current_user.id # or user checks if not explicitly parent_id (future proofing)
     ).first()
     
-    # Fallback: Check via User->Device relationship if parent_id is not widely used yet
-    # But current schema relies on it or User logic.
-    # Provided code used parent_id check, so we stick to it.
+    # Schema uses parent_id; expansion to User->Device relation possible later.
     if not device:
-         # Try to see if this user owns the device via User.devices relationship?
-         # Check via ID
          d_check = db.query(Device).filter(Device.device_id == device_id).first()
          if d_check and d_check.parent_id != current_user.id:
-              # For now strict check. If logic needs expansion (e.g. multiple parents), add here.
-              pass
+              pass  # Strict parent_id check; multi-parent expansion elsewhere
     
     if not device:
         raise HTTPException(

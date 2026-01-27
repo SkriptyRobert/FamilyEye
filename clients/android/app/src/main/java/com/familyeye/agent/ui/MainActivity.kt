@@ -92,8 +92,7 @@ class MainActivity : ComponentActivity() {
             }
             // Verify if intent can be handled
             if (context.packageManager.resolveActivity(intent, 0) != null) {
-                // Show dialog (simplified for now as a direct intent launch wrapped in a toast explaining why)
-                // Ideally this should be a nice Compose Dialog, but for Agentic speed we launch it with a Toast.
+                // Simplified: Toast + intent (Compose Dialog later).
                 android.widget.Toast.makeText(context, "Please enable AUTOSTART for FamilyEye to ensure protection!", android.widget.Toast.LENGTH_LONG).show()
                 try {
                     context.startActivity(intent)
@@ -180,8 +179,7 @@ class MainActivity : ComponentActivity() {
             composable("pairing") {
                 PairingScreen(
                     onPairingSuccess = {
-                        // In standalone mode, maybe go to dashboard? 
-                        // But we prefer setup_wizard flow.
+                        // Standalone pairing success -> dashboard (setup_wizard preferred elsewhere).
                         navController.navigate("dashboard")
                     }
                 )

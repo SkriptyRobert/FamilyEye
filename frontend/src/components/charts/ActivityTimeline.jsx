@@ -16,8 +16,7 @@ const ActivityTimeline = ({ timeline, date }) => {
     // Calculate day boundaries based on the first event or the selected date
     // Assuming timeline data timestamps are in seconds (UNIX)
 
-    // We need to normalize to 00:00 - 23:59 of the RELEVANT day.
-    // We can take the timestamp of the first event, convert to Date, set to 00:00.
+    // Normalize to 00:00–23:59 of the day of the first event.
     const firstEventDate = new Date(timeline[0].start_ts * 1000)
     const dayStart = new Date(firstEventDate)
     dayStart.setHours(0, 0, 0, 0)

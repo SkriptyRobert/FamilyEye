@@ -47,8 +47,7 @@ class UsageTracker @Inject constructor(
         context.getSharedPreferences(AgentConstants.PREFS_NAME, Context.MODE_PRIVATE) 
     }
     
-    // BUG FIX: Cache lastCheckTime in memory to prevent re-evaluation of default on every read
-    // The original bug: prefs.getLong("key", NOW) re-evaluates NOW every time, making elapsed = 0
+    // Cache lastCheckTime; prefs.getLong("key", NOW) re-evaluates NOW each read -> elapsed=0 bug
     @Volatile
     private var _lastCheckTime: Long = -1L  // Sentinel value = not initialized
     
@@ -347,15 +346,7 @@ class UsageTracker @Inject constructor(
         val appName = AppInfoResolver.getAppName(context, packageName)
         val remoteUsage = usageRepository.getRemoteAppUsage(appName)
         
-        // We take the MAX because usage only grows.
-        // If local is 0 (due to loss), remote helps.
-        // If remote is stale (due to offline), local (which includes history if retained) + delta should be checked?
-        // Actually, DAOs usually store 'duration' segments. 
-        // Ideally: Remote Baseline + Local Usage SINCE Sync.
-        // But we don't know "Sync Time" easily here.
-        // Simplified Logic: The backend value INCLUDES everything up to last sync.
-        // If local usage > remote, it means we've tracked more locally (offline).
-        // If remote > local, it means we lost local data.
+        // maxOf(local, remote): usage only grows; remote=baseline to last sync, local covers offline delta.
         return maxOf(localUsage, remoteUsage)
     }
 

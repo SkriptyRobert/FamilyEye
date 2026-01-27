@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.familyeye.agent.ui.viewmodel.MainViewModel
 import com.familyeye.agent.ui.OemSetupViewModel
 import com.familyeye.agent.ui.components.PermissionItem
@@ -103,11 +102,8 @@ fun SettingsScreen(
                             if (isDeviceOwner) {
                                 // Device Owner is active - special handling
                                 android.widget.Toast.makeText(context, "Aplikace je Správce zařízení (Device Owner)", android.widget.Toast.LENGTH_SHORT).show()
-                                // For now, we open settings, but ideally we should have a "Remove DO" button here if that was the intent.
-                                // But DO cannot be easily removed by user unless we clear it programmatically.
+                                // DO active: open settings (Remove DO would require programmatic clear).
                                 try {
-                                    // If user wants to remove, we can offer to clear it here?
-                                    // But usually we just open settings.
                                     val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
@@ -247,7 +243,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Verze 1.0.1",
+                text = "Verze 2.4.0",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

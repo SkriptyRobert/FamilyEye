@@ -77,9 +77,7 @@ object AlarmWatchdog {
     }
     
     fun cancel(context: Context) {
-        // We arguably DON'T want to cancel this if we want true immortality.
-        // But for "official" stopping of the service (e.g. uninstall), we might need to.
-        // For now, let's allow cancelling only if explicitly requested.
+        // Cancel only when explicitly requested (e.g. uninstall); keep alarm for persistence.
         try {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
             val intent = Intent(context, RestartReceiver::class.java).apply {

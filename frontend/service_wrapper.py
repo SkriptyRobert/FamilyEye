@@ -21,9 +21,7 @@ if _parent_dir not in sys.path:
 # Path from frontend/ to backend/venv: ../backend/venv
 _backend_venv_site = os.path.normpath(os.path.join(_script_dir, "..", "backend", "venv", "Lib", "site-packages"))
 if os.path.exists(_backend_venv_site) and _backend_venv_site not in sys.path:
-    # Append to end to prefer system packages if present, or insert 0? 
-    # Usually we want the venv to override if we are running from it, but here we run from system python.
-    # Let's insert at 1 (after script dir) to prioritize it if system lacks stuff.
+    # insert(1) so backend venv overrides when system lacks modules
     sys.path.insert(1, _backend_venv_site)
 
 # Include current directory (frontend) venv if it exists (future proofing)

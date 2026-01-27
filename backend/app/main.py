@@ -139,8 +139,7 @@ app.include_router(shield.router, prefix="/api", tags=["shield"]) # Note: Router
 # Uploads directory (screenshots served via authenticated /api/files/screenshots endpoint)
 uploads_path = os.path.join(os.getcwd(), "uploads")
 os.makedirs(uploads_path, exist_ok=True)
-# NOTE: Screenshots are NOT served as public static files for security.
-# Use /api/files/screenshots/{device_id}/{filename} with authentication instead.
+# Screenshots only via /api/files/screenshots/{device_id}/{filename} (auth required).
 
 def _get_android_version() -> str:
     """Extract version name from Android build.gradle.kts."""
@@ -165,7 +164,7 @@ def _get_android_version() -> str:
 @app.get("/api/download/android-agent/")
 async def download_android_agent():
     """Download the latest Android Agent APK."""
-    # Build path relative to backend/app/main.py -> backend -> root -> clients...
+    # Path: backend/app -> backend -> root -> clients/android/...
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     apk_path = os.path.join(base_dir, "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     

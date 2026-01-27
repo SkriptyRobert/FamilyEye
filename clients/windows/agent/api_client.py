@@ -184,14 +184,7 @@ class BackendAPIClient:
         try:
             url = f"{self._get_base_url()}/api/screenshots/upload"
             
-            # For multipart, we don't set Content-Type header (requests does it with boundary)
-            # We must temporarily remove it or create a new request without the global session header?
-            # Requests handles this automatically if 'files' is provided.
-            
-            # We need to send auth in body or headers? 
-            # Current backend likely expects headers or form fields. 
-            # Assuming headers are OK (X-Device-ID).
-            
+            # Multipart: requests sets Content-Type+boundary when 'files' present. Auth via headers (X-Device-ID).
             files = {
                 'file': (filename, image_data, 'image/jpeg')
             }

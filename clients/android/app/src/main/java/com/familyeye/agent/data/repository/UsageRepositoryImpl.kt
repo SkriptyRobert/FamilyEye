@@ -42,9 +42,7 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getRemoteAppUsage(appName: String): Int {
-        // Reset if data is stale (older than 24h)? No, let UsageTracker decide logic.
-        // But preventing stale usage from blocking mostly harmless if it resets at midnight.
-        // For simplicity, we trust the backend's snapshot until overwritten.
+        // Trust backend snapshot until overwritten; stale logic in UsageTracker.
         
         try {
             val jsonString = prefs.getString(KEY_USAGE_MAP, "{}")

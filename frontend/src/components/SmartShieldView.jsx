@@ -14,8 +14,7 @@ const SmartShieldView = () => {
         const fetchDevices = async () => {
             try {
                 const res = await api.get('/api/devices/')
-                // Filter only Android devices ? Or all that support Shield?
-                // Smart Shield is currently Android only.
+                // Smart Shield: Android only.
                 const androidDevices = res.data.filter(d => d.device_type === 'android')
                 setDevices(androidDevices)
 

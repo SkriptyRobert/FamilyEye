@@ -609,9 +609,4 @@ export const formatLimitText = (usedSeconds, limitMinutes) => {
     return `${displayMins} / ${limitMinutes} min`
 }
 
-// ============================================
-// NOTE: CONFIG-BASED FILTERING MOVED TO BACKEND
-// The appConfigLoader.js and related functions have been removed.
-// All filtering is now handled by backend/app/services/app_filter.py
-// Frontend just displays what backend sends.
-// ============================================
+// Config-based filtering in backend (app_filter.py); frontend displays backend output.

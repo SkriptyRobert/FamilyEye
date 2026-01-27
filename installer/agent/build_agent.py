@@ -64,8 +64,7 @@ if bundle_dir not in sys.path:
     sys.path.insert(0, bundle_dir)
 
 # Setup minimal file logging for critical startup errors
-# This logger captures errors BEFORE agent logger is initialized.
-# After agent starts successfully, all logging goes to service_core.log.
+# Startup logger; agent logger takes over after init, rest goes to service_core.log.
 def _setup_wrapper_logging():
     """Setup minimal file logging for critical startup errors.
     

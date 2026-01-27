@@ -166,13 +166,7 @@ async def report_alert(alert_data: ShieldAlertCreate, db: Session = Depends(get_
     try:
         from .websocket import notify_user
         
-        # Determine full_url for websocket notification if needed based on schema logic
-        # But schema logic only applies to Pydantic Response models.
-        # WebSocket sends raw dict. We should send Full URL for immediate display, 
-        # as frontend might not process WS payload through Pydantic.
-        # However, frontend handles blob fetch. Blob fetch needs Full URL? 
-        # Most likely yes, or relative to base.
-        # Let's verify schema behavior: it prepends BACKEND_URL to relative paths.
+        # WS sends raw dict; frontend needs full URL (schema prepends BACKEND_URL to relative).
         ws_screenshot_url = screenshot_url
         if ws_screenshot_url and not ws_screenshot_url.startswith("http"):
              from ..config import settings
@@ -241,9 +235,7 @@ def delete_alert(
             # Extract relative path from URL
             # URL: .../static/uploads/screenshots/DEVICE/FILE
             relative_path = alert.screenshot_url.split("/static/uploads/")[-1]
-            # Construct local path. Assuming CWD is backend root.
-            # Local: upgrades/../uploads/.. ?? 
-            # App runs in backend root. uploads is in backend/uploads.
+            # CWD = backend root; uploads in backend/uploads.
             import os
             file_path = os.path.join("uploads", relative_path)
             

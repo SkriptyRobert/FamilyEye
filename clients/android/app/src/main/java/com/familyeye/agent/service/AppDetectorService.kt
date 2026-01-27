@@ -190,17 +190,14 @@ class AppDetectorService : AccessibilityService() {
             Timber.v("Key Event: $keyCode (action=$action)")
         }
         
-        // BLOCK RECENTS BUTTON
-        // KEYCODE_APP_SWITCH is the modern square button.
-        // KEYCODE_MENU is the legacy mapping for the same physical button on some Xiaomi ROMs.
+        // Block Recents: KEYCODE_APP_SWITCH (square), KEYCODE_MENU (Xiaomi legacy).
         if (keyCode == android.view.KeyEvent.KEYCODE_APP_SWITCH || 
             keyCode == android.view.KeyEvent.KEYCODE_RECENT_APPS ||
             keyCode == android.view.KeyEvent.KEYCODE_MENU) {
             
             if (event.action == android.view.KeyEvent.ACTION_DOWN) {
                 Timber.w("BLOCKED: Recents button pressed")
-                // Optionally show a toast or overlay explanation?
-                // For now, silent block is more confusing/effective for the child.
+                // Silent block (no toast); child must not bypass.
             }
             return true // Consume the event (DO NOT pass to system)
         }
@@ -219,11 +216,7 @@ class AppDetectorService : AccessibilityService() {
                     checkTimeLimits(packageName)
                 }
                 is EnforcementResult.Whitelisted -> {
-                    // Fix for overlay disappearing on Home:
-                    // If we are showing an overlay, and we switch to:
-                    // 1. Ourselves (Agent)
-                    // 2. The Launcher (Home Screen)
-                    // Then we shoud NOT hide the overlay automatically. The user must dismiss it.
+                    // Do not auto-hide overlay when switching to Agent or Launcher; user must dismiss.
                     val isSelf = packageName == this.packageName
                     val isLauncher = enforcementService.isLauncher(packageName)
                     

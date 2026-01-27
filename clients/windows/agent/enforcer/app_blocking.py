@@ -150,11 +150,8 @@ class AppBlockingEnforcer:
             if session_id != 0xFFFFFFFF:
                 WTS_CURRENT_SERVER_HANDLE = 0
                 
-                # Double-check: Is this session actually creating a problem?
-                # If we're already checking "is_screen_locked" above, we know it's UNLOCKED.
-                # So we must disconnect it.
+                # Screen unlocked above -> disconnect active console.
                 
-                # Perform Disconnect (False = Synchronous? No, Wait=False)
                 # Correct signature: WTSDisconnectSession(hServer, SessionId, bWait)
                 ctypes.windll.wtsapi32.WTSDisconnectSession(WTS_CURRENT_SERVER_HANDLE, session_id, False)
                 self.logger.warning(f"Enforced Lock: Disconnected active console session {session_id}")
