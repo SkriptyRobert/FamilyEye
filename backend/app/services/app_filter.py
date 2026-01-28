@@ -34,6 +34,24 @@ class AppFilterService:
     
     def _get_config_path(self) -> Path:
         """Get path to app-config.json."""
+        import sys
+        
+        if getattr(sys, 'frozen', False):
+            # In PyInstaller, we bundle 'backend' or 'app/config'
+            # Based on build_client, we added backend to root path. 
+            # So app is importable. config is app/config/app-config.json
+            base_path = Path(sys._MEIPASS)
+            # Try multiple locations if structure varies
+            candidates = [
+                base_path / "backend" / "app" / "config" / "app-config.json",
+                base_path / "app" / "config" / "app-config.json",
+                base_path / "config" / "app-config.json"
+            ]
+            for c in candidates:
+                if c.exists():
+                    return c
+            return base_path / "backend" / "app" / "config" / "app-config.json"
+        
         # Path is backend/app/config/app-config.json
         # This file is in backend/app/services/
         return Path(__file__).parent.parent / "config" / "app-config.json"

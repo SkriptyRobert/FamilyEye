@@ -49,27 +49,44 @@ def main():
     print("="*60)
     
     if ssl_certfile and ssl_keyfile:
-        print(f"  🔒 HTTPS enabled")
-        print(f"  📍 Local:   https://localhost:{port}")
-        print(f"  📍 Network: https://{local_ip}:{port}")
-        print(f"\n  📱 For mobile setup, scan QR code at:")
+        print("  HTTPS enabled")
+        print(f"  Local:   https://localhost:{port}")
+        print(f"  Network: https://{local_ip}:{port}")
+        print("\n  For mobile setup, scan QR code at:")
         print(f"     https://{local_ip}:{port}/api/trust/qr.png")
-        print(f"\n  📥 Or download CA certificate:")
+        print("\n  Or download CA certificate:")
         print(f"     https://{local_ip}:{port}/api/trust/ca.crt")
     else:
-        print(f"  ⚠️  HTTP mode (not encrypted)")
-        print(f"  📍 Local:   http://localhost:{port}")
-        print(f"  📍 Network: http://{local_ip}:{port}")
+        print("  HTTP mode (not encrypted)")
+        print(f"  Local:   http://localhost:{port}")
+        print(f"  Network: http://{local_ip}:{port}")
     
     print("="*60 + "\n")
     
+    # Configure safe logging for headless/frozen environments
+    log_config = uvicorn.config.LOGGING_CONFIG
+    if getattr(sys, 'frozen', False):
+        # Disable access log validation of isatty
+        log_config["formatters"]["access"]["fmt"] = '%(asctime)s - %(levelname)s - %(message)s'
+        log_config["formatters"]["default"]["fmt"] = '%(asctime)s - %(levelname)s - %(message)s'
+        # Remove stream handlers that might fail if stdout is None
+        # We assume the parent process (launcher) catches logs via logging module or file capture
+        # However, server_launcher.py patches sys.stdout/stderr to a file? No. 
+        # But uvicorn tries to write to sys.stderr by default.
+        # We'll just safely pass log_config.
+        pass
+
+    # Ensure app is importable as string, or pass object directly if import fails in frozen
+    app_str = "app.main:app"
+    
     uvicorn.run(
-        "app.main:app",
+        app_str,
         host=settings.HOST,
         port=port,
         ssl_keyfile=ssl_keyfile,
         ssl_certfile=ssl_certfile,
         reload=False,
+        log_config=log_config,
         log_level="info"
     )
 

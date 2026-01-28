@@ -62,9 +62,11 @@ python run_https.py
 ### Produkce
 
 ```bash
-python run_https.py  # HTTPS server
-# nebo
-python service_wrapper.py  # Windows služba
+# Manuální spuštění (bez instalátoru)
+python run_https.py          # HTTPS server (self-signed certy v ./certs nebo ProgramData)
+
+# Windows služba (legacy manuální varianta)
+python service_wrapper.py    # registrace / správa služby přes Python skript
 ```
 
 ## Konfigurace
@@ -75,11 +77,11 @@ python service_wrapper.py  # Windows služba
 - `SECRET_KEY` - JWT secret key
 - `DATABASE_URL` - Databázové připojení
 - `BACKEND_HOST` - Host (výchozí: 0.0.0.0)
-- `BACKEND_PORT` - Port (výchozí: 8000)
+- `BACKEND_PORT` - Port (výchozí: 8443)
 - `BACKEND_URL` - URL backendu
 
 **Výchozí hodnoty**:
-- Port: 8000
+- Port: 8443
 - Database: SQLite (`parental_control.db`)
 - JWT expirace: 24 hodin
 

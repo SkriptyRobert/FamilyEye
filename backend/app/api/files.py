@@ -16,7 +16,16 @@ from ..config import settings
 router = APIRouter()
 security = HTTPBearer(auto_error=False) # Allow manual handling
 
-UPLOAD_DIR = "uploads"
+if os.environ.get('FAMILYEYE_SERVICE_MODE') == '1':
+    # Service Mode -> ProgramData
+    app_data = os.getenv('ProgramData', 'C:\\ProgramData')
+    UPLOAD_DIR = os.path.join(app_data, "FamilyEye", "Server", "uploads")
+elif os.name == 'nt':
+    app_data = os.getenv("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
+    UPLOAD_DIR = os.path.join(app_data, "FamilyEye", "Server", "uploads")
+else:
+    UPLOAD_DIR = "uploads" # Linux/Mac (or Docker) uses relative
+
 SCREENSHOTS_DIR = os.path.join(UPLOAD_DIR, "screenshots")
 
 # Ensure directories exist

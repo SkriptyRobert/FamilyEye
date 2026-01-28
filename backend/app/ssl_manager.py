@@ -12,12 +12,20 @@ import logging
 logger = logging.getLogger("ssl_manager")
 
 # Certificate storage directory
-CERTS_DIR = Path(__file__).parent.parent.parent / "certs"
+if os.environ.get('FAMILYEYE_SERVICE_MODE') == '1':
+    # Service Mode -> ProgramData
+    app_data = Path(os.environ.get("ProgramData", "C:\\ProgramData"))
+    CERTS_DIR = app_data / "FamilyEye" / "Server" / "certs"
+elif os.name == 'nt':
+    app_data = Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local")))
+    CERTS_DIR = app_data / "FamilyEye" / "Server" / "certs"
+else:
+    CERTS_DIR = Path("certs")
+
 CA_KEY_FILE = CERTS_DIR / "familyeye-ca.key"
 CA_CERT_FILE = CERTS_DIR / "familyeye-ca.crt"
 SERVER_KEY_FILE = CERTS_DIR / "server.key"
 SERVER_CERT_FILE = CERTS_DIR / "server.crt"
-
 
 def ensure_certs_dir():
     """Create certificates directory if it doesn't exist."""

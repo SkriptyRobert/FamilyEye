@@ -26,16 +26,18 @@ Návod na instalaci a nasazení systému Parental Control Enterprise.
 
 ### Automatická instalace (doporučeno)
 
-1. Stáhněte instalační EXE serveru (např. `ParentalControlServer_Setup_2.x.x.exe` z [installer/README.md](../installer/README.md))
-2. Spusťte instalátor
-3. Postupujte podle průvodce:
-   - Výběr portu (výchozí: 8000)
-   - E-mail a heslo pro první rodičovský účet
-4. Po instalaci se spustí server a případně se otevře dashboard v prohlížeči
+1. Stáhněte instalační EXE serveru (např. `ParentalControlServer_Setup_2.x.x.exe` z [installer/README.md](../installer/README.md)).
+2. Spusťte instalátor (jako administrátor).
+3. V průvodci zadejte:
+   - Port serveru (výchozí: **8443**, HTTPS).
+4. Po instalaci:
+   - Nainstaluje se a spustí Windows služba `FamilyEyeServer`.
+   - Do prohlížeče se automaticky otevře dashboard (`https://<IP>:8443`).
+   - Prvního admin uživatele vytvoříte přímo v UI (registrace/přihlášení).
 
 **Komponenty instalátoru serveru**:
-- **server_launcher.py** – vstupní bod po instalaci. Umístěn v instalační složce vedle `backend/`. Spouští backend (`run_https.py`), volitelně otevře prohlížeč (`--open-browser`). Zástupce na ploše / v menu volá `pythonw server_launcher.py --open-browser`.
-- **init_admin.py** – instalátor ho volá s e‑mailem a heslem z průvodce a vytvoří prvního rodičovského účtu (viz [BACKEND.md](BACKEND.md#inicializace-admina)). Umístění: `backend/init_admin.py`; volání např. `python backend/init_admin.py "email@example.com" "heslo"`.
+- **FamilyEyeServer.exe** – binárka serveru (Windows služba + helper pro `--launch-browser-only`).
+- **ProgramData\FamilyEye\Server\*** – databáze, logy, uploady a vygenerované certifikáty.
 
 ### Manuální instalace
 

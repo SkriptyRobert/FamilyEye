@@ -18,84 +18,61 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
   // Auto-detect backend URL on mount
   React.useEffect(() => {
     const autoDetectBackend = async () => {
-      // Get default backend URL from env or use default
-      const backendPort = parseInt(import.meta.env.VITE_BACKEND_PORT || '8000', 10)
       const currentHost = window.location.hostname
-      const currentProtocol = window.location.protocol // 'http:' or 'https:'
+      const currentPort = window.location.port || (window.location.protocol === 'https:' ? '443' : '80')
+      const currentProtocol = window.location.protocol
 
-      // Prefer HTTPS, fallback to same protocol as current page
-      const preferredProtocol = 'https'
-      const fallbackProtocol = currentProtocol.replace(':', '')
+      // 1. Initial Guess: Use the current address (since we are served by the backend)
+      let candidateUrl = `${currentProtocol}//${currentHost}:${currentPort}`
 
-      // If we're on same-origin (port 8000), backend is probably serving us
-      if (window.location.port === String(backendPort) || !window.location.port) {
-        const sameOriginUrl = `${currentProtocol}//${currentHost}:${backendPort}`
-        setBackendUrlState(sameOriginUrl)
-        setBackendUrl(sameOriginUrl)
-        return
+      // Clean up port 80/443 if standard
+      if ((currentProtocol === 'http:' && currentPort === '80') ||
+        (currentProtocol === 'https:' && currentPort === '443')) {
+        candidateUrl = `${currentProtocol}//${currentHost}`
       }
 
-      if (backendUrl && backendUrl !== 'http://localhost:8000') {
-        // User already has a saved URL, don't override
-        return
-      }
+      // Check if we can get better info from the API (Dynamic IP)
+      // This upgrades "localhost" to "192.168.x.x"
+      try {
+        const infoRes = await axios.get(`${candidateUrl}/api/info`, { timeout: 2000 })
+        if (infoRes.data && infoRes.data.local_ip) {
+          const lanIp = infoRes.data.local_ip
+          const lanUrl = `https://${lanIp}:${currentPort}`
 
-      setAutoDetecting(true)
-
-      // Try common ports
-      const commonPorts = [backendPort, 8000, 5000]
-      const protocols = [preferredProtocol, fallbackProtocol]
-
-      // Try to detect from current window location first
-      if (currentHost && currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
-        for (const protocol of protocols) {
-          for (const port of commonPorts) {
-            try {
-              const testUrl = `${protocol}://${currentHost}:${port}`
-              const response = await axios.get(`${testUrl}/api/health`, { timeout: 2000 })
-              if (response.data && response.data.status === 'healthy') {
-                setBackendUrlState(testUrl)
-                setBackendUrl(testUrl)
-                setAutoDetecting(false)
-                return
-              }
-            } catch (e) {
-              // Continue trying
+          // CRITICAL FIX: If we are on localhost, but found a real LAN IP,
+          // REDIRECT the browser to the LAN IP.
+          // This solves "Cross-Origin" login issues and ensures the user sees the real address.
+          if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+            if (lanIp !== '127.0.0.1' && lanIp !== 'localhost') {
+              // Force redirect
+              window.location.href = lanUrl
+              return
             }
           }
+
+          setBackendUrlState(lanUrl)
+          setBackendUrl(lanUrl)
+          setAutoDetecting(false)
+          return
         }
+      } catch (e) {
+        // console.warn("Failed to fetch API info:", e)
       }
 
-      // Try localhost
-      const localhosts = ['localhost', '127.0.0.1']
-      for (const protocol of protocols) {
-        for (const host of localhosts) {
-          for (const port of commonPorts) {
-            try {
-              const testUrl = `${protocol}://${host}:${port}`
-              const response = await axios.get(`${testUrl}/api/health`, { timeout: 2000 })
-              if (response.data && response.data.status === 'healthy') {
-                setBackendUrlState(testUrl)
-                setBackendUrl(testUrl)
-                setAutoDetecting(false)
-                return
-              }
-            } catch (e) {
-              // Continue trying
-            }
-          }
-        }
-      }
-
-      // Default to HTTPS on current host
-      const defaultUrl = `https://${currentHost}:${backendPort}`
-      setBackendUrlState(defaultUrl)
-      setBackendUrl(defaultUrl)
+      // Fallback: Just use what we are on
+      setBackendUrlState(candidateUrl)
+      setBackendUrl(candidateUrl)
       setAutoDetecting(false)
     }
 
     autoDetectBackend()
   }, [])
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(backendUrl)
+      .then(() => alert('URL zkopírována: ' + backendUrl))
+      .catch(() => { })
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -161,24 +138,35 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
               type="text"
               value={backendUrl}
               onChange={(e) => setBackendUrlState(e.target.value)}
               placeholder="Backend URL (automaticky detekováno)"
               className="input"
+              style={{ paddingRight: '40px', marginBottom: 0 }}
               required
               disabled={autoDetecting}
             />
-            {autoDetecting && (
-              <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#666' }}>
-                Detekuji...
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={copyToClipboard}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#666'
+              }}
+              title="Kopírovat adresu"
+            >
+              📋
+            </button>
           </div>
-          <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '-10px', marginBottom: '10px' }}>
-            URL serveru se detekuje automaticky. Pro jinou adresu zadejte manuálně.
+          <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '5px', marginBottom: '15px' }}>
+            URL serveru. Pro připojení dalších zařízení použijte <strong style={{ color: '#667eea' }}>{backendUrl}</strong>
           </small>
           <input
             type="email"

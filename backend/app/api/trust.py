@@ -43,20 +43,14 @@ async def get_trust_info():
     info = get_certificate_info()
     
     # Add download URL - use settings.BACKEND_URL if configured, otherwise local IP
+    # Add download URL - use settings.BACKEND_URL (Single Source of Truth)
     from ..config import settings
-    local_ip = get_local_ip()
     
-    # Check if BACKEND_URL is set and not default localhost
+    # settings.BACKEND_URL is now guaranteed to be the best available network address
     backend_url = settings.BACKEND_URL
-    if backend_url and "localhost" not in backend_url and "127.0.0.1" not in backend_url:
-        # Use configured BACKEND_URL
-        info["download_url"] = f"{backend_url}/api/trust/ca.crt"
-        info["qr_url"] = f"{backend_url}/api/trust/qr.png"
-    else:
-        # Fallback to local IP with default port
-        port = 8000
-        info["download_url"] = f"https://{local_ip}:{port}/api/trust/ca.crt"
-        info["qr_url"] = f"https://{local_ip}:{port}/api/trust/qr.png"
+    
+    info["download_url"] = f"{backend_url}/api/trust/ca.crt"
+    info["qr_url"] = f"{backend_url}/api/trust/qr.png"
     
     return info
 
@@ -79,14 +73,10 @@ async def get_qr_code():
         
         local_ip = get_local_ip()
         
-        # Use settings.BACKEND_URL if configured, otherwise local IP
+        # Use settings.BACKEND_URL (Single Source of Truth)
         from ..config import settings
         backend_url = settings.BACKEND_URL
-        if backend_url and "localhost" not in backend_url and "127.0.0.1" not in backend_url:
-            cert_url = f"{backend_url}/api/trust/ca.crt"
-        else:
-            port = 8000
-            cert_url = f"https://{local_ip}:{port}/api/trust/ca.crt"
+        cert_url = f"{backend_url}/api/trust/ca.crt"
         
         # Generate QR code
         qr = qrcode.QRCode(

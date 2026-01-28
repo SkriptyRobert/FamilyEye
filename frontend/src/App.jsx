@@ -24,13 +24,22 @@ function App() {
   }, [darkMode])
 
   useEffect(() => {
-    // Check if setup is needed (no token and no backend configured)
-    if (!getToken()) {
-      const backendUrl = localStorage.getItem('parental_control_backend_url')
-      if (!backendUrl) {
-        setNeedsSetup(true)
+    // Check if we are connected to a backend
+    const checkStatus = async () => {
+      // If we have a token, we are good
+      if (getToken()) {
+        setIsAuthenticated(true)
+        return
       }
+
+      // If no token, default to Login. 
+      // The installer creates the admin, so "Initial Setup" is rarely needed 
+      // unless it's a manual install.
+      // We can check if any users exist, but for now, let's assume Login is the primary entry.
+      setNeedsSetup(false)
     }
+
+    checkStatus()
   }, [])
 
   const handleSetupComplete = () => {

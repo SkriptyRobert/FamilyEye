@@ -14,38 +14,42 @@ Projekt obsahuje dva oddělené instalátory:
 ## 🖥️ Server Instalátor (v2.4.0)
 
 ### Co dělá:
-1. **Root CA Integrace**: Automaticky nainstaluje `FamilyEye Root CA` do systému Windows, takže prohlížeč důvěřuje HTTPS.
-2. **Backend + Frontend**: Nainstaluje backend API i frontend dashboard.
-3. **One-Click Setup**:
-   - Vytvoří administrátorský účet (email/heslo zadané při instalaci).
-   - Nastaví firewall pravidla.
-   - Spustí službu nebo launcher.
-4. **Unified Launcher**: `server_launcher.py` spouští server i prohlížeč.
+1. **Root CA integrace**: Při instalaci vygeneruje vlastní CA a server certifikát, uloží je do `ProgramData\FamilyEye\Server\certs` a přidá `FamilyEye Root CA` do důvěryhodných kořenových autorit.
+2. **Backend + Frontend**: Nainstaluje backend API i zbuildovaný React dashboard.
+3. **Windows služba**:
+   - Zaregistruje službu `FamilyEyeServer`, která běží na pozadí po startu Windows.
+   - Přidá firewall pravidlo pro zvolený port.
+4. **Zástupce na dashboard**: Vytvoří zástupce, který spustí `FamilyEyeServer.exe --launch-browser-only` a otevře ovládací panel v prohlížeči.
 
 ### Průvodce instalací:
-- **Port serveru** – výchozí: 8000.
-- **E-mail a heslo** – vytváří hlavní rodičovský účet.
+- **Port serveru** – výchozí: 8443 (HTTPS na lokální síti).
+- **Admin účet** – po instalaci se administrátor vytvoří přes webové rozhraní (registrace/přihlášení), ne v samotném instalátoru.
 
-### Build Instrukce:
+### Build instrukce:
 ```bash
-# 1. Build Frontendu
+# 1. Build frontendu (z kořene repozitáře)
 cd frontend
+npm ci
 npm run build
 cd ..
 
-# 2. Compile Installer
-# Ujistěte se, že máte Inno Setup 6 nainstalovaný
+# 2. Sestavit serverový EXE (PyInstaller)
+cd backend
+python "..\installer\server\build_server_exe.py"
+cd ..
+
+# 3. Zkompilovat Inno Setup instalátor
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/server/setup_server.iss
 
 # Výstup: installer/server/output/ParentalControlServer_Setup_2.4.0.exe
 ```
 
-### Struktura souborů v instalátoru:
-- `backend/` - Kompletní Python backend
-- `frontend/dist/` - Zkompilovaný React frontend
-- `certs/` - SSL certifikáty a CA
-- `server_launcher.py` - Spouštěcí skript
-- `python/` - Embedded Python (pokud je přítomen při kompilaci)
+### Struktura po instalaci:
+- `{app}\FamilyEyeServer.exe` – hlavní binárka serveru (PyInstaller).
+- `{commonappdata}\FamilyEye\Server\parental_control.db` – databáze.
+- `{commonappdata}\FamilyEye\Server\logs\` – logy backendu a služby.
+- `{commonappdata}\FamilyEye\Server\uploads\` – uploady a screenshoty.
+- `{commonappdata}\FamilyEye\Server\certs\` – vygenerované certifikáty (CA + server).
 
 ---
 
@@ -115,49 +119,16 @@ Pro build instalátoru je potřeba vytvořit:
 | `wizard_image.bmp` | 164x314 | Obrázek vlevo v průvodci (Server) |
 | `wizard_small.bmp` | 55x55 | Malá ikona vpravo nahoře (Server) |
 
-### Python Embedded
-Pro standalone instalátor je potřeba přidat:
-- `python-embed/` - [Python embeddable package](https://www.python.org/downloads/windows/)
+### Python
+Serverový instalátor používá samostatný EXE (`FamilyEyeServer.exe`) vytvořený přes PyInstaller, takže cílový počítač **nepotřebuje předinstalovaný Python**.
 
 ---
 
-## 🔐 Code Signing (produkce)
 
-Pro distribuci je NUTNÉ podepsat instalátor:
-
-```bash
-# Windows SDK signtool
-signtool sign /f certificate.pfx /p heslo /tr http://timestamp.digicert.com /td sha256 ParentalControlAgent_Setup_2.0.0.exe
-```
-
-Bez podpisu:
-- Windows Defender může blokovat
-- Uživatelé uvidí varování "Neznámý vydavatel"
 
 ---
 
-## 🧪 Testování
 
-### Checklist před release:
 
-- [ ] Čistá instalace Windows 10 VM
-- [ ] Instalace bez Python/Node.js
-- [ ] Agent se spáruje během instalace
-- [ ] Agent přežije restart
-- [ ] Agent reportuje na dashboard
-- [ ] Uninstaller vyžaduje heslo
-- [ ] Blokování aplikací funguje
-- [ ] Časové limity fungují
 
----
 
-## 🔄 Aktualizace
-
-### Strategie:
-1. Agent kontroluje verzi při startu
-2. Pokud je k dispozici nová verze:
-   - Stáhne nový instalátor
-   - Spustí silent upgrade
-   - Zachová konfiguraci
-
-*TODO: Implementovat auto-update mechanismus*

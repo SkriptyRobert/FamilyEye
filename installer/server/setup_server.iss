@@ -1,10 +1,3 @@
-; ============================================
-; Parental Control SERVER - Inno Setup Script
-; ============================================
-; Kompletní instalátor pro rodičovský server
-; S průvodcem nastavením během instalace
-; ============================================
-
 #define MyAppName "FamilyEye Server"
 #define MyAppVersion "2.4.0"
 #define MyAppPublisher "FamilyEye"
@@ -25,7 +18,7 @@ DefaultGroupName=FamilyEye
 DisableProgramGroupPage=yes
 
 OutputDir=output
-OutputBaseFilename=ParentalControlServer_Setup_{#MyAppVersion}
+OutputBaseFilename=FamilyEyeServer_Setup_{#MyAppVersion}
 SetupIconFile=assets\server_icon.ico
 UninstallDisplayIcon={app}\server_icon.ico
 UninstallDisplayName={#MyAppName}
@@ -77,72 +70,58 @@ Name: "dashboard"; Description: "Webový dashboard"; Types: typical custom; Flag
 Name: "autostart"; Description: "Automatické spuštění při startu Windows"; Types: typical
 
 [Files]
-; Backend API
-Source: "..\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs; Excludes: "*.pyc,__pycache__,*.db,*.log,venv,.env"
-; Frontend (pre-built)
-Source: "..\frontend\dist\*"; DestDir: "{app}\frontend\dist"; Flags: ignoreversion recursesubdirs
-; Python embedded
-Source: "python-embed\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs
-; Assets
+; Main Executable and dependencies from PyInstaller
+Source: "..\..\dist\FamilyEyeServer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+; Assets (Icon) - Optional if embedded, but good for shortcuts
 Source: "assets\server_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-; Launcher
-Source: "server_launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
 
-[Icons]
-Name: "{group}\Parental Control Dashboard"; Filename: "{app}\server_launcher.exe"; IconFilename: "{app}\server_icon.ico"; Parameters: "--open-browser"
-Name: "{group}\Spravovat server"; Filename: "{app}\server_launcher.exe"; IconFilename: "{app}\server_icon.ico"; Parameters: "--admin"
-Name: "{group}\Odinstalovat"; Filename: "{uninstallexe}"; IconFilename: "{app}\server_icon.ico"
-Name: "{commondesktop}\Parental Control"; Filename: "{app}\server_launcher.exe"; IconFilename: "{app}\server_icon.ico"; Parameters: "--open-browser"; Tasks: desktopicon
+[Dirs]
+; Create ProgramData structure with Modify permissions for Users (so Admin/System can write, verify this logic)
+Name: "{commonappdata}\FamilyEye"; Permissions: admins-full
+Name: "{commonappdata}\FamilyEye\Server"; Permissions: admins-full
+Name: "{commonappdata}\FamilyEye\Server\logs"; Permissions: admins-full
+Name: "{commonappdata}\FamilyEye\Server\uploads"; Permissions: admins-full
+Name: "{commonappdata}\FamilyEye\Server\certs"; Permissions: admins-full
 
 [Tasks]
 Name: "desktopicon"; Description: "Vytvořit zástupce na ploše"; GroupDescription: "Zástupci:"
 Name: "firewall"; Description: "Přidat výjimku do firewallu"; GroupDescription: "Síť:"; Flags: checkedonce
 
+[Icons]
+Name: "{group}\Parental Control Dashboard"; Filename: "{app}\FamilyEyeServer.exe"; Parameters: "--launch-browser-only"; IconFilename: "{app}\server_icon.ico"
+Name: "{group}\Spravovat Service"; Filename: "{app}\FamilyEyeServer.exe"; IconFilename: "{app}\server_icon.ico"; Parameters: "--help"
+Name: "{group}\Odinstalovat"; Filename: "{uninstallexe}"; IconFilename: "{app}\server_icon.ico"
+Name: "{commondesktop}\Parental Control"; Filename: "{app}\FamilyEyeServer.exe"; Parameters: "--launch-browser-only"; IconFilename: "{app}\server_icon.ico"; Tasks: desktopicon
+
 [Run]
-; Firewall pravidlo
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""Parental Control Server"" dir=in action=allow protocol=TCP localport={code:GetServerPort}"; Flags: runhidden; Tasks: firewall
-; Otevřít dashboard
-Filename: "{app}\server_launcher.exe"; Parameters: "--open-browser"; Description: "Otevřít Parental Control Dashboard"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\FamilyEyeServer.exe"; Parameters: "--launch-browser-only"; Description: "Otevřít Parental Control Dashboard"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
+Filename: "net"; Parameters: "stop FamilyEyeServer"; Flags: runhidden waituntilterminated
+Filename: "{app}\FamilyEyeServer.exe"; Parameters: "remove"; Flags: runhidden waituntilterminated
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""Parental Control Server"""; Flags: runhidden
+Filename: "certutil"; Parameters: "-delstore ""Root"" ""FamilyEye Root CA"""; Flags: runhidden
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{app}\logs"
-Type: filesandordirs; Name: "{app}\data"
-Type: filesandordirs; Name: "{app}\__pycache__"
+Type: filesandordirs; Name: "{commonappdata}\FamilyEye\Server"
+Type: dirifempty; Name: "{commonappdata}\FamilyEye"
 
 [Code]
 var
   ConfigPage: TInputQueryWizardPage;
-  AdminPage: TInputQueryWizardPage;
   ServerPort: String;
-  AdminEmail: String;
-  AdminPassword: String;
   
 procedure InitializeWizard;
 begin
-  // Stránka pro nastavení serveru
-  ConfigPage := CreateInputQueryPage(wpSelectTasks,
+  // Stránka pro nastavení serveru (port)
+  ConfigPage := CreateInputQueryPage(wpWelcome,
     ExpandConstant('{cm:ServerConfig}'),
     ExpandConstant('{cm:ServerConfigDesc}'),
-    'Server bude dostupný na tomto portu v rámci vaší lokální sítě.' + #13#10 +
-    'Výchozí port 8000 je doporučený, měňte jej pouze pokud je již obsazen jinou službou.');
+    'Server se nainstaluje jako Windows služba a bude dostupný na zadaném portu v rámci lokální sítě.' + #13#10 +
+    'Výchozí port 8443 je doporučený (HTTPS).');
   ConfigPage.Add(ExpandConstant('{cm:ServerPort}'), False);
-  ConfigPage.Values[0] := '8000';
-  
-  // Stránka pro admin účet
-  AdminPage := CreateInputQueryPage(ConfigPage.ID,
-    ExpandConstant('{cm:CreateAdmin}'),
-    ExpandConstant('{cm:CreateAdminDesc}'),
-    'Tento účet budete používat pro přihlášení k webovému ovládacímu panelu.' + #13#10 +
-    'Zadejte platnou e-mailovou adresu a bezpečné heslo o délce alespoň 8 znaků.');
-  AdminPage.Add(ExpandConstant('{cm:AdminEmail}'), False);
-  AdminPage.Add(ExpandConstant('{cm:AdminPassword}'), True);
-  AdminPage.Add(ExpandConstant('{cm:AdminPasswordConfirm}'), True);
-  AdminPage.Values[0] := '';
-  AdminPage.Values[1] := '';
-  AdminPage.Values[2] := '';
+  ConfigPage.Values[0] := '8443';
 end;
 
 function GetServerPort(Param: String): String;
@@ -153,7 +132,6 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
   Port: Integer;
-  Email: String;
 begin
   Result := True;
   
@@ -169,97 +147,57 @@ begin
     end;
     ServerPort := ConfigPage.Values[0];
   end;
-  
-  if CurPageID = AdminPage.ID then
-  begin
-    Email := AdminPage.Values[0];
-    
-    // Validace e-mailu
-    if (Pos('@', Email) < 2) or (Pos('.', Email) < Pos('@', Email) + 2) then
-    begin
-      MsgBox('Zadejte prosím platnou e-mailovou adresu.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-    
-    // Validace hesla
-    if Length(AdminPage.Values[1]) < 8 then
-    begin
-      MsgBox('Heslo musí obsahovat alespoň 8 znaků.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-    
-    // Potvrzení hesla
-    if AdminPage.Values[1] <> AdminPage.Values[2] then
-    begin
-      MsgBox('Zadaná hesla se neshodují.', mbError, MB_OK);
-      Result := False;
-      Exit;
-    end;
-    
-    AdminEmail := Email;
-    AdminPassword := AdminPage.Values[1];
-  end;
 end;
 
 procedure SaveConfiguration;
 var
-  ConfigFile: String;
   EnvFile: String;
 begin
-  // Uložit konfiguraci serveru
-  ConfigFile := ExpandConstant('{app}\config.ini');
-  SaveStringToFile(ConfigFile, 
-    '[server]' + #13#10 +
-    'port=' + ServerPort + #13#10 +
-    'host=0.0.0.0' + #13#10 +
-    '[admin]' + #13#10 +
-    'email=' + AdminEmail + #13#10,
-    False);
-  
-  // Vytvořit .env soubor pro backend
-  EnvFile := ExpandConstant('{app}\backend\.env');
+  // Vytvořit .env soubor pro backend v kořenovém adresáři aplikace
+  EnvFile := ExpandConstant('{app}\.env');
+  // UKLADAME JEN PORT. Secret Key si backend vygeneruje sam, Admina si vytvori uzivatel v browseru.
   SaveStringToFile(EnvFile,
-    'PORT=' + ServerPort + #13#10 +
-    'HOST=0.0.0.0' + #13#10 +
-    'ADMIN_EMAIL=' + AdminEmail + #13#10 +
-    'ADMIN_PASSWORD=' + AdminPassword + #13#10 +
-    'DATABASE_URL=sqlite:///data/parental_control.db' + #13#10,
+    'BACKEND_PORT=' + ServerPort + #13#10 +
+    'BACKEND_HOST=0.0.0.0' + #13#10,
     False);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  DataDir: String;
   ResultCode: Integer;
+  CertPath: String;
 begin
   if CurStep = ssPostInstall then
   begin
-    // Vytvořit datový adresář
-    DataDir := ExpandConstant('{app}\data');
-    CreateDir(DataDir);
-    
-    // Uložit konfiguraci
     SaveConfiguration;
-    
-    // Inicializovat databázi a vytvořit admin účet
-    // Spustí Python skript pro inicializaci
-    Exec(ExpandConstant('{app}\python\python.exe'),
-      ExpandConstant('"{app}\backend\init_admin.py" "' + AdminEmail + '" "' + AdminPassword + '"'),
+
+    // Generate per-install certificates, then add CA to Root store
+    Exec(ExpandConstant('{app}\FamilyEyeServer.exe'),
+      '--ensure-certs',
       ExpandConstant('{app}'),
       SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  end;
-end;
 
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-var
-  ResultCode: Integer;
-begin
-  if CurUninstallStep = usUninstall then
-  begin
-    // Zastavit službu
-    Exec('net', 'stop FamilyEyeServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Exec('sc', 'delete FamilyEyeServer', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    CertPath := ExpandConstant('{commonappdata}\FamilyEye\Server\certs\familyeye-ca.crt');
+    Exec('certutil',
+      '-addstore -f "Root" "' + CertPath + '"',
+      '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    Exec(ExpandConstant('{app}\FamilyEyeServer.exe'),
+      '--startup auto install',
+      ExpandConstant('{app}'),
+      SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    Exec('sc',
+      'failure FamilyEyeServer reset= 86400 actions= restart/60000/restart/60000/restart/60000',
+      '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+    Sleep(2000);
+
+    Exec('net',
+      'start FamilyEyeServer',
+      '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;

@@ -1,5 +1,5 @@
 """FastAPI main application."""
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -11,15 +11,46 @@ import sys
 import asyncio
 import re
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log', encoding='utf-8')
-    ]
+# Setup logging to an OS-appropriate writable directory with rotation
+import os
+from pathlib import Path
+from logging.handlers import TimedRotatingFileHandler
+
+def _get_log_dir() -> Path:
+    if os.environ.get("FAMILYEYE_SERVICE_MODE") == "1":
+        program_data = Path(os.environ.get("ProgramData", "C:\\ProgramData"))
+        return program_data / "FamilyEye" / "Server" / "logs"
+    if os.name == "nt":
+        return Path(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))) / "FamilyEye" / "Server" / "logs"
+    return Path("logs")
+
+log_dir = _get_log_dir()
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "app.log"
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+console_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(console_formatter)
+
+# Timed rotating file handler – rotate at midnight, keep 5 souborů
+file_handler = TimedRotatingFileHandler(
+    filename=str(log_file),
+    when="midnight",
+    backupCount=5,
+    encoding="utf-8"
 )
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(console_formatter)
+
+# Přidat handlery jen jednou (pokud ještě nejsou)
+if not root_logger.handlers:
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +134,7 @@ async def run_daily_cleanup():
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "version": "1.0.0"}
+    return {"status": "healthy", "version": app.version}
 
 
 @app.get("/api/info")
@@ -117,7 +148,7 @@ async def get_server_info():
         "local_ip": local_ip,
         "port": settings.PORT,
         "host": settings.HOST,
-        "version": "1.0.0"
+        "version": app.version
     }
 
 
@@ -137,7 +168,15 @@ app.include_router(files.router, prefix="/api/files", tags=["files"])
 app.include_router(shield.router, prefix="/api", tags=["shield"]) # Note: Router has "/shield" prefix internaly
 
 # Uploads directory (screenshots served via authenticated /api/files/screenshots endpoint)
-uploads_path = os.path.join(os.getcwd(), "uploads")
+if os.environ.get("FAMILYEYE_SERVICE_MODE") == "1":
+    app_data = os.getenv("ProgramData", "C:\\ProgramData")
+    uploads_path = os.path.join(app_data, "FamilyEye", "Server", "uploads")
+elif os.name == "nt":
+    app_data = os.getenv("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
+    uploads_path = os.path.join(app_data, "FamilyEye", "Server", "uploads")
+else:
+    uploads_path = os.path.join(os.getcwd(), "uploads")
+
 os.makedirs(uploads_path, exist_ok=True)
 # Screenshots only via /api/files/screenshots/{device_id}/{filename} (auth required).
 
@@ -158,15 +197,20 @@ def _get_android_version() -> str:
         logger.warning(f"Failed to parse Android version: {e}")
     return "latest"
 
-@app.get("/api/download")
-@app.get("/api/download/")
+# Helper for base path
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+base_path = get_base_path()
+
 @app.get("/api/download/android-agent")
-@app.get("/api/download/android-agent/")
 async def download_android_agent():
     """Download the latest Android Agent APK."""
-    # Path: backend/app -> backend -> root -> clients/android/...
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    apk_path = os.path.join(base_dir, "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
+    # Look in bundled assets or source
+    # We need to ensure build_server_exe.py bundles this if we want it to work in exe
+    apk_path = os.path.join(base_path, "clients", "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk")
     
     if os.path.exists(apk_path):
         version = _get_android_version()
@@ -177,13 +221,13 @@ async def download_android_agent():
         )
     return {"error": "APK file not found. Please build the Android project first."}
 
-# Serve Installers (Public)
-installers_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "installer", "agent", "output")
+# Serve Installers
+installers_path = os.path.join(base_path, "installer", "agent", "output")
 if os.path.exists(installers_path):
     app.mount("/installers", StaticFiles(directory=installers_path), name="installers")
 
 # Serve Static Files (Frontend)
-frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist")
+frontend_path = os.path.join(base_path, "frontend", "dist")
 
 if os.path.exists(frontend_path):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
@@ -210,6 +254,7 @@ if os.path.exists(frontend_path):
         
         # Check if it's a static file that exists in dist folder
         static_path = os.path.join(frontend_path, full_path)
+        
         if os.path.exists(static_path) and os.path.isfile(static_path):
             return FileResponse(static_path)
         

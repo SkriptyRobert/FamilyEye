@@ -234,6 +234,9 @@ BACKEND:
 - Run: python run_https.py (generates SSL certs automatically)
 - Service: python service_wrapper.py install/start
 - Tests: pytest tests/
+- Build Installer:
+  1. Build EXE: python installer/server/build_server_exe.py
+  2. Compile ISS: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/server/setup_server.iss"
 
 FRONTEND:
 - Dev: npm run dev (Vite dev server)
