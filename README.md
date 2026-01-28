@@ -1,4 +1,4 @@
-# FamilyEye <img src="docs/assets/logo.png" height="32" alt="FamilyEye Logo" style="vertical-align: bottom;" />
+#               FamilyEye <img src="docs/assets/logo.png" height="32" alt="FamilyEye Logo" style="vertical-align: bottom;" />
 
 <div align="center">
   <img src="docs/assets/hero-family.jpg" alt="FamilyEye - Secure Your Family's Digital Future" width="100%" style="border-radius: 10px;" />
@@ -20,7 +20,7 @@
 ### 🛡️ Smart Shield & Detekce Slov
 **Nečekejte na problém, předcházejte mu.**
 Náš unikátní **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazovky v reálném čase:
-- **Detekce nebezpečných slov a vizuálů** (AI analýza).
+- **Detekce nebezpečných slov a vizuálů**
 - **Okamžité pořízení důkazního snímku** obrazovky při detekci.
 - Funguje v jakékoliv aplikaci, nejen v prohlížeči.
 
