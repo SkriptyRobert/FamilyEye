@@ -1,6 +1,8 @@
-# FamilyEye <img src="docs/assets/logo.png" height="32" alt="FamilyEye Logo" style="vertical-align: bottom;" />
-
 <div align="center">
+  <img src="docs/assets/header_logo.png" height="50" alt="FamilyEye Logo" />
+  
+  <br><br>
+
   <img src="docs/assets/hero-family.jpg" alt="FamilyEye - Secure Your Family's Digital Future" width="100%" style="border-radius: 10px;" />
   <br><br>
   
@@ -15,13 +17,26 @@
 
 ---
 
+## ⚡ Blesková Instalace & Nastavení
+**Zapomeňte na složité konfigurace. Vše je připraveno pro okamžité použití.**
+
+- 🐳 **Server (Docker):** Jediný příkaz `docker-compose up` a váš server běží.
+- 🏢 **Server (Windows):** One-click instalátor pro domácí PC. Může běžet samostatně nebo spolu s agentem. Veškerý provoz je **šifrovaný by default**.
+- 💻 **Agent Windows:** Jednoduchý instalátor, který za vás nastaví účet, oprávnění i služby.
+- 📱 **Agent Android:**
+  - **Bez ztráty dat!** Není potřeba tovární nastavení.
+  - **Snadné párování:** Stačí naskenovat QR kód.
+  - **Plná ochrana (Device Owner):** Nastavení na 3 klinkutí přes **WebUSB/WebADB**. Připojíte kabel, kliknete a máte hotovo.
+
+---
+
 ## 🌟 Proč FamilyEye? Game Changer Features!
 
-### 🛡️ Smart Shield & Detekce Slov
+### 🛡️ Smart Shield & Detekce Slov (i Vlastních!)
 **Nečekejte na problém, předcházejte mu.**
 Náš unikátní **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazovky v reálném čase:
-- **Detekce nebezpečných slov a vizuálů** (AI analýza).
-- **Okamžité pořízení důkazního snímku** obrazovky při detekci.
+- **Detekce nebezpečných slov** (včetně vašich **vlastních kategorií**!).
+- **AI analýza vizuálů** a okamžité pořízení důkazního snímku.
 - Funguje v jakékoliv aplikaci, nejen v prohlížeči.
 
 ### 🔒 Vaše Data v Bezpečí (Ani Čína, ani Amerika)
