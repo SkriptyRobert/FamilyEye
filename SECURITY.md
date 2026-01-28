@@ -4,7 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
+| 2.x.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -44,4 +44,4 @@ For local network deployments, self-signed certificates are acceptable. For publ
 
 ---
 
-Thank you for helping keep FamilyEye secure! 🔐
+Thank you for helping keep FamilyEye secure!

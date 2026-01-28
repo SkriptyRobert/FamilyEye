@@ -4,11 +4,11 @@
 
 | Verze | Podporováno |
 | ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
+| 2.x.x   | :white_check_mark: |
 
 ## Hlášení Zranitelností
 
-**Prosím NEHLAŠTE bezpečnostní chyby prostřednictvím veřejných GitHub Issues.**
+**Prosím hlašte chyby prostřednictvím veřejných GitHub Issues.**
 
 Pokud objevíte bezpečnostní zranitelnost, nahlaste ji prosím následovně:
 
@@ -21,11 +21,11 @@ Pokud objevíte bezpečnostní zranitelnost, nahlaste ji prosím následovně:
 
 ### Co očekávat
 
-- **Doba odezvy:** Snažíme se odpovědět do 48 hodin
-- **Aktualizace:** Budeme vás informovat o našem postupu
-- **Kredit:** Rádi vás uvedeme v poděkování u opravy (pokud si to přejete)
+- **Doba odezvy:** Snažím se odpovědět co nejdříve
+- **Aktualizace:** Budu zpětně informovat o postupu
+- **Kredit:** Rád vás uvedu v poděkování u opravy (pokud si to přejete)
 
-## Bezpečnostní Doporučení (Best Practices)
+## Bezpečnostní Doporučení 
 
 Při nasazování FamilyEye:
 
@@ -44,4 +44,4 @@ Pro nasazení v lokální síti jsou self-signed certifikáty akceptovatelné. P
 
 ---
 
-Děkujeme, že pomáháte udržet FamilyEye bezpečné! 🔐
+Děkuji, že pomáháte udržet FamilyEye bezpečné! 🔐
