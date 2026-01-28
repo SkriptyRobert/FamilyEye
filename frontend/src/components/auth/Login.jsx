@@ -35,15 +35,27 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
       // This upgrades "localhost" to "192.168.x.x"
       try {
         const infoRes = await axios.get(`${candidateUrl}/api/info`, { timeout: 2000 })
-        if (infoRes.data && infoRes.data.local_ip) {
-          const lanIp = infoRes.data.local_ip
-          const lanUrl = `https://${lanIp}:${currentPort}`
+        const backendUrlFromApi = infoRes?.data?.backend_url
+        const localIpFromApi = infoRes?.data?.local_ip
+
+        // Preferred: backend tells us the correct public URL (e.g. from BACKEND_URL env).
+        // This avoids Docker/container internal IPs like 172.19.x.x showing up in the UI.
+        if (backendUrlFromApi) {
+          setBackendUrlState(backendUrlFromApi)
+          setBackendUrl(backendUrlFromApi)
+          setAutoDetecting(false)
+          return
+        }
+
+        // Fallback: only use local_ip to upgrade localhost → LAN IP for local deployments.
+        if (localIpFromApi && (currentHost === 'localhost' || currentHost === '127.0.0.1')) {
+          const lanUrl = `${currentProtocol}//${localIpFromApi}:${currentPort}`
 
           // CRITICAL FIX: If we are on localhost, but found a real LAN IP,
           // REDIRECT the browser to the LAN IP.
           // This solves "Cross-Origin" login issues and ensures the user sees the real address.
           if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-            if (lanIp !== '127.0.0.1' && lanIp !== 'localhost') {
+            if (localIpFromApi !== '127.0.0.1' && localIpFromApi !== 'localhost') {
               // Force redirect
               window.location.href = lanUrl
               return
