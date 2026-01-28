@@ -12,12 +12,13 @@
 
 Potřebujete: Docker a Docker Compose.
 
-### **1. Připravit `.env` Jinak nebude správně načtena URL pro reagistraci, QR párování, protože se použije IP z Docker=network!**
+### **1. Připravit `.env` Jinak nebude správně načtena URL pro registraci, QR párování a bude použita IP z Docker-network!**
 
 ```bash
 cd docker/server
 cp .env.example .env
 # upravte alespoň BACKEND_URL (veřejná URL serveru)
+# BACKEND_URL=https://<YOUR_SERVER_IP>:8443
 ```
 
 ### 2. Stáhnout image a spustit server + PostgreSQL
