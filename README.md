@@ -8,7 +8,7 @@
   > **Inteligentní ochrana pro Vaši rodinu v digitálním světě**
 
   [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-  [![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
+  [![Images: Public Domain](https://img.shields.io/badge/Images-Public%20Domain-lightgrey.svg)](LICENSE_IMAGES)
   [![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
   [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
   [![Device Owner: Supported](https://img.shields.io/badge/🤖_Device%20Owner-Supported-purple)](docs/AGENT.md)
@@ -161,15 +161,16 @@ This project's **source code** is licensed under **GNU General Public License v3
 See [LICENSE](LICENSE) file for details.
 
 ### Images License
-All **images, graphics, and visual assets** in this repository are licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+Grafický obsah v tomto projektu byl vygenerován pomocí umělé inteligence (Nanobanana / Google Cloud). Tyto obrázky jsou poskytovány jako **volné dílo (Public Domain)**.
+
+Naše prosba: Ačkoliv to zákon nevyžaduje, ocením, pokud při dalším šíření těchto obrázků uvedete odkaz na tento projekt.
 See [LICENSE_IMAGES](LICENSE_IMAGES) file for details.
 
 **Author:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com
 
-**Note:** Images are for non-commercial use only. For commercial use of images, please contact the author.
-
 ---
 
 <p align="center">
-  Made with ❤️ for families everywhere
+  Made with ❤️ for families everywhere<br>
+  <small>Obrázky generovány pomocí AI. Určeno pro nekomerční využití v rámci tohoto projektu.</small>
 </p>
