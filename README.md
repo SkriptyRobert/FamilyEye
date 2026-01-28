@@ -1,9 +1,6 @@
-# FamilyEye
+# FamilyEye <img src="docs/assets/logo.png" height="32" alt="FamilyEye Logo" style="vertical-align: bottom;" />
 
 <div align="center">
-  <img src="docs/assets/header_logo.png" height="50" alt="FamilyEye Logo" />
-  
-  <br><br>
 
   <img src="docs/assets/hero-family.jpg" alt="FamilyEye - Secure Your Family's Digital Future" width="100%" style="border-radius: 10px;" />
   <br><br>
