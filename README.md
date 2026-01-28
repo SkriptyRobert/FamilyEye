@@ -84,6 +84,21 @@ Open `https://localhost:8000` in your browser.
 
 Default credentials will be created on first run.
 
+## Docker (server image)
+
+Pre-built server image (backend + frontend) is published to GitHub Container Registry. Use it with PostgreSQL via Docker Compose:
+
+```bash
+# Run with PostgreSQL
+cd docker/server
+cp .env.example .env
+# set BACKEND_URL (public URL, e.g. https://<server-ip>:8443)
+docker compose pull
+docker compose up -d
+```
+
+Default port: **8443**. Full instructions: [docker/server/README.md](docker/server/README.md).
+
 ## 📁 Project Structure
 
 ```

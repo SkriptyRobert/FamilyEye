@@ -10,34 +10,22 @@
 
 ## Spuštění lokálně (Docker Compose)
 
-Potřebujete: Docker a Docker Compose. Frontend musí být před buildem image zbuildovaný.
+Potřebujete: Docker a Docker Compose.
 
-### 1. Zbuildovat frontend (jednorázově)
-
-Z kořene repozitáře:
-
-```bash
-cd frontend
-npm ci
-npm run build
-cd ..
-```
-
-### 2. Spustit server + PostgreSQL
-
-Z kořene repozitáře:
+### 1. Připravit `.env` (doporučeno)
 
 ```bash
 cd docker/server
-docker compose up --build
+cp .env.example .env
+# upravte alespoň BACKEND_URL (veřejná URL serveru)
 ```
 
-Nebo s vlastním `.env` (zkopírujte z `.env.example` a upravte hesla):
+### 2. Stáhnout image a spustit server + PostgreSQL
 
 ```bash
-cp .env.example .env
-# upravte .env
-docker compose up --build
+cd docker/server
+docker compose pull
+docker compose up -d
 ```
 
 ### 3. Otevřít v prohlížeči
