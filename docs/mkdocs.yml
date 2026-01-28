@@ -80,6 +80,15 @@ nav:
   - Architecture:
     - System Design: architecture/system-design.md
     - Security Model: architecture/security-model.md
+    - Time Sync Diagram: TIME_SYNC_DIAGRAM.md
+  - Pro vyvojare:
+    - Backend: BACKEND.md
+    - Frontend: FRONTEND.md
+    - Architektura: ARCHITECTURE.md
+    - API prehled: API.md
+    - Databaze: DATABASE.md
+    - Nasazeni: DEPLOYMENT.md
+    - Vyvoj: DEVELOPMENT.md
 
 extra:
   social:

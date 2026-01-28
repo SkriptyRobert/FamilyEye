@@ -9,25 +9,70 @@ React dashboard pro správu rodičovské kontroly. Single Page Application (SPA)
 ```
 frontend/src/
 ├── main.jsx              # Entry point
-├── App.jsx               # Hlavní routing
+├── App.jsx                # Hlavní routing
 ├── App.css                # Globální styly
 ├── index.css              # Base styly
 ├── components/            # React komponenty
+│   ├── auth/
+│   │   ├── Login.jsx      # Přihlášení
+│   │   └── Login.css
 │   ├── Dashboard.jsx      # Hlavní dashboard
-│   ├── DeviceList.jsx    # Seznam zařízení
-│   ├── DevicePairing.jsx # Párování zařízení
-│   ├── RuleEditor.jsx    # Editor pravidel
-│   ├── Reports.jsx       # Statistiky
-│   ├── Overview.jsx      # Přehled
-│   ├── Login.jsx         # Přihlášení
-│   ├── InitialSetup.jsx  # Prvotní nastavení
-│   └── charts/           # Grafické komponenty
+│   ├── DeviceList.jsx     # Seznam zařízení
+│   ├── DevicePairing.jsx  # Párování zařízení
+│   ├── QRPairing.jsx      # Párování přes QR kód
+│   ├── DeviceOwnerSetup.jsx  # Nastavení Android Device Owner
+│   ├── RuleEditor.jsx     # Editor pravidel (kontejner)
+│   ├── RuleEditor/        # Podkomponenty editoru pravidel
+│   │   ├── RuleCards.css
+│   │   └── RuleForms.css
+│   ├── rules/             # Komponenty pro pravidla
+│   │   ├── AppPicker.jsx, RuleCard.jsx, ScheduleForm.jsx
+│   │   ├── HiddenAppsSection.jsx, constants.js, index.js
+│   ├── devices/           # Karty a akce zařízení
+│   │   ├── DeviceCard.jsx, QuickActionsBar.jsx
+│   │   ├── platforms/AndroidDeviceCard.jsx, WindowsDeviceCard.jsx
+│   │   └── index.js
+│   ├── modals/
+│   │   ├── AllAppsModal.jsx   # Výběr aplikací
+│   │   ├── ScreenshotModal.jsx # Náhled screenshotu
+│   │   └── index.js
+│   ├── limits/            # Čip a progress bar limitů
+│   │   ├── LimitChip.jsx, LimitProgressBar.jsx, index.js
+│   ├── overview/          # Přehled – filtry a globální statistiky
+│   │   ├── DeviceFilter.jsx, GlobalStats.jsx
+│   ├── shield/            # Alert karty, sekce kategorií (Smart Shield)
+│   │   ├── AlertCard.jsx, CategorySection.jsx, index.js
+│   ├── SmartShield/       # UI Smart Shield (AlertCard, FilterChips, KeywordManager)
+│   ├── SmartShield.jsx, SmartShieldView.jsx
+│   ├── SmartInsights.jsx  # Smart Insights metriky
+│   ├── StatusOverview.jsx  # Přehled stavu zařízení
+│   ├── Reports.jsx        # Statistiky (kontejner)
+│   ├── Reports/           # Podkomponenty reportů
+│   │   ├── ProcessMonitor.jsx, ReportApps.jsx, ReportMetrics.jsx
+│   ├── Overview.jsx       # Přehled
+│   ├── DayPicker.jsx       # Výběr dne
+│   ├── NotificationDropdown.jsx  # Rozbalovací notifikace
+│   ├── setup/
+│   │   ├── InitialSetup.jsx     # Prvotní nastavení
+│   │   └── InitialSetup.css
+│   ├── charts/            # Grafické komponenty
+│   │   ├── ActivityHeatmap.jsx, ActivityTimeline.jsx
+│   │   ├── UsageTrendChart.jsx, WeeklyBarChart.jsx, WeeklyPatternChart.jsx
+│   │   └── AppDetailsModal.jsx
+│   ├── DynamicIcon.jsx    # Dynamická ikona podle typu
+│   └── ...
 ├── services/
-│   └── api.js            # API klient
-└── utils/
-    ├── auth.js           # Autentizace
-    ├── date.js           # Formátování datumů
-    └── formatting.js     # Formátování
+│   ├── api.js             # API klient
+│   └── websocket.js       # WebSocket klient
+├── hooks/
+│   ├── useDevices.js, useRules.js, useQuickActions.js
+│   └── index.js
+├── utils/
+│   ├── auth.js            # Autentizace
+│   ├── date.js            # Formátování datumů
+│   └── formatting.js      # Formátování (včetně getAppIcon)
+└── styles/
+    └── design-tokens.css  # Design tokeny
 ```
 
 ## Spuštění
@@ -62,7 +107,7 @@ Výstup: `frontend/dist/`
 
 **Routes**:
 - `/` - Dashboard (vyžaduje auth)
-- `/login` - Přihlášení
+- `/login` - Přihlášení (komponenta `auth/Login.jsx`)
 - `*` - Initial setup (pokud není konfigurováno)
 
 ### Dashboard.jsx
@@ -100,32 +145,53 @@ Výstup: `frontend/dist/`
 - Zobrazení tokenu pro manuální zadání
 - Instrukce pro párování
 
-### RuleEditor.jsx
+### RuleEditor.jsx a podsložka RuleEditor/
 
-**Funkce**:
-- Vytváření pravidel
-- Úprava pravidel
-- Smazání pravidel
-- Typy pravidel:
-  - Blokování aplikace
-  - Časový limit
-  - Denní limit
-  - Časové okno
-  - Blokování webu
+**RuleEditor.jsx**: Kontejner editoru pravidel – vytváření, úprava a mazání pravidel (app_block, time_limit, daily_limit, schedule, lock_device, network_block, website_block).
 
-### Reports.jsx
+**RuleEditor/** (styly a podkomponenty): `RuleCards.css`, `RuleForms.css` – karty pravidel a formuláře.
 
-**Funkce**:
-- Zobrazení statistik
-- Grafy použití
-- Filtrování podle období
-- Export dat (případně)
+### rules/
 
-**Grafy**:
-- Activity Heatmap - Použití po hodinách
-- Usage Trend Chart - Trendy v čase
-- Weekly Bar Chart - Týdenní přehled
-- Weekly Pattern Chart - Vzory podle dne
+Komponenty pro práci s pravidly: **AppPicker.jsx** (výběr aplikace), **RuleCard.jsx** (karta pravidla), **ScheduleForm.jsx** (časové okno), **HiddenAppsSection.jsx** (skryté aplikace), **constants.js**, **index.js**.
+
+### devices/ a devices/platforms/
+
+**DeviceCard.jsx**, **QuickActionsBar.jsx** – karta zařízení a rychlé akce. **platforms/AndroidDeviceCard.jsx**, **platforms/WindowsDeviceCard.jsx** – platformně specifické karty.
+
+### modals/
+
+**AllAppsModal.jsx** – výběr všech aplikací. **ScreenshotModal.jsx** – zobrazení screenshotu z Smart Shield.
+
+### limits/
+
+**LimitChip.jsx**, **LimitProgressBar.jsx** – čip a progress bar pro zobrazení limitů použití.
+
+### overview/
+
+**DeviceFilter.jsx**, **GlobalStats.jsx** – filtry a globální statistiky na stránce přehledu.
+
+### shield/ a SmartShield/
+
+**shield/**: **AlertCard.jsx**, **CategorySection.jsx** – karty alertů a sekce kategorií Smart Shield.
+
+**SmartShield.jsx**, **SmartShieldView.jsx** – hlavní view Smart Shield. **SmartShield/** – styly a komponenty (AlertCard, FilterChips, KeywordManager).
+
+### Ostatní stránkové komponenty
+
+- **QRPairing.jsx** – párování přes QR kód.
+- **DeviceOwnerSetup.jsx** – průvodce nastavením Android Device Owner.
+- **SmartInsights.jsx** – Smart Insights metriky (focus, wellness).
+- **StatusOverview.jsx** – přehled stavu zařízení.
+- **DayPicker.jsx** – výběr dne pro reporty.
+- **NotificationDropdown.jsx** – rozbalovací notifikace (např. Smart Shield alerty).
+- **setup/InitialSetup.jsx** – prvotní nastavení aplikace (účet, konfigurace).
+
+### Reports.jsx a Reports/
+
+**Reports.jsx**: Kontejner statistik – grafy, filtrování podle období.
+
+**Reports/**: **ProcessMonitor.jsx** (běžící procesy), **ReportApps.jsx** (aplikace), **ReportMetrics.jsx** (metriky).
 
 ### Charts komponenty
 
@@ -148,7 +214,7 @@ Výstup: `frontend/dist/`
 - Statistiky použití
 - Trendy
 
-## Služby
+## Služby a hooky
 
 ### API (`services/api.js`)
 
@@ -161,7 +227,14 @@ Výstup: `frontend/dist/`
 **Metody**:
 - `get()`, `post()`, `put()`, `delete()`
 - Automatická autentizace
-- Refresh token (případně)
+
+### WebSocket (`services/websocket.js`)
+
+Připojení k backendu pro real-time zprávy (notifikace, aktualizace zařízení).
+
+### Hooky (`hooks/`)
+
+**useDevices.js** – načtení a aktualizace seznamu zařízení. **useRules.js** – pravidla pro zařízení. **useQuickActions.js** – rychlé akce (lock, unlock, pause-internet).
 
 ### Auth (`utils/auth.js`)
 

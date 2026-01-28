@@ -26,12 +26,16 @@ Návod na instalaci a nasazení systému Parental Control Enterprise.
 
 ### Automatická instalace (doporučeno)
 
-1. Stáhněte `ParentalControlServer_Setup_2.0.0.exe`
+1. Stáhněte instalační EXE serveru (např. `ParentalControlServer_Setup_2.x.x.exe` z [installer/README.md](../installer/README.md))
 2. Spusťte instalátor
 3. Postupujte podle průvodce:
    - Výběr portu (výchozí: 8000)
-   - Vytvoření účtu (e-mail + heslo)
-4. Po instalaci se otevře dashboard v prohlížeči
+   - E-mail a heslo pro první rodičovský účet
+4. Po instalaci se spustí server a případně se otevře dashboard v prohlížeči
+
+**Komponenty instalátoru serveru**:
+- **server_launcher.py** – vstupní bod po instalaci. Umístěn v instalační složce vedle `backend/`. Spouští backend (`run_https.py`), volitelně otevře prohlížeč (`--open-browser`). Zástupce na ploše / v menu volá `pythonw server_launcher.py --open-browser`.
+- **init_admin.py** – instalátor ho volá s e‑mailem a heslem z průvodce a vytvoří prvního rodičovského účtu (viz [BACKEND.md](BACKEND.md#inicializace-admina)). Umístění: `backend/init_admin.py`; volání např. `python backend/init_admin.py "email@example.com" "heslo"`.
 
 ### Manuální instalace
 

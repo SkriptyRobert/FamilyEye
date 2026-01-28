@@ -77,7 +77,7 @@ Android Device Owner mód poskytuje nejvyšší úroveň ochrany. Aplikaci nelze
 - Časové rozvrhy
 - Blokování sítě
 
-**Dokumentace**: [API.md](API.md#pravidla)
+**Dokumentace**: [API.md](API.md), [reference/api-docs.md](reference/api-docs.md)
 
 ## Návody
 

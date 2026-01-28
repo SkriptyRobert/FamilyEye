@@ -11,26 +11,41 @@ Projekt obsahuje dva oddělené instalátory:
 
 ---
 
-## 🖥️ Server Instalátor
+## 🖥️ Server Instalátor (v2.4.0)
 
 ### Co dělá:
-1. Nainstaluje backend API (Python)
-2. Nainstaluje webový dashboard
-3. Vytvoří administrátorský účet
-4. Nastaví Windows službu
-5. Přidá firewall pravidlo
+1. **Root CA Integrace**: Automaticky nainstaluje `FamilyEye Root CA` do systému Windows, takže prohlížeč důvěřuje HTTPS.
+2. **Backend + Frontend**: Nainstaluje backend API i frontend dashboard.
+3. **One-Click Setup**:
+   - Vytvoří administrátorský účet (email/heslo zadané při instalaci).
+   - Nastaví firewall pravidla.
+   - Spustí službu nebo launcher.
+4. **Unified Launcher**: `server_launcher.py` spouští server i prohlížeč.
 
 ### Průvodce instalací:
-- **Port serveru** – na jakém portu poběží webové rozhraní (výchozí: 8000)
-- **E-mail a heslo** – pro přihlášení do rodičovské administrace
+- **Port serveru** – výchozí: 8000.
+- **E-mail a heslo** – vytváří hlavní rodičovský účet.
 
-### Build:
+### Build Instrukce:
+```bash
+# 1. Build Frontendu
+cd frontend
+npm run build
+cd ..
+
+# 2. Compile Installer
+# Ujistěte se, že máte Inno Setup 6 nainstalovaný
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/server/setup_server.iss
+
+# Výstup: installer/server/output/ParentalControlServer_Setup_2.4.0.exe
 ```
-1. Nainstalujte Inno Setup 6
-2. Otevřete installer/server/setup_server.iss
-3. Build → Compile
-4. Výstup: `installer/server/output/FamilyEyeServer_Setup_2.1.5.exe`
-```
+
+### Struktura souborů v instalátoru:
+- `backend/` - Kompletní Python backend
+- `frontend/dist/` - Zkompilovaný React frontend
+- `certs/` - SSL certifikáty a CA
+- `server_launcher.py` - Spouštěcí skript
+- `python/` - Embedded Python (pokud je přítomen při kompilaci)
 
 ---
 
@@ -65,7 +80,7 @@ installer/
 ├── README.md                    # Tento soubor
 │
 ├── agent/                       # Agent instalátor
-│   ├── setup_agent_2.3.0.iss  # Inno Setup skript
+│   ├── setup_agent_2.4.0.iss   # Inno Setup skript
 │   ├── assets/                 # Ikony, obrázky
 │   │   ├── setup_icon.ico
 │   │   ├── wizard_side.bmp

@@ -40,6 +40,25 @@ Authorization: Bearer <jwt_token>
 
 **Získání**: Při párování zařízení
 
+## Přehled endpointů
+
+**Skupiny endpointů**:
+
+| Skupina | Prefix | Popis |
+|--------|--------|--------|
+| Autentizace | `/api/auth` | Registrace, login, `/me` |
+| Zařízení | `/api/devices` | CRUD, párování (token, qr, pair), akce (lock, unlock, pause-internet, atd.) |
+| Pravidla | `/api/rules` | CRUD pravidel, agent fetch |
+| Reporty | `/api/reports` | Agent report/critical-event, device usage/summary/trends, cleanup |
+| WebSocket | `/api/ws` | Real-time zprávy pro frontend |
+| Trust | `/api/trust` | CA certifikát, info, QR, status |
+| Soubory | `/api/files` | Screenshot upload, servírování a mazání |
+| Smart Shield | `/api/shield` | Klíčová slova, alerty, agent endpoints |
+
+Doplňující technické detaily a zdrojové soubory: [reference/api-docs.md](reference/api-docs.md).
+
+---
+
 ## Endpointy
 
 ### Autentizace
@@ -57,13 +76,15 @@ Registrace nového uživatele.
 }
 ```
 
-**Response**:
+**Response** (201):
 ```json
 {
   "access_token": "jwt_token",
   "token_type": "bearer"
 }
 ```
+
+**Chyby**: 400 (email již existuje), 429 (rate limit).
 
 #### POST /api/auth/login
 
@@ -77,7 +98,7 @@ Přihlášení uživatele.
 }
 ```
 
-**Response**:
+**Response** (200):
 ```json
 {
   "access_token": "jwt_token",
@@ -85,13 +106,13 @@ Přihlášení uživatele.
 }
 ```
 
+**Chyby**: 401 (neplatné údaje), 429 (rate limit).
+
 #### GET /api/auth/me
 
-Informace o přihlášeném uživateli.
+Informace o přihlášeném uživateli. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**:
+**Response** (200):
 ```json
 {
   "id": 1,
@@ -105,43 +126,41 @@ Informace o přihlášeném uživateli.
 
 #### POST /api/devices/pairing/token
 
-Vytvoření pairing tokenu pro párování zařízení.
+Vytvoření pairing tokenu. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**:
+**Response** (200):
 ```json
 {
   "token": "uuid-token",
   "expires_at": "2024-01-01T00:05:00Z",
-  "pairing_url": "parental-control://pair?token=..."
+  "pairing_url": "parental-control://pair?token=...&backend=..."
 }
 ```
 
+Platnost tokenu: 5 minut.
+
 #### GET /api/devices/pairing/qr/{token}
 
-QR kód pro párování.
+QR kód pro párování. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: Base64 encoded PNG image
+**Response** (200): JSON s `qr_code` (base64 PNG) a `token`.
 
 #### POST /api/devices/pairing/pair
 
-Párování zařízení (voláno agentem).
+Párování zařízení (volá agent).
 
 **Request**:
 ```json
 {
   "token": "uuid-token",
-  "device_name": "Dětský počítač",
-  "device_type": "windows",
+  "device_name": "Dětský telefon",
+  "device_type": "android",
   "mac_address": "AA:BB:CC:DD:EE:FF",
   "device_id": "uuid-device-id"
 }
 ```
 
-**Response**:
+**Response** (200):
 ```json
 {
   "device_id": "uuid-device-id",
@@ -152,104 +171,45 @@ Párování zařízení (voláno agentem).
 
 #### GET /api/devices/
 
-Seznam všech zařízení rodiče.
+Seznam zařízení rodiče. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
+**Response** (200): Pole objektů zařízení (`id`, `name`, `device_type`, `is_online`, `has_lock_rule`, `has_network_block`, `is_device_owner`, …).
 
-**Response**:
-```json
-[
-  {
-    "id": 1,
-    "name": "Dětský počítač",
-    "device_type": "windows",
-    "mac_address": "AA:BB:CC:DD:EE:FF",
-    "device_id": "uuid",
-    "parent_id": 1,
-    "child_id": null,
-    "api_key": "uuid",
-    "paired_at": "2024-01-01T00:00:00Z",
-    "last_seen": "2024-01-01T12:00:00Z",
-    "is_active": true,
-    "is_online": true,
-    "has_lock_rule": false,
-    "has_network_block": false
-  }
-]
-```
+#### GET /api/devices/{device_id}, PUT /api/devices/{device_id}, DELETE /api/devices/{device_id}
 
-#### GET /api/devices/{device_id}
-
-Detail zařízení.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: Stejné jako v seznamu
-
-#### PUT /api/devices/{device_id}
-
-Aktualizace zařízení (např. název).
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Request**:
-```json
-{
-  "name": "Nový název"
-}
-```
-
-#### DELETE /api/devices/{device_id}
-
-Smazání zařízení a všech jeho dat.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: 204 No Content
+Detail, aktualizace (např. `name`), smazání zařízení. Vše vyžaduje Bearer token.
 
 #### POST /api/devices/{device_id}/lock
 
-Zamknutí zařízení.
+Zamknutí zařízení. Vytvoří pravidlo `lock_device` a odešle WebSocket příkaz.
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**:
-```json
-{
-  "status": "success",
-  "message": "Lock command sent to device"
-}
-```
+**Response** (200): `{"status": "success", "message": "Lock command sent to device"}`
 
 #### POST /api/devices/{device_id}/unlock
 
 Odemknutí zařízení.
 
-**Headers**: `Authorization: Bearer <token>`
+**Response** (200): `{"status": "success", "message": "Unlock command sent to device"}`
 
 #### POST /api/devices/{device_id}/pause-internet
 
-Pozastavení internetu na X minut.
+Pozastavení internetu. **Query**: `duration_minutes` (default 60, max 1440).
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Query params**: `duration_minutes` (default: 60)
+**Response** (200): `{"status": "success", "message": "Internet paused for X minutes", "duration_minutes": X}`
 
 #### POST /api/devices/{device_id}/resume-internet
 
 Obnovení internetu.
 
-**Headers**: `Authorization: Bearer <token>`
+**Response** (200): `{"status": "success", "message": "Internet access resumed", "rules_removed": N}`
 
 ### Pravidla
 
 #### POST /api/rules/
 
-Vytvoření pravidla.
+Vytvoření pravidla. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Request**:
+**Request** (příklad):
 ```json
 {
   "device_id": 1,
@@ -259,62 +219,23 @@ Vytvoření pravidla.
 }
 ```
 
-**Typy pravidel**:
-- `app_block` - Blokování aplikace
-- `time_limit` - Časový limit (vyžaduje `time_limit` v minutách)
-- `daily_limit` - Denní limit (vyžaduje `time_limit` v minutách)
-- `schedule` - Časové okno (vyžaduje `schedule_start_time`, `schedule_end_time`, `schedule_days`)
-- `lock_device` - Zamknutí zařízení
-- `network_block` - Blokování sítě
-- `website_block` - Blokování webu (vyžaduje `website_url`)
+**Typy pravidel**: `app_block`, `time_limit`, `daily_limit`, `schedule`, `lock_device`, `network_block`, `website_block`. U `time_limit`/`daily_limit` uvádět `time_limit` (minuty), u `schedule` uvádět `schedule_start_time`, `schedule_end_time`, `schedule_days`, u `website_block` uvádět `website_url`.
 
-**Response**: RuleResponse
+**Response** (201): Objekt pravidla včetně `id`, `created_at`.
 
 #### GET /api/rules/device/{device_id}
 
-Seznam pravidel pro zařízení.
+Seznam pravidel pro zařízení. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
+**Response** (200): Pole pravidel (pouze `enabled == true`).
 
-**Response**:
-```json
-[
-  {
-    "id": 1,
-    "device_id": 1,
-    "rule_type": "app_block",
-    "app_name": "steam",
-    "enabled": true,
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-]
-```
+#### GET /api/rules/{rule_id}, PUT /api/rules/{rule_id}, DELETE /api/rules/{rule_id}
 
-#### GET /api/rules/{rule_id}
-
-Detail pravidla.
-
-**Headers**: `Authorization: Bearer <token>`
-
-#### PUT /api/rules/{rule_id}
-
-Aktualizace pravidla.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Request**: Stejné jako POST /api/rules/
-
-#### DELETE /api/rules/{rule_id}
-
-Smazání pravidla.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: 204 No Content
+Detail, aktualizace a smazání pravidla. Vše vyžaduje Bearer token.
 
 #### POST /api/rules/agent/fetch
 
-Agent endpoint pro načtení pravidel.
+Načtení pravidel agentem.
 
 **Request**:
 ```json
@@ -324,15 +245,15 @@ Agent endpoint pro načtení pravidel.
 }
 ```
 
-**Response**:
+**Response** (200):
 ```json
 {
   "rules": [...],
   "daily_usage": 3600,
-  "usage_by_app": {
-    "chrome": 1800,
-    "steam": 1800
-  }
+  "usage_by_app": {"chrome": 1800, "steam": 1800},
+  "server_time": "2024-01-01T12:00:00Z",
+  "settings_protection": "full",
+  "settings_exceptions": null
 }
 ```
 
@@ -340,312 +261,99 @@ Agent endpoint pro načtení pravidel.
 
 #### POST /api/reports/agent/report
 
-Agent endpoint pro odeslání statistik.
+Odeslání statistik agentem.
 
 **Request**:
 ```json
 {
   "device_id": "uuid",
   "api_key": "uuid",
-  "usage_logs": [
-    {
-      "app_name": "chrome",
-      "duration": 60,
-      "timestamp": "2024-01-01T12:00:00Z"
-    }
-  ],
+  "usage_logs": [{"app_name": "chrome", "duration": 60, "timestamp": "2024-01-01T12:00:00Z"}],
   "running_processes": ["chrome", "steam"]
 }
 ```
 
-**Response**:
-```json
-{
-  "status": "success",
-  "logs_received": 10,
-  "last_seen": "2024-01-01T12:00:00Z"
-}
-```
-
-#### POST /api/reports/agent/critical-event
-
-Kritické události (limit exceeded, atd.).
-
-**Request**:
-```json
-{
-  "device_id": "uuid",
-  "api_key": "uuid",
-  "event_type": "limit_exceeded",
-  "app_name": "steam",
-  "used_seconds": 3600,
-  "limit_seconds": 1800
-}
-```
+**Response** (200): `{"status": "success", "logs_received": N, "last_seen": "..."}`
 
 #### GET /api/reports/device/{device_id}/summary
 
-Souhrn statistik zařízení.
+Souhrn pro dashboard. **Headers**: `Authorization: Bearer <token>`. **Query**: `date` (YYYY-MM-DD, volitelné).
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**:
-```json
-{
-  "device_id": 1,
-  "device_name": "Dětský počítač",
-  "today_usage_seconds": 7200,
-  "today_usage_hours": 2.0,
-  "yesterday_usage_seconds": 5400,
-  "week_avg_seconds": 6000,
-  "apps_used_today": 5,
-  "top_apps": [
-    {"app_name": "chrome", "duration_seconds": 3600}
-  ],
-  "active_rules": 3,
-  "apps_with_limits": [...],
-  "daily_limit": {...},
-  "running_processes": ["chrome", "steam"]
-}
-```
+**Response** (200): Objekt s `today_usage_seconds`, `today_usage_hours`, `top_apps`, `apps_with_limits`, `daily_limit`, `running_processes`, `smart_insights` (focus_score, wellness_score, anomalies), apod.
 
 #### GET /api/reports/device/{device_id}/usage-by-hour
 
-Použití po hodinách (heatmap data).
+Použití po hodinách (heatmap). **Query**: `days` (default 7, max 14).
 
-**Headers**: `Authorization: Bearer <token>`
+**Response** (200): Pole objektů `{date, hour, duration_seconds, duration_minutes, apps_count, sessions_count}`.
 
-**Query params**: `days` (default: 7, max: 14)
-
-**Response**:
-```json
-[
-  {
-    "date": "2024-01-01",
-    "hour": 14,
-    "duration_seconds": 3600,
-    "duration_minutes": 60.0,
-    "apps_count": 3,
-    "sessions_count": 10
-  }
-]
-```
-
-#### GET /api/reports/device/{device_id}/usage-trends
-
-Trendy použití.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Query params**: `period` ("week" nebo "month")
-
-#### GET /api/reports/device/{device_id}/weekly-pattern
-
-Týdenní vzory použití.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Query params**: `weeks` (default: 4, max: 8)
-
-#### GET /api/reports/device/{device_id}/app-details
-
-Detail aplikace.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Query params**: `app_name`, `days` (default: 7, max: 30)
+Další report endpointy: `usage`, `usage-trends`, `weekly-pattern`, `app-details`, `app-trends`, `cleanup` – viz [reference/api-docs.md](reference/api-docs.md).
 
 ### WebSocket
 
-#### WS /api/ws/{user_id}
+**Endpoint**: `/ws/{user_id}` (resp. podle implementace v backendu).
 
-WebSocket připojení pro real-time aktualizace.
+**Příkazy na zařízení**: `LOCK_NOW`, `UNLOCK_NOW`, `REFRESH_RULES`, `SCREENSHOT_NOW`, `DEACTIVATE_DEVICE_OWNER`, `REACTIVATE_DEVICE_OWNER`.
 
-**Autentizace**: JWT token v query string nebo header
-
-**Zprávy**:
-- Příchozí: JSON zprávy
-- Odchozí: Broadcast aktualizací
+**Notifikace rodiči**: `shield_alert`, `device_status`.
 
 ### Trust (SSL)
 
-#### GET /api/trust/ca.crt
+- `GET /api/trust/ca.crt` – stažení CA certifikátu (PEM).
+- `GET /api/trust/info` – informace o SSL (`ca_subject`, `download_url`, `qr_url`).
+- `GET /api/trust/qr.png` – QR kód pro certifikát.
+- `GET /api/trust/status` – stav SSL.
 
-Stažení CA certifikátu.
+### Soubory (screenshots)
 
-**Response**: PEM certifikát
-
-#### GET /api/trust/info
-
-Informace o SSL konfiguraci.
-
-**Response**:
-```json
-{
-  "ca_subject": "...",
-  "download_url": "https://.../api/trust/ca.crt",
-  "qr_url": "https://.../api/trust/qr.png"
-}
-```
+- `GET /api/files/screenshots/{device_id}/{filename}` – zobrazení screenshotu (Bearer token nebo query `token`).
+- `POST /api/files/upload/screenshot` – nahrání screenshotu agentem (headers `X-Device-ID`, `X-API-Key` nebo ekvivalent).
+- `DELETE /api/files/screenshots/{device_id}/{filename}` – smazání screenshotu.
 
 ### Smart Shield
 
 #### GET /api/shield/keywords/{device_id}
 
-Získání všech klíčových slov pro zařízení.
+Seznam klíčových slov. **Headers**: `Authorization: Bearer <token>`
 
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**:
-```json
-[
-  {
-    "id": 1,
-    "device_id": 1,
-    "keyword": "drogy",
-    "category": "drugs",
-    "severity": "high",
-    "enabled": true,
-    "created_at": "2024-01-01T00:00:00Z"
-  }
-]
-```
+**Response** (200): Pole `{id, device_id, keyword, category, severity, enabled, created_at}`.
 
 #### POST /api/shield/keywords
 
-Přidání nového klíčového slova.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Request**:
-```json
-{
-  "device_id": 1,
-  "keyword": "drogy",
-  "category": "drugs",
-  "severity": "high"
-}
-```
-
-**Response**: ShieldKeywordResponse
-
-#### DELETE /api/shield/keywords/{keyword_id}
-
-Smazání klíčového slova.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: `{"status": "success"}`
-
-#### GET /api/shield/alerts/{device_id}
-
-Získání všech alertů pro zařízení.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Query params**: 
-- `limit` (default: 50, max: 200)
-- `offset` (default: 0)
-- `category` (volitelné, filtr podle kategorie)
-- `severity` (volitelné, filtr podle severity)
-
-**Response**:
-```json
-[
-  {
-    "id": 1,
-    "device_id": 1,
-    "keyword_id": 1,
-    "keyword": "drogy",
-    "category": "drugs",
-    "severity": "high",
-    "package_name": "com.chrome.browser",
-    "screenshot_url": "https://.../screenshot.jpg",
-    "context_text": "Kde koupit drogy...",
-    "detected_at": "2024-01-01T12:00:00Z"
-  }
-]
-```
+Přidání klíčového slova. **Request**: `{device_id, keyword, category, severity}`.
 
 #### POST /api/shield/alert
 
-Agent endpoint pro odeslání alertu (voláno agentem).
+Report alertu z agenta.
 
 **Request**:
 ```json
 {
   "device_id": "uuid",
   "api_key": "uuid",
-  "keyword_id": 1,
   "keyword": "drogy",
-  "category": "drugs",
-  "severity": "high",
-  "package_name": "com.chrome.browser",
-  "screenshot_url": "https://.../screenshot.jpg",
-  "context_text": "Kde koupit drogy..."
+  "app_name": "com.android.chrome",
+  "detected_text": "úryvek textu",
+  "screenshot_url": "screenshots/...",
+  "severity": "high"
 }
 ```
 
-**Response**:
-```json
-{
-  "status": "success",
-  "alert_id": 1
-}
-```
+**Response** (201): `{"status": "alert_recorded"}`. Platí spam prevention (deduplikace, cooldown).
+
+#### GET /api/shield/alerts/{device_id}
+
+Seznam alertů. **Query**: `limit` (default 50, max 100).
+
+#### POST /api/shield/alerts/batch-delete
+
+Hromadné mazání. **Request**: `{"alert_ids": [1, 2, 3]}`.
 
 #### POST /api/shield/agent/keywords
 
-Agent endpoint pro načtení klíčových slov (voláno agentem).
+Načtení klíčových slov agentem. **Request**: `{device_id, api_key}`. **Response**: pole klíčových slov.
 
-**Request**:
-```json
-{
-  "device_id": "uuid",
-  "api_key": "uuid"
-}
-```
-
-**Response**: List[ShieldKeywordResponse]
-
-### Files
-
-#### POST /api/files/upload
-
-Nahrání souboru (screenshot) - voláno agentem.
-
-**Headers**: 
-- `X-Device-ID: uuid`
-- `X-API-Key: uuid`
-
-**Request**: Multipart form data
-- `file`: Soubor (obrázek)
-
-**Response**:
-```json
-{
-  "url": "https://.../uploads/screenshots/{device_id}/{filename}",
-  "filename": "screenshot_20240101_120000.jpg"
-}
-```
-
-#### GET /api/files/screenshots/{device_id}/{filename}
-
-Stažení screenshotu.
-
-**Headers**: `Authorization: Bearer <token>` (volitelné, lze použít i query param `token`)
-
-**Query params**: `token` (volitelné, JWT token pro přístup přes img tag)
-
-**Response**: Obrázek (image/jpeg)
-
-#### DELETE /api/files/screenshots/{device_id}/{filename}
-
-Smazání screenshotu.
-
-**Headers**: `Authorization: Bearer <token>`
-
-**Response**: `{"status": "success"}`
+---
 
 ## Error responses
 

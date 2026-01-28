@@ -43,6 +43,15 @@ pip install -r requirements.txt
 python -m agent.main
 ```
 
+### Vývojové skripty
+
+V adresáři **`dev/`** jsou batch skripty pro rychlé spuštění a zastavení celého vývojového prostředí na Windows.
+
+- **`dev/start.bat`** – Spustí backend a frontend najednou. Nejprve uvolní porty 8000 a 5173 (ukončí procesy, které je používají), zjistí lokální IP (např. 192.168.x.x), spustí backend jako `python run_https.py` v `backend/` a frontend jako `npm run dev -- --host <IP> --port 5173` v `frontend/`. Po spuštění jsou dostupné: Dashboard UI na `http://<IP>:5173`, Backend API na `https://localhost:8000`. Skript neukončuje běh po stisku klávesy – procesy zastavíte pomocí `dev/STOP.bat`.
+- **`dev/STOP.bat`** – Zastaví vývojové prostředí: ukončí procesy `python.exe` a `node.exe` (backend a frontend). Spusťte ho v samostatném okně nebo až po ukončení `start.bat`.
+
+**Použití**: Z kořene projektu spusťte `dev\start.bat`. Pro zastavení všech služeb spusťte `dev\STOP.bat`.
+
 ## Struktura projektu
 
 ```
@@ -69,11 +78,24 @@ Parental-Control_Enterprise/
 └── docs/                # Dokumentace
 ```
 
+## CI/CD – GitHub Actions
+
+Workflow jsou v [.github/workflows/](../.github/workflows/). Spouštějí se na push a pull request do větví `main`, `master`, `android-fix-process` při změnách v příslušných cestách.
+
+| Workflow | Soubor | Kdy se spustí | Co dělá |
+|----------|--------|----------------|---------|
+| **Backend Tests** | [backend.yml](../.github/workflows/backend.yml) | Změny v `backend/**` | Python 3.11, `pip install`, `pytest tests/` s coverage, upload do Codecov |
+| **Frontend Tests** | [frontend.yml](../.github/workflows/frontend.yml) | Změny v `frontend/**` | Node 18, `npm ci`, `npm test -- --run --coverage` |
+| **Android Tests** | [android.yml](../.github/workflows/android.yml) | Změny v `clients/android/**` | JDK 17, `./gradlew test`, upload artifactů s test výsledky |
+| **Create Release** | [release.yml](../.github/workflows/release.yml) | Po úspěšném dokončení workflow „Run Tests” na `main`/`master` | Vytvoření GitHub Release s tagem odvozeným od `versionName` z Android `build.gradle.kts` |
+
+**Poznámka**: Release workflow předpokládá workflow s názvem „Run Tests”; pokud máte jeden složený workflow, který volá backend/frontend/android testy, pojmenujte ho takto. V opačném případě upravte `workflow_run.workflows` v `release.yml` podle skutečných názvů workflow.
+
 ## Přidávání funkcí
 
 ### Nový API endpoint
 
-1. **Vytvořit nebo upravit router** v `backend/app/api/`:
+1. **Vytvořit nebo upravit modul** v `backend/app/api/` (soubor, např. `api/foo.py`, nebo podmodul v balíčku `api/devices/`, `api/reports/`):
 
 ```python
 from fastapi import APIRouter, Depends
@@ -86,15 +108,14 @@ async def new_endpoint(current_user: User = Depends(get_current_parent)):
     return {"message": "Hello"}
 ```
 
-2. **Zaregistrovat router** v `backend/app/main.py`:
+2. **Zaregistrovat router** v `backend/app/main.py`. U balíčků (např. `api.devices`) se importuje router z `__init__.py`:
 
 ```python
-from .api import new_module
-
-app.include_router(new_module.router, prefix="/api/new", tags=["new"])
+from .api import auth, devices, rules, reports, ...
+app.include_router(devices.router, prefix="/api/devices", tags=["devices"])
 ```
 
-3. **Aktualizovat dokumentaci** v `docs/API.md`
+3. **Aktualizovat dokumentaci** v [API.md](API.md) a [reference/api-docs.md](reference/api-docs.md)
 
 ### Nová frontend komponenta
 

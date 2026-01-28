@@ -383,7 +383,6 @@ clients/android/app/src/main/java/com/familyeye/agent/
 ├── service/
 │   ├── FamilyEyeService.kt          # Hlavní foreground služba
 │   ├── AppDetectorService.kt        # Accessibility Service pro detekci aplikací
-│   ├── EnforcementService.kt       # Centralizované vynucování pravidel
 │   ├── RuleEnforcer.kt              # Logika vynucování pravidel
 │   ├── UsageTracker.kt              # Sledování použití aplikací
 │   ├── Reporter.kt                  # Odesílání statistik
@@ -391,42 +390,48 @@ clients/android/app/src/main/java/com/familyeye/agent/
 │   ├── ResurrectionJobService.kt   # JobScheduler persistence
 │   ├── ProcessGuardianWorker.kt    # WorkManager persistence
 │   ├── AlarmWatchdog.kt             # AlarmManager heartbeat
-│   └── BlockOverlayManager.kt      # UI overlay pro blokování
+│   ├── BlockOverlayManager.kt      # UI overlay pro blokování
+│   ├── ScreenStateReceiver.kt      # Stav obrazovky
+│   └── RestartWorker.kt             # Restart worker
 ├── scanner/
-│   ├── ContentScanner.kt           # Smart Shield skenování obsahu
-│   ├── KeywordDetector.kt          # Aho-Corasick detekce klíčových slov
+│   ├── ContentScanner.kt            # Smart Shield skenování obsahu
+│   ├── KeywordDetector.kt           # Aho-Corasick detekce klíčových slov
 │   └── KeywordManager.kt           # Správa klíčových slov
+├── enforcement/
+│   ├── EnforcementService.kt        # Centralizované vynucování pravidel
+│   ├── Blocker.kt                   # Blokování aplikací
+│   ├── SelfProtectionHandler.kt    # Anti-tampering detekce
+│   └── WhitelistManager.kt          # Whitelist systémových aplikací
 ├── device/
 │   ├── DeviceOwnerPolicyEnforcer.kt # Device Owner ochrana
-│   └── DeviceRestrictions.kt        # Restrikce a konstanty
-├── enforcement/
-│   ├── Blocker.kt                   # Blokování aplikací
-│   ├── SelfProtectionHandler.kt     # Anti-tampering detekce
-│   └── WhitelistManager.kt          # Whitelist systémových aplikací
+│   └── DeviceRestrictions.kt       # Restrikce a konstanty
 ├── receiver/
-│   ├── BootReceiver.kt             # Boot receiver
-│   ├── RestartReceiver.kt            # Restart receiver
-│   └── FamilyEyeDeviceAdmin.kt       # Device Admin receiver
+│   ├── BootReceiver.kt              # Boot receiver
+│   ├── RestartReceiver.kt           # Restart receiver
+│   └── FamilyEyeDeviceAdmin.kt      # Device Admin receiver
 ├── data/
-│   ├── api/
-│   │   ├── FamilyEyeApi.kt          # REST API klient
-│   │   └── WebSocketClient.kt       # WebSocket klient
-│   ├── local/
-│   │   ├── AgentDatabase.kt         # Room databáze
-│   │   ├── RuleDao.kt               # Pravidla DAO
-│   │   └── UsageLogDao.kt           # Usage logs DAO
-│   └── repository/
-│       ├── AgentConfigRepository.kt  # Konfigurace
-│       ├── RuleRepository.kt        # Pravidla repository
-│       └── UsageRepository.kt       # Usage repository
+│   ├── api/                         # FamilyEyeApi, WebSocketClient, dto/
+│   ├── local/                       # AgentDatabase, RuleDao, UsageLogDao
+│   └── repository/                 # AgentConfig, Rule, Usage repositories
+├── auth/                             # ParentSessionManager
+├── config/                           # AgentConstants
+├── di/                               # DataModule, NetworkModule (DI)
+├── policy/                           # PolicyClasses, SettingsProtectionPolicy
+├── time/                             # SecureTimeProvider
+├── utils/                            # AccountHelper, AppInfoResolver, PackageMatcher, TimeUtils
 └── ui/
-    ├── MainActivity.kt               # Hlavní aktivita
-    ├── KeepAliveActivity.kt          # Keep-alive aktivita
+    ├── MainActivity.kt, KeepAliveActivity.kt
+    ├── components/                  # PermissionCard, PinDialog
+    ├── theme/                        # Color, Theme, Type
+    ├── viewmodel/                    # MainViewModel, PairingViewModel, SetupWizardViewModel
     └── screens/
-        ├── PairingScreen.kt          # Párování
-        ├── SetupWizardScreen.kt     # Setup wizard
-        └── ChildDashboardScreen.kt  # Dětský dashboard
+        ├── PairingScreen.kt, ChildDashboardScreen.kt
+        ├── AdminLoginScreen.kt, BlockOverlayScreen.kt, SettingsScreen.kt
+        ├── OemSetupScreen.kt, SetupWizardScreen.kt
+        └── setup/                     # Kroky setupu (Welcome, Permissions, PinSetup, …)
 ```
+
+**Přehled hlavních modulů**: Orchestrace a persistence – **FamilyEyeService**; detekce obsahu – **ContentScanner**, **KeywordDetector**; vynucování – **EnforcementService**, **RuleEnforcer**; Device Owner – **DeviceOwnerPolicyEnforcer**. Životní cyklus, tok dat a bezpečnostní model jsou popsány v [architecture/system-design.md](architecture/system-design.md) a [architecture/security-model.md](architecture/security-model.md).
 
 ## Instalace
 
