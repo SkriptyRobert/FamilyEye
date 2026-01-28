@@ -16,4 +16,5 @@ WORKDIR /app/backend
 
 EXPOSE 8443
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8443"]
+# Use run_https.py so the server runs with SSL (HTTPS); certs are generated at first start
+CMD ["python", "run_https.py"]
