@@ -1,103 +1,66 @@
 # FamilyEye 🛡️
 
-> **Complete parental control solution for families**
+<div align="center">
+  <img src="clients/android/app/src/main/res/drawable-xxhdpi/block_shield.jpg" alt="FamilyEye Server Room" width="400" />
+</div>
+
+> **Inteligentní ochrana pro Vaši rodinu v digitálním světě**
 
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
 [![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
 [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
-[![Device Owner: Supported](https://img.shields.io/badge/🤖_Device%20Owner-Supported-purple)](docs/AGENT.md)
-
-**FamilyEye je open-source projekt pro osobní nekomerční použití.**
-Komunitní příspěvky (bug fixy, nové funkce) jsou vřele vítány! Podívejte se do [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## ✨ Features
+## 🌟 Proč FamilyEye? Game Changer Features!
 
-- **📱 Multi-Platform Agents** - Windows & Android monitoring clients
-- **🛡️ Smart Shield (Game-Changer)** - Advanced real-time on-screen content analysis. Goes beyond simple DNS blocking to detect harmful visuals and text in any app.
-- **⏰ Screen Time Management** - Daily limits, app limits, and schedules
-- **📊 Usage Analytics** - Detailed reports with insights and trends
-- **🌐 Web Dashboard** - Modern React-based parent dashboard
-- **🔐 Offline-First** - Agents work without internet, sync when connected
+### 🛡️ Smart Shield & Detekce Slov
+**Nečekejte na problém, předcházejte mu.**
+Náš unikátní **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazovky v reálném čase:
+- **Detekce nebezpečných slov a vizuálů** (AI analýza).
+- **Okamžité pořízení důkazního snímku** obrazovky při detekci.
+- Funguje v jakékoliv aplikaci, nejen v prohlížeči.
 
-## 🏗️ Architecture
+### 🔒 Vaše Data v Bezpečí (Ani Čína, ani Amerika)
+Soukromí je pro nás klíčové.
+- **Self-hosted:** Celý systém běží na vašem vlastním železe.
+- **Žádné sledování:** Vaše data neputují na cizí servery v Číně ani v USA. Vše zůstává u vás doma.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Parent Dashboard                        │
-│                    (React + Vite + CSS)                      │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTPS
-┌─────────────────────────▼───────────────────────────────────┐
-│                    Backend API                               │
-│              (FastAPI + SQLite + WebSocket)                  │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTPS
-          ┌───────────────┴───────────────┐
-          ▼                               ▼
-┌─────────────────────┐       ┌─────────────────────┐
-│   Windows Agent     │       │   Android Agent     │
-│  (Python + PyQt5)   │       │ (Kotlin + Compose)  │
-└─────────────────────┘       └─────────────────────┘
-```
+### 🎮 Kompletní Kontrola a Agenti
+**To není jen o blokování. Je to o zdravých návycích.**
 
-## 🚀 Quick Start
+#### ⏰ Pánem Času (Limity a Rozvrhy)
+- **Flexibilní Rozvrhy:** Nastavte přesně, kdy se smí hrát a kdy se spí ("Večerka").
+- **Dávkování Zábavy:** Určete denní limity pro konkrétní aplikace nebo celé kategorie.
+- **Školní Režim:** Během výuky jen povolené aplikace.
 
-### Prerequisites
+#### 🔒 Vzdálená Správa v Reálném Čase
+- **Lock Down!** Potřebujete okamžitou pozornost? Uzamkněte zařízení dítěte na jedno kliknutí z vašeho mobilu.
+- **Blokování Instalací:** Na Androidu a Windows zabráníte instalaci nežádoucích programů.
+- **Webový Filtr:** Blokování stránek a vynucení bezpečného vyhledávání.
 
-- Python 3.10+
-- Node.js 18+
-- (For Android) Android Studio + JDK 17
+#### 🕵️‍♂️ Co se děje, když se nedíváte?
+- **Detailní Reporting:** Přesné grafy používání aplikací (žádné "jen jsem se díval na hodiny").
+- **Offline? Nevadí:** Agenti nahrávají aktivitu i offline a po připojení vše synchronizují.
+- **Anti-Tamper Ochrana:** Dítě nemůže agenta jen tak odinstalovat nebo vypnout (Device Admin/Owner mód).
 
-### 1. Clone & Setup Backend
+---
 
-```bash
-git clone https://github.com/SkriptyRobert/Parential-Control-Enterprise.git
-cd Parential-Control-Enterprise
+## 🚀 Chcete se zapojit? Nebo jste našli chybu?
 
-# Create virtual environment
-cd backend
-python -m venv venv
-.\venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+**Chcete vylepšit funkce nebo opravit bug? Tak to jednoduše udělejte!**
 
-# Install dependencies
-pip install -r requirements.txt
+Projekt je navržen tak, aby se do něj mohl zapojit každý – klidně s pomocí **AI**.
+- **Pro AI Agenty:** V kořenu projektu najdete soubor [`llms.txt`](llms.txt).
+- **Jak na to:** Jednoduše načtěte `llms.txt` svému AI agentovi (Claude, ChatGPT, Cursor). Soubor obsahuje kompletní kontext, architekturu a instrukce, takže AI okamžitě pochopí, co a jak upravit.
 
-# Run backend
-python run_https.py
-```
+*Vytvářejte, upravujte a pomozte nám dělat digitální svět bezpečnějším!*
 
-### 2. Setup Frontend
+---
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## 🛠️ Technická Dokumentace
 
-### 3. Access Dashboard
-
-Open `https://localhost:8000` in your browser.
-
-Default credentials will be created on first run.
-
-## Docker (server image)
-
-Pre-built server image (backend + frontend) is published to GitHub Container Registry. Use it with PostgreSQL via Docker Compose:
-
-```bash
-# Run with PostgreSQL
-cd docker/server
-cp .env.example .env
-# set BACKEND_URL (public URL, e.g. https://<server-ip>:8443)
-docker compose pull
-docker compose up -d
-```
-
-Default port: **8443**. Full instructions: [docker/server/README.md](docker/server/README.md).
+*Níže naleznete technické detaily, strukturu projektu a návody na instalaci.*
 
 ## 📁 Project Structure
 
@@ -121,19 +84,36 @@ FamilyEye/
 └── certs/             # SSL certificates
 ```
 
-## 📚 Documentation
+## 📚 Dokumentace
 
-| Document | Description |
+Kompletní dokumentace je organizována v adresáři `/docs`.
+
+### 🧭 Hlavní Přehled
+| Dokument | Popis |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System architecture overview |
-| [Backend API](docs/API.md) | REST API documentation |
-| [Frontend](docs/FRONTEND.md) | Dashboard development guide |
-| [Agent](docs/AGENT.md) | Windows & Android agent documentation |
-| [Deployment](docs/DEPLOYMENT.md) | Production deployment guide |
-| [Development](docs/DEVELOPMENT.md) | Developer setup guide |
-| [System Design](docs/architecture/system-design.md) | Detailed system design |
-| [Security Model](docs/architecture/security-model.md) | Security architecture |
-| [Feature Matrix](docs/reference/feature-matrix.md) | Complete feature reference |
+| **[INDEX](docs/INDEX.md)** | **Hlavní rozcestník dokumentace** |
+| [Architecture](docs/ARCHITECTURE.md) | Přehled architektury systému |
+| [Deployment](docs/DEPLOYMENT.md) | Příručka pro nasazení do produkce |
+| [Development](docs/DEVELOPMENT.md) | Návod pro nastavení vývojového prostředí |
+
+### 🧩 Komponenty
+| Dokument | Popis |
+|----------|-------------|
+| [Backend Guide](docs/BACKEND.md) | Detailní popis backendu a služeb |
+| [Frontend Guide](docs/FRONTEND.md) | Vývoj webového dashboardu |
+| [Agents Guide](docs/AGENT.md) | Dokumentace pro Windows a Android agenty |
+| [Database](docs/DATABASE.md) | Databázové schéma a správa dat |
+| [API Reference](docs/API.md) | Specifikace REST API endpointů |
+
+### 🔬 Deep Dives & Reference
+- **Architektura:** [System Design](docs/architecture/system-design.md), [Security Model](docs/architecture/security-model.md)
+- **Reference:** [Feature Matrix](docs/reference/feature-matrix.md), [Error Codes](docs/reference/error-codes.md), [Testing Guide](docs/reference/testing.md)
+- **Diagramy:** [Synchronizace času](docs/TIME_SYNC_DIAGRAM.md)
+
+### 🎓 Návody a Tutoriály
+- **Začínáme:** [Prvotní nastavení](docs/tutorials/first-setup.md), [Průvodce startem](docs/tutorials/getting-started.md)
+- **Řešení problémů:** [USB Debugging](docs/how-to/troubleshoot-usb.md), [Obnovení přístupu](docs/how-to/restore-access.md)
+- **Běžné úkony:** [Změna PINu](docs/how-to/change-pin.md), [Odblokování aplikace](docs/how-to/unblock-app.md)
 
 ## 🤝 Contributing
 
