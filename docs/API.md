@@ -399,7 +399,7 @@ Načtení klíčových slov agentem. **Request**: `{device_id, api_key}`. **Resp
 
 ## Rate limiting
 
-Aktuálně není implementováno. Doporučeno pro produkci.
+Aktuálně není implementováno.
 
 ## Verze API
 

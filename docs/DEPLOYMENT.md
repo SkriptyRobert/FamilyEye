@@ -138,7 +138,7 @@ python service_wrapper.py start
 **Soubor**: `backend/app/config.py`
 
 **Proměnné prostředí**:
-- `SECRET_KEY` - JWT secret key (změnit v produkci!)
+- `SECRET_KEY` - JWT secret key
 - `DATABASE_URL` - Databázové připojení
 - `BACKEND_HOST` - Host (0.0.0.0 pro všechny rozhraní)
 - `BACKEND_PORT` - Port (výchozí: 8000)
@@ -192,15 +192,6 @@ Otevřete porty:
 Povolte odchozí připojení na port 8000 serveru.
 
 ## Produkční nasazení
-
-### Doporučení
-
-1. **Změnit SECRET_KEY** - Použít silný náhodný klíč
-2. **Použít HTTPS** - Spustit `run_https.py`
-3. **Změnit CORS** - Omezit `allow_origins` v `main.py`
-4. **Zálohování databáze** - Pravidelné zálohy `parental_control.db`
-5. **Logování** - Kontrola `app.log`
-6. **Windows služba** - Spustit jako služba pro automatický start
 
 ### Windows služba
 

@@ -129,8 +129,7 @@ Zařízení nepodporuje ADB shell protokol používaný WebADB.
 ### Řešení
 
 1. **Zkuste jiný prohlížeč:**
-   - Chrome (doporučeno)
-   - Edge
+   - Chrome nebo Edge
    - Firefox nepodporuje WebUSB
 
 2. **Zkontrolujte Android verzi:**

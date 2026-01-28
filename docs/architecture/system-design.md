@@ -9,7 +9,7 @@ Hluboký technický popis architektury Smart Shield s Mermaid diagramy, toky dat
 ```mermaid
 graph LR
     A[Android Agent] -->|REST API| B[FastAPI Backend]
-    B -->|SQLite/PostgreSQL| C[Database]
+    B -->|SQLite| C[Database]
     B -->|WebSocket| D[React Frontend]
     A -->|WebSocket| B
     B -->|WebSocket| D

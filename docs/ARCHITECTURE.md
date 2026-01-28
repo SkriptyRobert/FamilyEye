@@ -250,13 +250,6 @@ Viz [DATABASE.md](./DATABASE.md) pro detailní schéma.
 - Single-threaded agent
 - In-memory WebSocket connections
 
-### Možná vylepšení
-
-- PostgreSQL/MySQL pro produkci
-- Redis pro cache
-- Message queue pro asynchronní zpracování
-- Load balancer pro více instancí
-
 ## Rozšíření
 
 ### Přidání nové platformy

@@ -205,8 +205,6 @@ pairing_tokens
 
 Aktuálně není použito Alembic. Tabulky se vytváří automaticky při startu (`init_db()`).
 
-**Pro produkci**: Doporučeno použít Alembic pro migrace.
-
 ### Migrační skripty
 
 Pro doplnění sloupců do existující databáze se používají skripty v kořeni `backend/`:
@@ -244,23 +242,6 @@ Pro doplnění sloupců do existující databáze se používají skripty v koř
 ## Backup
 
 **SQLite**: Zkopírovat soubor `parental_control.db`
-
-**Doporučení**:
-- Pravidelné zálohování
-- Automatické zálohy před migracemi
-- Offsite zálohy
-
-## Produkční databáze
-
-Pro produkci doporučeno použít:
-- **PostgreSQL** - Pro větší zátěž
-- **MySQL** - Alternativa
-- **SQLite** - Pouze pro malé nasazení
-
-**Migrace**:
-1. Změnit `DATABASE_URL` v `config.py`
-2. Aktualizovat connection string
-3. Spustit migrace (Alembic)
 
 ## Příklady dotazů
 

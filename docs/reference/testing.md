@@ -38,7 +38,7 @@ cd clients/android
 
 **Framework**: Android Test Framework (Espresso)
 
-**Status**: Není v projektu, ale doporučeno pro budoucí rozšíření
+**Status**: Aktuálně nejsou součástí projektu.
 
 **Použití**: Testování UI a integračních testů na reálném zařízení
 

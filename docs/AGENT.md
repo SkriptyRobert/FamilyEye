@@ -454,7 +454,7 @@ clients/android/app/src/main/java/com/familyeye/agent/
 
 Device Owner musí být nastaven **před prvním spuštěním aplikace** nebo po factory resetu.
 
-**Metoda 1: WebADB (doporučeno)**
+**Metoda 1: WebADB**
 1. Otevřete dashboard
 2. Přejděte na Device Owner Setup
 3. Připojte zařízení přes USB
