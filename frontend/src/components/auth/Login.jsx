@@ -116,7 +116,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <div style={{ position: 'absolute', top: '30px', right: '30px' }}>
           <button
             type="button"
             onClick={() => setDarkMode(!darkMode)}
@@ -129,6 +129,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
         <h1>
           <img src={logo} alt="FamilyEye" className="login-logo" />
           FamilyEye
+          <div className="login-logo-spacer"></div>
         </h1>
         <h2>{isLogin ? 'Přihlášení' : 'Registrace'}</h2>
 

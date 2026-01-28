@@ -28,9 +28,16 @@
 }
 
 .login-logo {
-  height: 48px;
+  height: 64px;
   width: auto;
   object-fit: contain;
+}
+
+.login-logo-spacer {
+  width: 64px;
+  /* Should match the logo width approx */
+  height: 64px;
+  visibility: hidden;
 }
 
 .login-box h2 {
