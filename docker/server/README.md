@@ -3,7 +3,7 @@
 ## Jak to funguje
 
 - **Jeden kontejner** = backend (FastAPI) + zbuildovaný frontend (statické soubory). Backend servíruje API i SPA z jedné image.
-- **PostgreSQL** se používá jen v Docker/Kubernetes; v produkčním kódu se nic neměnilo – stačí env `DATABASE_URL=postgresql://...` a driver v `docker/server/requirements-docker.txt`.
+- **PostgreSQL** se používá jen v Docker/Kubernetes;  env `DATABASE_URL=postgresql://...` a driver v `docker/server/requirements-docker.txt`.
 - **CI/CD**: při push do main/master (nebo android-fix-process) se spouští buildy (Android APK, Windows installer, Docker image). Release se vytvoří při push tagu `v*`.
 
 ---
@@ -12,7 +12,7 @@
 
 Potřebujete: Docker a Docker Compose.
 
-### 1. Připravit `.env` (doporučeno)
+### 1. Připravit `.env` (doporučeno) !!!
 
 ```bash
 cd docker/server
