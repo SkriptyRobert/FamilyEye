@@ -1,3 +1,5 @@
+# FamilyEye
+
 <div align="center">
   <img src="docs/assets/header_logo.png" height="50" alt="FamilyEye Logo" />
   
