@@ -38,6 +38,12 @@ Náš unikátní **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazov
 - **AI analýza vizuálů** a okamžité pořízení důkazního snímku.
 - Funguje v jakékoliv aplikaci, nejen v prohlížeči.
 
+### 🌐 Žádné Zbytečné Aplikace pro Rodiče
+**Váš telefon zůstane čistý.**
+Pro správu rodiny nepotřebujete instalovat žádnou další aplikaci.
+- **Plně responzivní Web:** Dashboard funguje perfektně na mobilu, tabletu i počítači.
+- **Kdekoliv a kdykoliv:** Stačí otevřít prohlížeč. Žádné otravné aktualizace "Rodičovské aplikace".
+
 ### 🔒 Vaše Data v Bezpečí (Ani Čína, ani Amerika)
 Soukromí je pro nás klíčové.
 - **Self-hosted:** Celý systém běží na vašem vlastním železe.
