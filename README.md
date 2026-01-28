@@ -152,7 +152,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## 🔐 Security
 
-For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email security@familyeye.app (do not open public issues).
+For security vulnerabilities, please see [SECURITY.md](SECURITY.md) or email robert.pesout@gmail.com.
 
 ## 📄 License
 
