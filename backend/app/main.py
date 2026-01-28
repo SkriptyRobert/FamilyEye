@@ -221,10 +221,10 @@ async def download_android_agent():
         )
     return {"error": "APK file not found. Please build the Android project first."}
 
-# Serve Installers
-installers_path = os.path.join(base_path, "installer", "agent", "output")
-if os.path.exists(installers_path):
-    app.mount("/installers", StaticFiles(directory=installers_path), name="installers")
+# Serve installer (Windows agent EXE from installer/agent/output)
+installer_path = os.path.join(base_path, "installer", "agent", "output")
+if os.path.exists(installer_path):
+    app.mount("/installer", StaticFiles(directory=installer_path), name="installer")
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(base_path, "frontend", "dist")
