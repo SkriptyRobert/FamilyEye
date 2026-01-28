@@ -1,14 +1,17 @@
-# FamilyEye 🛡️
+# FamilyEye <img src="docs/assets/logo.png" height="32" alt="FamilyEye Logo" style="vertical-align: bottom;" />
 
 <div align="center">
-  <img src="clients/android/app/src/main/res/drawable-xxhdpi/block_shield.jpg" alt="FamilyEye Server Room" width="400" />
+  <img src="docs/assets/hero-family.jpg" alt="FamilyEye - Secure Your Family's Digital Future" width="100%" style="border-radius: 10px;" />
+  <br><br>
+  
+  > **Inteligentní ochrana pro Vaši rodinu v digitálním světě**
+
+  [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+  [![Images: CC BY-NC-SA 4.0](https://img.shields.io/badge/Images-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE_IMAGES)
+  [![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
+  [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
+  [![Device Owner: Supported](https://img.shields.io/badge/🤖_Device%20Owner-Supported-purple)](docs/AGENT.md)
 </div>
-
-> **Inteligentní ochrana pro Vaši rodinu v digitálním světě**
-
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
-[![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
 
 ---
 
