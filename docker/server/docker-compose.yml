@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-familyeye}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-familyeye_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-familyeye}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-familyeye} -d ${POSTGRES_DB:-familyeye}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ../..
+      dockerfile: docker/server/Dockerfile
+    ports:
+      - "8443:8443"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-familyeye}:${POSTGRES_PASSWORD:-familyeye_secret}@postgres:5432/${POSTGRES_DB:-familyeye}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      BACKEND_HOST: "0.0.0.0"
+      BACKEND_PORT: "8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
