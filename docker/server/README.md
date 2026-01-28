@@ -12,7 +12,7 @@
 
 Potřebujete: Docker a Docker Compose.
 
-### 1. Připravit `.env` (doporučeno) !!!
+### **1. Připravit `.env` Jinak nebude správně načtena URL pro reagistraci, QR párování, protože se použije IP z Docker=network!**
 
 ```bash
 cd docker/server
