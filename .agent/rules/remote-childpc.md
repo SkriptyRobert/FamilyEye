@@ -6,7 +6,7 @@ description: Remote-connection for child-PC OR frontend login to familyeye https
 remote child pc:
 
 hostname: DESKTOP-B7CMT7J
-IP: 192.168.0.154
+IP: 192.168.0.67
 USER:  DESKTOP-B7CMT7J\Admin
 PASS: student
 
