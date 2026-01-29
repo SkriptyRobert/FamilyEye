@@ -17,10 +17,11 @@
     border-top: none;
 }
 
-/* Desktop: stejna vyska radku akci u vsech karet (2 tlacitka vs 3) */
+/* Desktop: pevna vyska radku akci – obe karty stejne */
 @media (min-width: 768px) {
     .quick-actions:not(.offline) {
-        min-height: 88px;
+        min-height: 92px;
+        align-items: flex-start;
     }
 }
 

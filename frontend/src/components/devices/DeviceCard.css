@@ -27,7 +27,7 @@
 }
 
 .device-card:not(.expanded) {
-    min-height: 280px;
+    min-height: 300px;
 }
 
 /* Status border indicators */
