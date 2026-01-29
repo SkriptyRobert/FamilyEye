@@ -104,14 +104,15 @@ const AndroidDeviceCard = ({
                 </div>
             )}
 
-            {/* Quick actions */}
-            <QuickActionsBar
-                device={device}
-                actionPending={actionPending}
-                actionFeedback={actionFeedback}
-                onDeviceAction={onDeviceAction}
-                onShowScreenshot={onShowScreenshot}
-            />
+            <div onClick={e => e.stopPropagation()}>
+                <QuickActionsBar
+                    device={device}
+                    actionPending={actionPending}
+                    actionFeedback={actionFeedback}
+                    onDeviceAction={onDeviceAction}
+                    onShowScreenshot={onShowScreenshot}
+                />
+            </div>
 
             {/* Expanded content */}
             {expanded && (

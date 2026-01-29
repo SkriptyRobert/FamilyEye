@@ -156,7 +156,7 @@ const StatusOverview = () => {
                         device={device}
                         summary={summaries[device.id]}
                         rules={rules[device.id] || []}
-                        expanded={expandedDevice === device.id}
+                        expanded={Number(expandedDevice) === Number(device.id)}
                         onToggle={() => toggleDevice(device.id)}
                         actionPending={actionPending}
                         actionFeedback={actionFeedback}
