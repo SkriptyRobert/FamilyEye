@@ -29,6 +29,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      # Persist screenshots across container restarts (GET /api/files/screenshots/... would 404 otherwise)
+      - server_uploads:/app/backend/uploads
 
 volumes:
   postgres_data:
+  server_uploads:
