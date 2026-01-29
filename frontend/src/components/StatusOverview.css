@@ -179,6 +179,8 @@
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
     width: 100%;
+    /* Na PC: karty nemeni vysku podle souseda – rozbalena je vysoka, sbalena nizka (jako na mobilu) */
+    align-items: start;
 }
 
 @media (max-width: 767px) {
