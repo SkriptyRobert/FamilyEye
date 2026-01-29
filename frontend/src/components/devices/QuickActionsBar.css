@@ -17,6 +17,13 @@
     border-top: none;
 }
 
+/* Desktop: stejna vyska radku akci u vsech karet (2 tlacitka vs 3) */
+@media (min-width: 768px) {
+    .quick-actions:not(.offline) {
+        min-height: 88px;
+    }
+}
+
 .action-group {
     display: flex;
     gap: var(--space-2, 8px);
