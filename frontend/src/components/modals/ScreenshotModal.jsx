@@ -4,17 +4,24 @@ import api from '../../services/api'
 import './ScreenshotModal.css'
 
 /**
- * Modal for viewing device screenshots
- * Extracted from StatusOverview.jsx
- * 
- * @param {Object} props
+ * Modal for viewing device screenshots.
+ * Calls onRefresh when opened so the parent can refetch devices and pass fresh last_screenshot
+ * (agent uploads a few seconds after request; without refresh the modal would show stale data).
+ *
  * @param {Object} props.device - Device object with last_screenshot
  * @param {Function} props.onClose - Handler to close modal
+ * @param {Function} [props.onRefresh] - Called when modal opens to refetch device list
  */
-const ScreenshotModal = ({ device, onClose }) => {
+const ScreenshotModal = ({ device, onClose, onRefresh }) => {
     const [imageUrl, setImageUrl] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+
+    useEffect(() => {
+        if (device?.id && typeof onRefresh === 'function') {
+            onRefresh()
+        }
+    }, [device?.id, onRefresh])
 
     useEffect(() => {
         if (!device?.last_screenshot) return

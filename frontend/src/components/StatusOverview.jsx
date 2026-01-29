@@ -196,6 +196,7 @@ const StatusOverview = () => {
                     deviceId={showScreenshotModal}
                     device={devices.find(d => d.id === showScreenshotModal)}
                     onClose={() => setShowScreenshotModal(null)}
+                    onRefresh={refetch}
                     actionPending={actionPending}
                     actionFeedback={actionFeedback}
                     onRequestScreenshot={() => handleDeviceAction(showScreenshotModal, 'screenshot')}
