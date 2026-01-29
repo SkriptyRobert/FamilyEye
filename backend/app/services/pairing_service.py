@@ -79,10 +79,13 @@ def create_device_from_pairing(
         raise ValueError("Device already paired with this device_id")
     
     # Check if device with same MAC address already exists
-    # Skip this check if MAC is "auto-detected" (installer doesn't provide real MAC)
-    # This allows multiple PCs to be paired under one parent account
+    # Skip this check when MAC is not a real identifier:
+    # - "auto-detected": Windows installer placeholder
+    # - "02:00:00:00:00:00": Android sends this constant; matching by it would make every
+    #   new Android overwrite the first one instead of creating a new device
+    _MAC_SKIP_LOOKUP = ("auto-detected", "02:00:00:00:00:00")
     existing_device_by_mac = None
-    if mac_address and mac_address != "auto-detected":
+    if mac_address and mac_address not in _MAC_SKIP_LOOKUP:
         existing_device_by_mac = db.query(Device).filter(
             Device.mac_address == mac_address,
             Device.parent_id == pairing_token.parent_id  # Scope to parent
