@@ -15,6 +15,7 @@ from ..auth import get_current_parent
 from ...cache import stats_cache
 from ...services import stats_service
 from ...services.app_filter import app_filter
+from ...db_utils import date_expr, hour_expr, day_range_utc
 
 router = APIRouter()
 logger = logging.getLogger("stats_endpoints")
@@ -59,19 +60,19 @@ async def get_usage_by_hour(
     start_date = now_utc - timedelta(days=days)
     
     results = db.query(
-        func.strftime('%Y-%m-%d', UsageLog.timestamp).label('date'),
-        func.strftime('%H', UsageLog.timestamp).label('hour'),
+        date_expr(db, UsageLog.timestamp).label('date'),
+        hour_expr(db, UsageLog.timestamp).label('hour'),
         func.sum(UsageLog.duration).label('total_seconds')
     ).filter(
         UsageLog.device_id == device_id,
         UsageLog.timestamp >= start_date
     ).group_by(
-        func.strftime('%Y-%m-%d', UsageLog.timestamp),
-        func.strftime('%H', UsageLog.timestamp)
+        date_expr(db, UsageLog.timestamp),
+        hour_expr(db, UsageLog.timestamp)
     ).all()
-    
+
     heatmap_data = [{
-        "date": row.date,
+        "date": str(row.date),
         "hour": int(row.hour),
         "duration_seconds": int(row.total_seconds or 0),
         "duration_minutes": round((row.total_seconds or 0) / 60, 1)
@@ -166,9 +167,11 @@ async def get_weekly_pattern(
             day_totals[day_of_week]["total_seconds"] += day_usage
             day_totals[day_of_week]["days_count"] += 1
         
+        day_start, day_end = day_range_utc(day_str)
         sessions = db.query(func.count(UsageLog.id)).filter(
             UsageLog.device_id == device_id,
-            UsageLog.timestamp.like(f'{day_str}%')
+            UsageLog.timestamp >= day_start,
+            UsageLog.timestamp < day_end
         ).scalar() or 0
         
         day_totals[day_of_week]["sessions"] += sessions
@@ -322,6 +325,7 @@ async def get_app_trends(
         day = now_utc - timedelta(days=i)
         day_str = day.strftime('%Y-%m-%d')
         
+        day_start, day_end = day_range_utc(day_str)
         stats = db.query(
             func.sum(UsageLog.duration).label('total_duration'),
             func.count(UsageLog.id).label('sessions_count'),
@@ -330,7 +334,8 @@ async def get_app_trends(
         ).filter(
             UsageLog.device_id == device_id,
             func.lower(UsageLog.app_name).in_(app_names),
-            UsageLog.timestamp.like(f'{day_str}%')
+            UsageLog.timestamp >= day_start,
+            UsageLog.timestamp < day_end
         ).first()
         
         duration = int(stats.total_duration or 0)

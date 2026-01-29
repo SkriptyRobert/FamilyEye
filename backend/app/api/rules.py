@@ -266,10 +266,11 @@ async def agent_fetch_rules(
     
     from ..models import UsageLog
     from sqlalchemy import func
-    
+    from ..db_utils import minute_bucket
+
     # Count unique report minutes - truncate timestamp to minute level
     unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+        func.count(func.distinct(minute_bucket(db, UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device.id,
         UsageLog.timestamp >= query_start_utc

@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Tuple
 import logging
 
 from ..models import UsageLog, Rule
+from ..db_utils import minute_bucket
 from .app_filter import app_filter
 
 logger = logging.getLogger("summary_service")
@@ -108,7 +109,7 @@ def calculate_day_usage(
 ) -> int:
     """Calculate usage for a specific day using minute buckets."""
     unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+        func.count(func.distinct(minute_bucket(db, UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device_id,
         UsageLog.timestamp >= start_utc,
@@ -128,7 +129,7 @@ def calculate_week_average(
         day_start = today_start_utc - timedelta(days=i)
         day_end = day_start + timedelta(days=1)
         day_minutes = db.query(
-            func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+            func.count(func.distinct(minute_bucket(db, UsageLog.timestamp)))
         ).filter(
             UsageLog.device_id == device_id,
             UsageLog.timestamp >= day_start,

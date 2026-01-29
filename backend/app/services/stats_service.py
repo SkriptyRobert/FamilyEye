@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 from dateutil import parser
 
 from ..models import UsageLog
+from ..db_utils import minute_bucket, hour_expr, day_range_utc
 
 
 def get_app_name_variants(app_name: str) -> List[str]:
@@ -28,11 +29,13 @@ def calculate_day_usage_minutes(
     
     Uses minute-bucket deduplication for accurate usage calculation.
     """
+    day_start, day_end = day_range_utc(day_str)
     unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+        func.count(func.distinct(minute_bucket(db, UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{day_str}%')
+        UsageLog.timestamp >= day_start,
+        UsageLog.timestamp < day_end
     ).scalar() or 0
     return unique_minutes
 
@@ -45,7 +48,7 @@ def calculate_day_usage_range(
 ) -> int:
     """Calculate unique minutes of usage for a datetime range."""
     unique_minutes = db.query(
-        func.count(func.distinct(func.strftime('%Y-%m-%d %H:%M', UsageLog.timestamp)))
+        func.count(func.distinct(minute_bucket(db, UsageLog.timestamp)))
     ).filter(
         UsageLog.device_id == device_id,
         UsageLog.timestamp >= start,
@@ -65,14 +68,17 @@ def get_activity_boundaries(
     Returns:
         Tuple of (first_time_str, last_time_str) in HH:MM format, or (None, None)
     """
+    day_start, day_end = day_range_utc(day_str)
     first_activity = db.query(func.min(UsageLog.timestamp)).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{day_str}%')
+        UsageLog.timestamp >= day_start,
+        UsageLog.timestamp < day_end
     ).scalar()
-    
+
     last_activity = db.query(func.max(UsageLog.timestamp)).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{day_str}%')
+        UsageLog.timestamp >= day_start,
+        UsageLog.timestamp < day_end
     ).scalar()
     
     if not first_activity or not last_activity:
@@ -99,12 +105,14 @@ def get_day_stats(
     Returns:
         Tuple of (unique_apps_count, sessions_count)
     """
+    day_start, day_end = day_range_utc(day_str)
     stats = db.query(
         func.count(func.distinct(UsageLog.app_name)).label('apps_count'),
         func.count(UsageLog.id).label('sessions_count')
     ).filter(
         UsageLog.device_id == device_id,
-        UsageLog.timestamp.like(f'{day_str}%')
+        UsageLog.timestamp >= day_start,
+        UsageLog.timestamp < day_end
     ).first()
     
     return (stats.apps_count or 0, stats.sessions_count or 0) if stats else (0, 0)
@@ -117,10 +125,12 @@ def get_app_day_duration(
     day_str: str
 ) -> int:
     """Get total duration for specific app(s) on a given day."""
+    day_start, day_end = day_range_utc(day_str)
     return db.query(func.sum(UsageLog.duration)).filter(
         UsageLog.device_id == device_id,
         func.lower(UsageLog.app_name).in_(app_names),
-        UsageLog.timestamp.like(f'{day_str}%')
+        UsageLog.timestamp >= day_start,
+        UsageLog.timestamp < day_end
     ).scalar() or 0
 
 
@@ -151,14 +161,14 @@ def get_hourly_distribution(
 ) -> List[dict]:
     """Get usage distribution by hour for specific app(s)."""
     hourly_stats = db.query(
-        func.strftime('%H', UsageLog.timestamp).label('hour'),
+        hour_expr(db, UsageLog.timestamp).label('hour'),
         func.sum(UsageLog.duration).label('total')
     ).filter(
         UsageLog.device_id == device_id,
         func.lower(UsageLog.app_name).in_(app_names),
         UsageLog.timestamp >= start_date
     ).group_by(
-        func.strftime('%H', UsageLog.timestamp)
+        hour_expr(db, UsageLog.timestamp)
     ).all()
     
     usage_by_hour = [{"hour": h, "duration_seconds": 0} for h in range(24)]
