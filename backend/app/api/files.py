@@ -112,6 +112,10 @@ async def get_screenshot(
     file_path = os.path.join(SCREENSHOTS_DIR, str(device_id), safe_filename)
     
     if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        # File missing (e.g. lost on container restart). Clear broken reference so UI stops requesting it.
+        if device.last_screenshot:
+            device.last_screenshot = None
+            db.commit()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Screenshot not found"
