@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { getDataFreshness, getDeviceTypeInfo } from '../utils/formatting'
+import { getDataFreshness, getDeviceTypeInfo, filterSystemApps } from '../utils/formatting'
 
 // Hooks
 import useDevices from '../hooks/useDevices'
@@ -181,7 +181,7 @@ const StatusOverview = () => {
                 <AllAppsModal
                     deviceId={showAllAppsModal}
                     device={devices.find(d => d.id === showAllAppsModal)}
-                    apps={summaries[showAllAppsModal]?.top_apps || []}
+                    apps={filterSystemApps(summaries[showAllAppsModal]?.top_apps || [], { deviceId: showAllAppsModal })}
                     rules={rules[showAllAppsModal] || []}
                     lastFetch={lastFetch}
                     onClose={() => setShowAllAppsModal(null)}

@@ -24,7 +24,7 @@ const DeviceCard = memo((props) => {
 
     // Use elapsed time for "Dnes aktivní" display
     const todayUsage = summary?.elapsed_today_seconds || summary?.today_usage_seconds || 0
-    const topApps = filterSystemApps(summary?.top_apps || [], null)
+    const topApps = filterSystemApps(summary?.top_apps || [], { deviceId: device?.id })
 
     // Get apps with limits - Shared logic
     const getAppsWithLimits = () => {
