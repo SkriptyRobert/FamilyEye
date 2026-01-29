@@ -73,7 +73,8 @@ const StatusOverview = () => {
 
     // Handlers
     const toggleDevice = useCallback((deviceId) => {
-        setExpandedDevice(prev => prev === deviceId ? null : deviceId)
+        const id = Number(deviceId)
+        setExpandedDevice(prev => (prev != null && Number(prev) === id) ? null : id)
     }, [])
 
     const onAppActionWrapper = useCallback((deviceId, appName, action) => {
