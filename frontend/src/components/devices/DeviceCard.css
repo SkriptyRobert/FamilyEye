@@ -26,6 +26,10 @@
     cursor: default;
 }
 
+.device-card:not(.expanded) {
+    min-height: 280px;
+}
+
 /* Status border indicators */
 .device-card.online {
     border-left: 4px solid var(--color-success, #10b981);
