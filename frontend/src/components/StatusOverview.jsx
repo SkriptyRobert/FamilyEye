@@ -149,15 +149,19 @@ const StatusOverview = () => {
                 counts={counts}
             />
 
-            {/* Device List */}
+            {/* Device List – rozbalena jen jedna karta: ta, na kterou bylo kliknuto */}
             <div className="device-list">
-                {filteredDevices.map(device => (
+                {filteredDevices.map((device, index) => {
+                    const isExpandedId = expandedDevice != null && Number(expandedDevice) === Number(device.id)
+                    const isFirstWithThisId = filteredDevices.findIndex(d => Number(d.id) === Number(device.id)) === index
+                    const expanded = isExpandedId && isFirstWithThisId
+                    return (
                     <DeviceCard
-                        key={device.id}
+                        key={`device-${device.id}-${index}`}
                         device={device}
                         summary={summaries[device.id]}
                         rules={rules[device.id] || []}
-                        expanded={Number(expandedDevice) === Number(device.id)}
+                        expanded={expanded}
                         onToggle={() => toggleDevice(device.id)}
                         actionPending={actionPending}
                         actionFeedback={actionFeedback}
@@ -168,7 +172,8 @@ const StatusOverview = () => {
                         onShowScreenshot={setShowScreenshotModal}
                         onHideApp={(appName) => handleHideApp(appName, device.id)}
                     />
-                ))}
+                    )
+                })}
             </div>
 
             {/* Modals */}
