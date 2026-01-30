@@ -26,6 +26,43 @@ const screenshots = [
     mediaType: 'image',
   },
   {
+    id: 'mobile-prehled',
+    src: '/images/mobile-dashboard.png',
+    alt: 'Přehled v mobilní aplikaci',
+    title: 'Přehled (mobil)',
+    desc: 'Tento týden, graf používání a aplikace – stejné údaje jako na webu.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
+    id: 'mobile-statistiky',
+    src: '/images/mobile-stats.png',
+    alt: 'Statistiky v mobilu',
+    title: 'Statistiky (mobil)',
+    desc: 'Celkový čas dnes, nejvíce používané aplikace a chytrý přehled anomálií.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
+    id: 'mobile-smart-shield',
+    src: '/images/mobile-smart-shield.png',
+    alt: 'Smart Shield v mobilní aplikaci',
+    title: 'Smart Shield (mobil)',
+    desc: 'Detekce rizikového obsahu a důkazy v reálném čase na telefonu.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
+    id: 'mobile-menu',
+    src: '/images/mobile-menu.png',
+    alt: 'Boční menu (hamburger) v mobilní aplikaci',
+    fallbackSrc: '/images/mobile-smart-shield.png',
+    title: 'Menu (mobil)',
+    desc: 'Boční navigace – Přehled, Zařízení, Smart Shield, Pravidla, Statistiky, Přidat. Stejné sekce jako v aplikaci.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
     id: 'pravidla',
     src: '/images/rules.png',
     alt: 'Pravidla a limity',
@@ -84,7 +121,7 @@ const screenshots = [
   },
 ]
 
-const CLOSE_DELAY_MS = 80
+const CLOSE_DELAY_MS = 0
 
 export default function Screenshots() {
   const [loginImageFailed, setLoginImageFailed] = useState(false)
@@ -123,12 +160,23 @@ export default function Screenshots() {
     if (!el) return
     const onScroll = () => {
       const scrollLeft = el.scrollLeft
-      const cardWidth = el.querySelector('[data-index]')?.offsetWidth ?? 0
+      const maxScroll = el.scrollWidth - el.clientWidth
+      if (maxScroll <= 0) {
+        setActiveIndex(0)
+        return
+      }
+      if (scrollLeft >= maxScroll - 2) {
+        setActiveIndex(screenshots.length - 1)
+        return
+      }
+      const firstCard = el.querySelector('[data-index="0"]')
       const gap = 24
+      const cardWidth = firstCard?.offsetWidth ?? 0
       const index = Math.round(scrollLeft / (cardWidth + gap))
-      setActiveIndex(Math.min(index, screenshots.length - 1))
+      setActiveIndex(Math.min(Math.max(0, index), screenshots.length - 1))
     }
     el.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
@@ -141,7 +189,6 @@ export default function Screenshots() {
       <div className="screenshots-inner">
         <h2 className="screenshots-title">FamilyEye v praxi</h2>
         <p className="screenshots-intro">
-          Kompletní flow: instalace agentů, dashboard, pravidla, statistiky a Smart Shield. Swipe nebo bubliny pro přepnutí. Najetí myší zobrazí větší detail.
         </p>
 
         <div
