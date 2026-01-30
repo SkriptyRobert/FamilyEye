@@ -1,0 +1,206 @@
+.screenshots {
+  padding: 5rem var(--space-8);
+  background: var(--bg-secondary);
+}
+
+.screenshots-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.screenshots-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 var(--space-4);
+  letter-spacing: -0.02em;
+}
+
+.screenshots-intro {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0 0 var(--space-12);
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.screenshots-intro code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  background: var(--bg-card);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.screenshots-carousel {
+  display: flex;
+  gap: var(--space-6);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: var(--space-4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.screenshots-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.screenshots-carousel::-webkit-scrollbar-track {
+  background: var(--bg-card);
+  border-radius: 4px;
+}
+
+.screenshots-carousel::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.screenshots-carousel::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+.screenshots-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: var(--space-6);
+}
+
+.screenshot-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.screenshot-dot:hover {
+  background: var(--text-secondary);
+}
+
+.screenshot-dot.active {
+  background: var(--accent);
+  transform: scale(1.2);
+}
+
+.screenshot-card {
+  margin: 0;
+  flex: 0 0 min(320px, 85vw);
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  scroll-snap-align: center;
+  transition: transform 0.25s ease, border-color 0.2s, box-shadow 0.2s;
+  transform-origin: center;
+}
+
+.screenshot-card:hover {
+  z-index: 2;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.screenshot-img-wrap {
+  aspect-ratio: 16 / 10;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.screenshot-img-wrap .screenshot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Pevný rám – vždy stejná velikost, na střed stránky, libovolný obrázek se vměstná */
+.screenshot-zoom-panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: 640px;
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+}
+
+.screenshot-zoom-frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.screenshot-zoom-frame .screenshot-zoom-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.screenshot-zoom-frame .login-preview {
+  transform: scale(0.85);
+}
+
+.screenshot-zoom-title {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .screenshot-zoom-panel {
+    width: min(92vw, 540px);
+    height: min(75vh, 400px);
+  }
+}
+
+@media (max-width: 480px) {
+  .screenshot-zoom-panel {
+    width: min(94vw, 440px);
+    height: min(68vh, 340px);
+  }
+}
+
+.screenshot-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-4);
+}
+
+.screenshot-caption strong {
+  font-size: 1rem;
+}
+
+.screenshot-caption span {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

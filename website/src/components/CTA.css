@@ -1,0 +1,117 @@
+.cta {
+  padding: 5rem var(--space-8);
+  background: var(--bg-primary);
+}
+
+.cta-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cta-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-2);
+  letter-spacing: -0.02em;
+}
+
+.cta-subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0 0 var(--space-6);
+  font-weight: 500;
+}
+
+.cta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-8);
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.cta-list li {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  padding: 0.5rem 0 0.5rem 2rem;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+.cta-list li:last-child {
+  border-bottom: none;
+}
+
+.cta-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.9em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cta-list-note {
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+.cta-list-note::before {
+  display: none;
+}
+
+.cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: center;
+  margin-bottom: var(--space-8);
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 28px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.cta-btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.cta-btn-primary:hover {
+  background: var(--accent-hover);
+  text-decoration: none;
+  color: white;
+}
+
+.cta-btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 2px solid var(--border);
+}
+
+.cta-btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.cta-note {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
