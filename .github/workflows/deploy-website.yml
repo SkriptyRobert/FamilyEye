@@ -39,7 +39,9 @@ jobs:
 
       - name: Install website dependencies
         working-directory: website
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Build website (GH Pages base path)
         working-directory: website
