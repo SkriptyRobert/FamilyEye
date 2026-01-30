@@ -22,7 +22,7 @@ const features = [
   },
   {
     icon: Globe,
-    title: 'Žádné zbytečná aplikace pro rodiče',
+    title: 'Žádné zbytečné aplikace pro rodiče',
     paragraphs: [
       'Váš telefon zůstane čistý. Pro správu rodiny nepotřebujete instalovat žádnou další aplikaci.',
       'Plně responzivní webový dashboard funguje na mobilu, tabletu i počítači. Stačí otevřít prohlížeč – žádné otravné aktualizace „rodičovské aplikace“.',
