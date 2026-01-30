@@ -70,11 +70,14 @@ installer/agent/test.iss
 # Windows shortcuts
 *.lnk
 
-# IDE and workspace
+# IDE and workspace (Cursor, agent rules; llms.txt in repo root is kept)
 .agent/
 .agent/rules
+.agentrules
 .cursor/
+.cursor/rules
 .cursorrules
+*.cursorrules
 
 # Temporary Build & Test Logs
 clients/android/build_error*.txt
