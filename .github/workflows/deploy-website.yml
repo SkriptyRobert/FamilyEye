@@ -69,10 +69,9 @@ jobs:
           mkdir -p deploy/docs
           cp -r site/* deploy/docs/
 
+      # Pages must be enabled in repo: Settings -> Pages -> Source: GitHub Actions
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        with:
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
