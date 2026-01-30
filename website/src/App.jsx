@@ -1,21 +1,24 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import DisclaimerBar from './components/DisclaimerBar'
 import Hero from './components/Hero'
-import Features from './components/Features'
-import DashboardPreview from './components/DashboardPreview'
-import Screenshots from './components/Screenshots'
-import CTA from './components/CTA'
 import Footer from './components/Footer'
+
+const Features = lazy(() => import('./components/Features'))
+const DashboardPreview = lazy(() => import('./components/DashboardPreview'))
+const Screenshots = lazy(() => import('./components/Screenshots'))
+const CTA = lazy(() => import('./components/CTA'))
 
 function App() {
   return (
     <>
       <DisclaimerBar />
       <Hero />
-      <Features />
-      <DashboardPreview />
-      <Screenshots />
-      <CTA />
+      <Suspense fallback={<div style={{ minHeight: '40vh' }} />}>
+        <Features />
+        <DashboardPreview />
+        <Screenshots />
+        <CTA />
+      </Suspense>
       <Footer />
     </>
   )
