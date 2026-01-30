@@ -1,4 +1,5 @@
 import React from 'react'
+import { RELEASES_URL, GITHUB_REPO } from '../utils/links'
 import './CTA.css'
 
 export default function CTA() {
@@ -12,9 +13,16 @@ export default function CTA() {
           <li><strong>Windows:</strong> one-click instalátor pro agenta i server</li>
           <li><strong>Android:</strong> párování přes QR kód, volitelně Device Owner na pár kliknutí</li>
         </ul>
+        <p className="cta-badges">
+          <span>100&nbsp;% zdarma</span>
+          <span className="cta-badges-sep">|</span>
+          <span>Otevřený kód</span>
+          <span className="cta-badges-sep">|</span>
+          <span>Přispějte kódem k vylepšení FamilyEye</span>
+        </p>
         <div className="cta-actions">
           <a
-            href="https://github.com/SkriptyRobert/Parential-Control_Enterprise/releases"
+            href={RELEASES_URL}
             className="cta-btn cta-btn-primary"
             target="_blank"
             rel="noopener noreferrer"
@@ -22,7 +30,7 @@ export default function CTA() {
             Stáhnout (Releases)
           </a>
           <a
-            href="https://github.com/SkriptyRobert/Parential-Control_Enterprise"
+            href={GITHUB_REPO}
             className="cta-btn cta-btn-secondary"
             target="_blank"
             rel="noopener noreferrer"
