@@ -12,6 +12,7 @@ venv/
 dist/
 build/
 output/
+site/
 clients/windows/agent/dist/
 clients/windows/agent/build/
 installer/agent/dist/

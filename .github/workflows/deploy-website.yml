@@ -50,18 +50,24 @@ jobs:
           GH_PAGES: 1
         run: npm run build
 
+      - name: Cache pip (MkDocs)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-mkdocs-${{ hashFiles('mkdocs.yml') }}
+
       - name: Setup MkDocs
         run: pip install mkdocs-material mkdocs-minify-plugin
 
       - name: Build MkDocs
-        run: mkdocs build --config-file mkdocs.yml --site-dir docs/site
+        run: mkdocs build --config-file mkdocs.yml --site-dir site
 
       - name: Merge website and docs for deploy
         run: |
           mkdir -p deploy
           cp -r website/dist/* deploy/
           mkdir -p deploy/docs
-          cp -r docs/site/* deploy/docs/
+          cp -r site/* deploy/docs/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

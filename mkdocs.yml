@@ -3,6 +3,7 @@ site_description: Kompletní dokumentace pro Smart Shield - rodičovská kontrol
 site_author: FamilyEye Team
 site_url: https://familyeye.github.io
 docs_dir: docs
+site_dir: site
 
 repo_name: Parential-Control_Enterprise
 repo_url: https://github.com/familyeye/Parential-Control_Enterprise
