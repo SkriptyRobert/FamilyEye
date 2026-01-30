@@ -12,7 +12,7 @@
   position: absolute;
   inset: 0;
   background: url('/images/hero-family.jpg') center / cover no-repeat;
-  opacity: 0.2;
+  opacity: 0.35;
   pointer-events: none;
 }
 
@@ -21,8 +21,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 85% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-    linear-gradient(160deg, rgba(15, 20, 25, 0.92) 0%, rgba(26, 35, 50, 0.88) 50%, rgba(15, 20, 25, 0.92) 100%);
+    radial-gradient(ellipse 70% 50% at 50% 45%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 85% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    linear-gradient(160deg, rgba(15, 20, 25, 0.82) 0%, rgba(26, 35, 50, 0.78) 50%, rgba(15, 20, 25, 0.82) 100%);
   pointer-events: none;
 }
 
@@ -31,32 +32,37 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-6) var(--space-8);
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: var(--space-5) var(--space-8);
+  padding-left: var(--space-5);
+  padding-right: var(--space-8);
   width: 100%;
   position: relative;
   z-index: 2;
+  background: rgba(15, 20, 25, 0.6);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  backdrop-filter: blur(8px);
 }
 
 .hero-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   color: var(--text-primary);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 1.25rem;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
 }
 
 .hero-logo:hover {
   text-decoration: none;
   opacity: 0.9;
+  color: var(--text-primary);
 }
 
 .hero-logo-img {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
 
@@ -67,18 +73,147 @@
 .hero-links {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: 2rem;
 }
 
 .hero-links a {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-size: 1.12rem;
+  font-weight: 600;
   text-decoration: none;
+  padding: 0.5em 0.75em;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
 
 .hero-links a:hover {
-  color: var(--text-primary);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
   text-decoration: none;
+}
+
+.hero-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.hero-menu-btn:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: var(--accent);
+}
+
+.hero-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.hero-drawer-backdrop.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hero-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(280px, 85vw);
+  height: 100vh;
+  background: var(--drawer-bg, #1a1c29);
+  border-right: 1px solid var(--border);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+.hero-drawer.is-open {
+  transform: translateX(0);
+}
+
+.hero-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-drawer-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hero-drawer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.hero-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.hero-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) 0;
+  gap: 2px;
+}
+
+.hero-drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem var(--space-5);
+  margin: 0 var(--space-4);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.hero-drawer-link:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.hero-drawer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .hero-content {
@@ -101,6 +236,17 @@
   line-height: 1.2;
   margin: 0 0 var(--space-6);
   letter-spacing: -0.02em;
+  position: relative;
+}
+
+.hero-title::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 4px;
+  margin: var(--space-4) auto 0;
+  background: linear-gradient(90deg, var(--accent), rgba(59, 130, 246, 0.6));
+  border-radius: 2px;
 }
 
 .hero-subtitle {
@@ -139,10 +285,12 @@
 .hero-btn-primary {
   background: var(--accent);
   color: white;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
 .hero-btn-primary:hover {
   background: var(--accent-hover);
+  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.5);
   text-decoration: none;
   color: white;
 }
@@ -157,6 +305,23 @@
   border-color: var(--accent);
   color: var(--accent);
   text-decoration: none;
+}
+
+.hero-cta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.6rem;
+  margin: var(--space-4) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.hero-cta-badges-sep {
+  opacity: 0.6;
+  user-select: none;
 }
 
 .hero-badge {
@@ -191,5 +356,9 @@
 @media (max-width: 768px) {
   .hero-links {
     display: none;
+  }
+
+  .hero-menu-btn {
+    display: flex;
   }
 }

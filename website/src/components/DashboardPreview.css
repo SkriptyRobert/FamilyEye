@@ -16,6 +16,16 @@
   letter-spacing: -0.02em;
 }
 
+.dashboard-preview-title::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 3px;
+  margin: var(--space-4) auto 0;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
 .dashboard-preview-intro {
   text-align: center;
   color: var(--text-secondary);
@@ -24,6 +34,75 @@
   max-width: 560px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.dashboard-block {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-block .dashboard-mock {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.responsive-showcase {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  gap: var(--space-4);
+  background: var(--bg-card);
+}
+
+.responsive-phone-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.device-frame {
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.device-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  vertical-align: top;
+}
+
+.device-phone {
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+  border-radius: 32px;
+  padding: 12px;
+  border: 3px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.device-phone img {
+  border-radius: 22px;
+}
+
+.device-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  opacity: 0.9;
 }
 
 .dashboard-mock {
@@ -250,5 +329,47 @@
     flex-wrap: wrap;
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+
+  .responsive-showcase {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-5);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .responsive-showcase::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .responsive-showcase::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+  }
+
+  .responsive-showcase::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .responsive-phone-wrap {
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+    max-width: 160px;
+  }
+
+  .device-phone {
+    max-width: 140px;
+    padding: 10px;
+    border-radius: 26px;
+  }
+
+  .device-phone img {
+    border-radius: 18px;
   }
 }

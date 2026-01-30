@@ -28,8 +28,9 @@ export default function DashboardPreview() {
       <div className="dashboard-preview-inner">
         <h2 className="dashboard-preview-title">Responzivní dashboard</h2>
         <p className="dashboard-preview-intro">
-          Lehký a přehledný webový dashboard – stejný na mobilu, tabletu i počítači. Žádná aplikace, jen prohlížeč. Vše je na jedno místě.
+          Přehled v prohlížeči i v mobilní aplikaci – stejná data na počítači, tabletu i Androidu.
         </p>
+        <div className="dashboard-block">
         <div className="dashboard-mock">
           <header className="dashboard-mock-header-bar">
             <img src="/images/logo.png" alt="" className="dashboard-mock-logo" />
@@ -93,6 +94,28 @@ export default function DashboardPreview() {
             </div>
             </main>
           </div>
+        </div>
+
+        <div className="responsive-showcase">
+          <div className="responsive-phone-wrap">
+            <div className="device-frame device-phone">
+              <img src="/images/mobile-dashboard.png" alt="Přehled v mobilní aplikaci" />
+            </div>
+            <span className="device-label">Přehled</span>
+          </div>
+          <div className="responsive-phone-wrap">
+            <div className="device-frame device-phone">
+              <img src="/images/mobile-stats.png" alt="Statistiky v mobilu" />
+            </div>
+            <span className="device-label">Statistiky</span>
+          </div>
+          <div className="responsive-phone-wrap">
+            <div className="device-frame device-phone">
+              <img src="/images/mobile-smart-shield.png" alt="Smart Shield v mobilu" />
+            </div>
+            <span className="device-label">Smart Shield</span>
+          </div>
+        </div>
         </div>
       </div>
     </section>

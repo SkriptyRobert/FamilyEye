@@ -16,6 +16,16 @@
   letter-spacing: -0.02em;
 }
 
+.cta-title::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  margin: var(--space-4) auto 0;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
 .cta-subtitle {
   color: var(--text-secondary);
   font-size: 1rem;
@@ -66,6 +76,23 @@
   display: none;
 }
 
+.cta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0 0 var(--space-4);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cta-badges-sep {
+  opacity: 0.6;
+  user-select: none;
+}
+
 .cta-actions {
   display: flex;
   flex-wrap: wrap;
@@ -89,10 +116,12 @@
 .cta-btn-primary {
   background: var(--accent);
   color: white;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
 }
 
 .cta-btn-primary:hover {
   background: var(--accent-hover);
+  box-shadow: 0 6px 28px rgba(59, 130, 246, 0.5);
   text-decoration: none;
   color: white;
 }
