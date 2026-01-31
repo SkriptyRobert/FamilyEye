@@ -143,9 +143,36 @@
 }
 
 .requirements-box li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
     color: var(--text-secondary);
     padding: 6px 0;
     font-size: 14px;
+}
+
+.requirements-box li > :first-child {
+    flex-shrink: 0;
+    color: var(--success-color);
+    margin-top: 2px;
+}
+
+.requirements-box li > span {
+    flex: 1;
+    min-width: 0;
+}
+
+.requirements-box .device-owner-note {
+    margin: 14px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.requirements-box .device-owner-note strong {
+    color: var(--text-primary);
 }
 
 .instructions-box ol {
