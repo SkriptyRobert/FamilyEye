@@ -154,12 +154,14 @@ def get_app_total_stats(
 
 
 def get_hourly_distribution(
-    db: Session, 
-    device_id: int, 
-    app_names: List[str], 
-    start_date: str
+    db: Session,
+    device_id: int,
+    app_names: List[str],
+    start_date: str,
+    timezone_offset_seconds: int = 0
 ) -> List[dict]:
-    """Get usage distribution by hour for specific app(s)."""
+    """Get usage distribution by hour for specific app(s) in device local time.
+    Timestamps in DB are UTC; offset is Client - Server in seconds."""
     hourly_stats = db.query(
         hour_expr(db, UsageLog.timestamp).label('hour'),
         func.sum(UsageLog.duration).label('total')
@@ -170,13 +172,13 @@ def get_hourly_distribution(
     ).group_by(
         hour_expr(db, UsageLog.timestamp)
     ).all()
-    
+    offset_hours = timezone_offset_seconds // 3600
     usage_by_hour = [{"hour": h, "duration_seconds": 0} for h in range(24)]
     for stat in hourly_stats:
-        if stat.hour:
-            hour_int = int(stat.hour)
-            usage_by_hour[hour_int]["duration_seconds"] = int(stat.total or 0)
-    
+        if stat.hour is not None:
+            utc_hour = int(stat.hour)
+            local_hour = (utc_hour + offset_hours) % 24
+            usage_by_hour[local_hour]["duration_seconds"] += int(stat.total or 0)
     return usage_by_hour
 
 
