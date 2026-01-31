@@ -11,7 +11,7 @@ export default function Contributors() {
         try {
             // Robust URL parsing to handle potential trailing slashes or different formats
             const urlObj = new URL(GITHUB_REPO)
-            // Example: /SkriptyRobert/Parential-Control_Enterprise
+            // Example: /SkriptyRobert/FamilyEye
             const parts = urlObj.pathname.split('/').filter(Boolean)
             if (parts.length >= 2) {
                 repoPath = `${parts[0]}/${parts[1]}`

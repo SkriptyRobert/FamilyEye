@@ -66,7 +66,7 @@ ANDROID AGENT:
 PROJECT STRUCTURE
 ================================================================================
 
-Parential-Control_Enterprise/
+FamilyEye/
 ├── .github/
 │   └── workflows/          # CI/CD (android.yml, backend.yml, frontend.yml, release.yml)
 ├── backend/

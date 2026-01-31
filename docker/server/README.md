@@ -88,7 +88,7 @@ Soubory v `kubernetes/` slouží k nasazení už zbuildované image do clusteru.
    V deploymentu je `DATABASE_URL` ze Secretu; musíte mít v clusteru běžící PostgreSQL (vlastní Deployment nebo managed služba) a v Secretu správnou URL (např. služba `postgres-service:5432`).
 
 2. **Image**  
-   V `kubernetes/deployment.yaml` je uvedená image `ghcr.io/SkriptyRobert/Parential-Control_Enterprise/familyeye-server:latest`. Po prvním úspěšném Build Server workflow bude image k dispozici; pro privátní image nastavte imagePullSecrets.
+   V `kubernetes/deployment.yaml` je uvedená image `ghcr.io/SkriptyRobert/FamilyEye/familyeye-server:latest`. Po prvním úspěšném Build Server workflow bude image k dispozici; pro privátní image nastavte imagePullSecrets.
 
 3. **Spuštění**  
    ```bash

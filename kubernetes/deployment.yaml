@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: server
-          image: ghcr.io/SkriptyRobert/Parential-Control_Enterprise/familyeye-server:latest
+          image: ghcr.io/SkriptyRobert/FamilyEye/familyeye-server:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8443

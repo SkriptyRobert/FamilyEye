@@ -70,7 +70,7 @@ Version is defined in the root file `VERSION`. All components (backend, frontend
 2. **Update CHANGELOG:** Edit `CHANGELOG.md`: add a section `## [X.Y.Z] - YYYY-MM-DD` and list changes (or use a tool that generates it from commits).
 3. **Commit and push:** e.g. `git add -A && git commit -m "chore: release 2.5.0" && git push origin main`.
 4. **Tag and push tag:** `git tag v2.5.0` (on the release commit), then `git push origin v2.5.0`.
-5. **GitHub Release:** The workflow `Create Release` runs on push of tag `v*`: it runs tests, builds Android APK and Windows installer (using `setup_agent.iss` and version from `VERSION`), and creates a GitHub Release with the artifacts. Users download from the [Releases](https://github.com/SkriptyRobert/Parential-Control_Enterprise/releases) page.
+5. **GitHub Release:** The workflow `Create Release` runs on push of tag `v*`: it runs tests, builds Android APK and Windows installer (using `setup_agent.iss` and version from `VERSION`), and creates a GitHub Release with the artifacts. Users download from the [Releases](https://github.com/SkriptyRobert/FamilyEye/releases) page.
 
 Always bump and commit the new version **before** creating the tag so the tagged commit contains the updated version everywhere.
 
