@@ -36,6 +36,9 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /* Safe area for iPhone notch */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 #root {
@@ -62,8 +65,35 @@ img {
   height: auto;
 }
 
+/* Touch-friendly tap targets */
+button,
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Inline/text links don't need minimum size */
+p a,
+span a,
+li a {
+  min-height: unset;
+  min-width: unset;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+}
+
+/* Mobile-first spacing adjustments */
+@media (max-width: 480px) {
+  :root {
+    --space-4: 0.875rem;
+    --space-5: 1rem;
+    --space-6: 1.25rem;
+    --space-8: 1.5rem;
+    --space-12: 2.5rem;
+    --radius: 8px;
   }
 }
