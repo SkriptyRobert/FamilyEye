@@ -1,0 +1,420 @@
+import React, { useState, useEffect, useMemo } from 'react'
+import api from '../services/api'
+import {
+    Shield, AlertTriangle, Plus, Trash2, X,
+    Settings, Filter
+} from 'lucide-react'
+import { AlertCard, CategorySection, CATEGORIES } from './shield'
+import './SmartShield.css'
+
+const SmartShield = ({ device }) => {
+    const [activeTab, setActiveTab] = useState('alerts')
+    const [alerts, setAlerts] = useState([])
+    const [keywords, setKeywords] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [viewingScreenshot, setViewingScreenshot] = useState(null)
+    const [expandedAlerts, setExpandedAlerts] = useState(new Set())
+    const [filterCategory, setFilterCategory] = useState('all')
+
+    // Keyword form states
+    const [newKeyword, setNewKeyword] = useState('')
+    const [newKeywordCategory, setNewKeywordCategory] = useState('custom')
+    const [expandedCategories, setExpandedCategories] = useState(new Set())
+
+    // Alert selection state
+    const [selectedAlerts, setSelectedAlerts] = useState(new Set())
+
+    // Error state
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        fetchKeywords()
+        if (activeTab === 'alerts') fetchAlerts()
+    }, [activeTab, device.id])
+
+    const fetchAlerts = async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await api.get(`/api/shield/alerts/${device.id}`)
+            setAlerts(res.data)
+        } catch (err) {
+            console.error("Failed to fetch alerts", err)
+            setError("Nepodařilo se načíst alerty.")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchKeywords = async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await api.get(`/api/shield/keywords/${device.id}`)
+            setKeywords(res.data)
+        } catch (err) {
+            console.error("Failed to fetch keywords", err)
+            setError("Nepodařilo se načíst klíčová slova.")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleAddKeyword = async (e, categoryOverride = null) => {
+        e.preventDefault()
+        const category = categoryOverride || newKeywordCategory
+        if (!newKeyword.trim()) return
+
+        try {
+            await api.post('/api/shield/keywords', {
+                device_id: device.id,
+                keyword: newKeyword.trim(),
+                category: category,
+                severity: 'high'
+            })
+            setNewKeyword('')
+            fetchKeywords()
+        } catch (err) {
+            alert("Chyba při přidávání slova")
+        }
+    }
+
+    const handleDeleteKeyword = async (id) => {
+        if (!confirm("Opravdu smazat toto klíčové slovo?")) return
+        try {
+            await api.delete(`/api/shield/keywords/${id}`)
+            fetchKeywords()
+        } catch (err) {
+            alert("Chyba při mazání")
+        }
+    }
+
+    const toggleAlertExpand = (alertId) => {
+        setExpandedAlerts(prev => {
+            const next = new Set(prev)
+            if (next.has(alertId)) {
+                next.delete(alertId)
+            } else {
+                next.add(alertId)
+            }
+            return next
+        })
+    }
+
+    const toggleCategoryExpand = (category) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev)
+            if (next.has(category)) {
+                next.delete(category)
+            } else {
+                next.add(category)
+            }
+            return next
+        })
+    }
+
+    const toggleAlertSelection = (alertId) => {
+        setSelectedAlerts(prev => {
+            const next = new Set(prev)
+            if (next.has(alertId)) {
+                next.delete(alertId)
+            } else {
+                next.add(alertId)
+            }
+            return next
+        })
+    }
+
+    const selectAllAlerts = () => {
+        if (selectedAlerts.size === filteredAlerts.length) {
+            setSelectedAlerts(new Set())
+        } else {
+            setSelectedAlerts(new Set(filteredAlerts.map(a => a.id)))
+        }
+    }
+
+    const handleDeleteAlert = async (id, event) => {
+        event?.stopPropagation()
+        if (!confirm("Opravdu smazat tento alert?")) return
+
+        try {
+            await api.delete(`/api/shield/alerts/${id}`)
+            setAlerts(prev => prev.filter(a => a.id !== id))
+            setSelectedAlerts(prev => {
+                const next = new Set(prev)
+                next.delete(id)
+                return next
+            })
+        } catch (err) {
+            console.error(err)
+            alert("Chyba při mazání")
+        }
+    }
+
+    const handleBatchDelete = async () => {
+        if (selectedAlerts.size === 0) return
+        if (!confirm(`Opravdu smazat ${selectedAlerts.size} vybraných alertů?`)) return
+
+        try {
+            await api.post('/api/shield/alerts/batch-delete', {
+                alert_ids: Array.from(selectedAlerts)
+            })
+            setAlerts(prev => prev.filter(a => !selectedAlerts.has(a.id)))
+            setSelectedAlerts(new Set())
+        } catch (err) {
+            console.error(err)
+            alert("Chyba při hromadném mazání")
+        }
+    }
+
+    // Group keywords by category
+    const keywordsByCategory = useMemo(() => {
+        const grouped = { adult: [], bullying: [], drugs: [], violence: [], custom: [] }
+        keywords.forEach(kw => {
+            const cat = kw.category || 'custom'
+            if (grouped[cat]) {
+                grouped[cat].push(kw)
+            } else {
+                grouped.custom.push(kw)
+            }
+        })
+        return grouped
+    }, [keywords])
+
+    // Filter alerts by category
+    const filteredAlerts = useMemo(() => {
+        if (filterCategory === 'all') return alerts
+        return alerts.filter(alert => {
+            const matchingKeyword = keywords.find(k => k.keyword.toLowerCase() === alert.keyword?.toLowerCase())
+            return matchingKeyword?.category === filterCategory
+        })
+    }, [alerts, filterCategory, keywords])
+
+    return (
+        <div className="smart-shield-container">
+            {/* Tab Navigation */}
+            <div className="shield-header">
+                <div className="shield-tabs">
+                    <button
+                        className={`shield-tab ${activeTab === 'alerts' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('alerts')}
+                    >
+                        <AlertTriangle size={16} />
+                        Alerty
+                    </button>
+                    <button
+                        className={`shield-tab ${activeTab === 'settings' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('settings')}
+                    >
+                        <Settings size={16} />
+                        Nastavení slov
+                    </button>
+                </div>
+            </div>
+
+            <div className="shield-content">
+                {loading ? (
+                    <div className="shield-loading">
+                        <div className="loading-spinner" />
+                        <span>Načítání...</span>
+                    </div>
+                ) : error ? (
+                    <div className="shield-error">
+                        <AlertTriangle size={32} />
+                        <h3>Chyba načítání dat</h3>
+                        <p>{error}</p>
+                        <button onClick={() => { fetchKeywords(); fetchAlerts(); }} className="shield-proof-btn">
+                            Zkusit znovu
+                        </button>
+                    </div>
+                ) : activeTab === 'alerts' ? (
+                    <div className="alerts-section">
+                        {/* Bulk Actions & Filters */}
+                        <div className="alerts-controls-row">
+                            <div className="filter-chips-row">
+                                <Filter size={16} className="filter-icon" />
+                                <button
+                                    className={`filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
+                                    onClick={() => setFilterCategory('all')}
+                                >
+                                    Vše
+                                </button>
+                                {Object.entries(CATEGORIES).map(([key, config]) => (
+                                    <button
+                                        key={key}
+                                        className={`filter-chip ${filterCategory === key ? 'active' : ''}`}
+                                        onClick={() => setFilterCategory(key)}
+                                        style={{
+                                            '--chip-color': config.color,
+                                            '--chip-bg': config.bgColor
+                                        }}
+                                    >
+                                        {config.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="bulk-actions">
+                                <button
+                                    className={`select-all-btn ${selectedAlerts.size === filteredAlerts.length && filteredAlerts.length > 0 ? 'active' : ''}`}
+                                    onClick={selectAllAlerts}
+                                    disabled={filteredAlerts.length === 0}
+                                >
+                                    {selectedAlerts.size === filteredAlerts.length && filteredAlerts.length > 0 ? 'Zrušit výběr' : 'Vybrat vše'}
+                                </button>
+
+                                {selectedAlerts.size > 0 && (
+                                    <button
+                                        className="bulk-delete-btn"
+                                        onClick={handleBatchDelete}
+                                    >
+                                        <Trash2 size={16} />
+                                        <span>Smazat ({selectedAlerts.size})</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="alerts-grid">
+                            {filteredAlerts.length === 0 ? (
+                                <div className="shield-empty-state">
+                                    <div className="empty-icon-container">
+                                        <Shield size={64} />
+                                    </div>
+                                    <h3>Vše v pořádku</h3>
+                                    <p>Žádné bezpečnostní incidenty za posledních 24 hodin.</p>
+                                </div>
+                            ) : (
+                                filteredAlerts.map(alert => (
+                                    <AlertCard
+                                        key={alert.id}
+                                        alert={alert}
+                                        isSelected={selectedAlerts.has(alert.id)}
+                                        isExpanded={expandedAlerts.has(alert.id)}
+                                        onSelect={() => toggleAlertSelection(alert.id)}
+                                        onToggleExpand={toggleAlertExpand}
+                                        onDelete={handleDeleteAlert}
+                                        onViewScreenshot={setViewingScreenshot}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="keywords-section">
+                        <div className="keywords-header">
+                            <h3>Sledovaná klíčová slova</h3>
+                            <p className="keywords-subtitle">
+                                Slova jsou organizována podle kategorie.
+                                <br />
+                                <span className="keywords-info-highlight">Vlastní slova přidejte pomocí volby Rychlé přidání. Vyberte kategorii a zadejte monitorované slovo.</span>
+                            </p>
+                        </div>
+
+                        {/* Global Add Section */}
+                        <div className="global-add-section">
+                            <h4>Rychlé přidání</h4>
+                            <form className="global-add-form" onSubmit={(e) => handleAddKeyword(e, newKeywordCategory)}>
+                                <input
+                                    type="text"
+                                    value={newKeyword}
+                                    onChange={(e) => setNewKeyword(e.target.value)}
+                                    placeholder="Např. drogy, sebevražda..."
+                                    className="global-add-input"
+                                />
+                                <select
+                                    value={newKeywordCategory}
+                                    onChange={(e) => setNewKeywordCategory(e.target.value)}
+                                    className="global-add-select"
+                                >
+                                    {Object.entries(CATEGORIES).map(([key, config]) => (
+                                        <option key={key} value={key}>{config.label}</option>
+                                    ))}
+                                </select>
+                                <button type="submit" className="global-add-btn">
+                                    <Plus size={18} />
+                                    Přidat
+                                </button>
+                            </form>
+                        </div>
+
+                        <div className="categories-grid">
+                            {Object.keys(CATEGORIES).map(key => (
+                                <CategorySection
+                                    key={key}
+                                    categoryKey={key}
+                                    keywords={keywordsByCategory[key] || []}
+                                    isExpanded={expandedCategories.has(key)}
+                                    onToggle={() => toggleCategoryExpand(key)}
+                                    onDeleteKeyword={handleDeleteKeyword}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Screenshot Modal */}
+            {viewingScreenshot && (
+                <SecureImageModal
+                    url={viewingScreenshot}
+                    onClose={() => setViewingScreenshot(null)}
+                />
+            )}
+        </div>
+    )
+}
+
+// Internal component for secure image handling
+const SecureImageModal = ({ url, onClose }) => {
+    const [blobUrl, setBlobUrl] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState(null)
+
+    useEffect(() => {
+        let mounted = true
+        const fetchImage = async () => {
+            try {
+                const response = await api.get(url, { responseType: 'blob' })
+                if (mounted) {
+                    const objectUrl = URL.createObjectURL(response.data)
+                    setBlobUrl(objectUrl)
+                    setLoading(false)
+                }
+            } catch (err) {
+                console.error("Failed to load shield screenshot", err)
+                if (mounted) {
+                    setError("Nepodařilo se načíst snímek")
+                    setLoading(false)
+                }
+            }
+        }
+
+        fetchImage()
+
+        return () => {
+            mounted = false
+            if (blobUrl) URL.revokeObjectURL(blobUrl)
+        }
+    }, [url])
+
+    return (
+        <div className="shield-modal-overlay" onClick={onClose}>
+            <div className="shield-modal-content" onClick={e => e.stopPropagation()}>
+                <button className="shield-modal-close" onClick={onClose}>
+                    <X size={20} />
+                </button>
+
+                {loading ? (
+                    <div className="shield-loading-image">Načítání důkazu...</div>
+                ) : error ? (
+                    <div className="shield-error-image">{error}</div>
+                ) : (
+                    <img src={blobUrl} alt="Evidence" />
+                )}
+            </div>
+        </div>
+    )
+}
+
+export default SmartShield

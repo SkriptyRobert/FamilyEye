@@ -1,0 +1,689 @@
+/* =============================================================================
+   Smart Shield Premium Styles - MODULAR VERSION
+   ============================================================================= 
+   
+   This file imports modular CSS components for better maintainability.
+   Extracted modules:
+   - SmartShield/FilterChips.css    (Filter chip styles)
+   - SmartShield/AlertCard.css      (Alert card styles)
+   - SmartShield/KeywordManager.css (Keyword management styles)
+   ============================================================================= */
+
+/* Import modular components */
+@import './SmartShield/FilterChips.css';
+@import './SmartShield/AlertCard.css';
+@import './SmartShield/KeywordManager.css';
+
+/* =============================================================================
+   Container & Base Styles
+   ============================================================================= */
+
+.smart-shield-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+}
+
+/* SmartShieldView specific styles */
+.shield-loading-state {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.shield-empty-devices {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 32px;
+    text-align: center;
+}
+
+.shield-empty-devices .empty-device-icon {
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.shield-empty-devices h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.shield-empty-devices p {
+    color: var(--text-secondary);
+    max-width: 400px;
+}
+
+.shield-view-content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    background: var(--bg-primary);
+}
+
+.shield-select-device-prompt {
+    text-align: center;
+    padding: 48px;
+    color: var(--text-secondary);
+}
+
+/* =============================================================================
+   Header & Tabs
+   ============================================================================= */
+
+.shield-header {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
+}
+
+.shield-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-secondary);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.shield-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shield-tab:hover {
+    color: var(--text-primary);
+    background: rgba(128, 128, 128, 0.1);
+}
+
+.shield-tab.active {
+    background: var(--accent-color);
+    color: #ffffff;
+}
+
+/* =============================================================================
+   Loading State
+   ============================================================================= */
+
+.shield-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(99, 102, 241, 0.2);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =============================================================================
+   Empty State
+   ============================================================================= */
+
+.shield-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+}
+
+.empty-icon-container {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    color: var(--accent-color);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+    }
+}
+
+.shield-empty-state h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.shield-empty-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 300px;
+}
+
+/* =============================================================================
+   Modal
+   ============================================================================= */
+
+.shield-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.shield-modal-content {
+    position: relative;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+    overflow: hidden;
+    max-width: 90vw;
+    max-height: 85vh;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalSlideUp 0.3s ease-out;
+    border: 1px solid var(--border-color);
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.shield-modal-content img {
+    display: block;
+    max-width: 100%;
+    max-height: 80vh;
+}
+
+.shield-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1;
+}
+
+.shield-modal-close:hover {
+    background: rgba(239, 68, 68, 0.8);
+    transform: rotate(90deg);
+}
+
+/* =============================================================================
+   Responsive
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .filter-chips-row {
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        flex-wrap: nowrap;
+        width: 100%;
+        mask-image: linear-gradient(to right, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+    }
+
+    .filter-chip {
+        padding: 6px 16px;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    .alerts-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .bulk-actions {
+        overflow-x: auto;
+        padding-bottom: 4px;
+        width: 100%;
+    }
+
+    .alert-card-content {
+        padding: 16px;
+        padding-left: 48px !important;
+    }
+
+    .alert-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .global-add-form {
+        flex-direction: column;
+    }
+
+    .global-add-input,
+    .global-add-select {
+        min-width: auto;
+        width: 100%;
+    }
+
+    /* Header Mobile Styles */
+    .shield-view-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+        padding: 20px 16px;
+    }
+
+    .shield-view-title {
+        font-size: 22px;
+    }
+
+    .shield-description-text {
+        max-width: 100%;
+        font-size: 13px;
+    }
+
+    .device-selector-wrapper {
+        width: 100%;
+        margin-top: 0;
+    }
+
+    .device-select {
+        width: 100%;
+        padding: 12px 16px;
+    }
+
+    .shield-tabs {
+        width: 100%;
+        overflow-x: auto;
+        padding: 4px;
+    }
+
+    .shield-tab {
+        flex: 1;
+        justify-content: center;
+        white-space: nowrap;
+    }
+}
+
+/* =============================================================================
+   View Header Styles (SmartShieldView)
+   ============================================================================= */
+
+.smart-shield-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.shield-view-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+}
+
+.shield-view-title {
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.shield-icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shield-icon {
+    font-size: 30px;
+    position: relative;
+    z-index: 10;
+    display: block;
+}
+
+.shield-icon-pulse {
+    position: absolute;
+    inset: 0;
+    background: rgba(59, 130, 246, 0.3);
+    filter: blur(8px);
+    border-radius: 50%;
+    z-index: 0;
+    animation: shieldPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shieldPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+.shield-beta-badge {
+    font-size: 12px;
+    background: linear-gradient(to right, #6366f1, #a855f7);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-weight: 600;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+    margin-left: 8px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.shield-info-wrapper {
+    position: relative;
+    margin-left: 8px;
+    display: flex;
+    align-items: center;
+    cursor: help;
+}
+
+.shield-info-icon {
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.shield-info-wrapper:hover .shield-info-icon {
+    color: var(--accent-color);
+}
+
+.shield-info-tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 100%;
+    margin-top: 8px;
+    width: 280px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.shield-info-tooltip p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.shield-info-wrapper:hover .shield-info-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.shield-subtitle {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.shield-subtitle span {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* Device Selector */
+.device-selector-wrapper {
+    position: relative;
+    min-width: 200px;
+}
+
+.device-select {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.device-select:focus {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+    border-color: var(--accent-color);
+}
+
+.device-select:hover {
+    background: var(--bg-primary);
+}
+
+.device-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    padding: 8px;
+}
+
+/* Alert Management UI */
+.alerts-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.select-all-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+    background: rgba(128, 128, 128, 0.05);
+    color: var(--text-primary);
+}
+
+.select-all-btn.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.bulk-delete-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bulk-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* Alert Card Selection (extends AlertCard.css) */
+.shield-alert-card {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shield-alert-card.selected {
+    box-shadow: 0 0 0 2px var(--accent-color);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.alert-select-indicator {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+}
+
+.select-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    color: white;
+}
+
+.shield-alert-card:hover .select-checkbox {
+    border-color: var(--text-secondary);
+}
+
+.select-checkbox.checked {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.alert-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0;
+    margin-left: auto;
+}
+
+.shield-alert-card:hover .alert-delete-btn {
+    opacity: 1;
+}
+
+.alert-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Secure Image Loading States */
+.shield-loading-image,
+.shield-error-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 300px;
+    min-height: 200px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.shield-error-image {
+    color: #ef4444;
+    flex-direction: column;
+    gap: 8px;
+}

@@ -1,0 +1,161 @@
+/* ============================================
+   WEEKLY PATTERN CHART - Bar Chart Styles
+   ============================================ */
+
+.weekly-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.weekly-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.weekly-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.weekly-period {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.weekly-chart {
+    margin: 0 -10px;
+}
+
+/* Custom tooltip */
+.weekly-tooltip {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.weekly-tooltip .tooltip-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.weekly-tooltip .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.weekly-tooltip .tooltip-row:last-child {
+    margin-bottom: 0;
+}
+
+.weekly-tooltip .tooltip-label {
+    color: var(--text-secondary);
+}
+
+.weekly-tooltip .tooltip-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.weekly-tooltip .tooltip-value.primary {
+    color: #6366f1;
+    font-size: 14px;
+}
+
+/* Legend */
+.weekly-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+}
+
+/* Loading state */
+.weekly-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.weekly-loading .loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Error state */
+.weekly-error {
+    text-align: center;
+    padding: 60px;
+    color: #ef4444;
+}
+
+/* Empty state */
+.weekly-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--text-secondary);
+    gap: 8px;
+}
+
+.weekly-empty .empty-icon {
+    font-size: 32px;
+    opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .weekly-legend {
+        gap: 10px;
+    }
+
+    .legend-item {
+        font-size: 11px;
+    }
+}

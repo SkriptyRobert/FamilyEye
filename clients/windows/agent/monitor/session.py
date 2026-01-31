@@ -1,0 +1,181 @@
+"""Session tracking logic."""
+import time
+from typing import Dict, List, Optional
+from datetime import datetime
+from ..logger import get_logger
+
+class SessionTracker:
+    """Handles app session tracking and kill history."""
+    
+    def __init__(self):
+        self.logger = get_logger("monitor.session")
+        self.app_session_start: Dict[str, float] = {}  # app_name -> session start monotonic
+        self.process_start_times: Dict[str, float] = {}  # app_name -> timestamp (ISO)
+        self.kill_history: List[Dict] = []
+        
+        # Sync: caller or Core holds lock; GIL often enough for simple dict ops.
+        
+    def track_app_session(self, app_name: str):
+        """Track when an app session starts (for session duration)."""
+        app_lower = app_name.lower()
+        current_mono = time.monotonic()
+        
+        # Record first seen time today
+        if app_lower not in self.process_start_times:
+            self.process_start_times[app_lower] = datetime.now().isoformat()
+            self.logger.debug(f"First detection today: {app_name}")
+        
+        # Record session start if not already running
+        if app_lower not in self.app_session_start:
+            self.app_session_start[app_lower] = current_mono
+            
+    def end_app_session(self, app_name: str):
+        """End an app session (app no longer detected)."""
+        app_lower = app_name.lower()
+        if app_lower in self.app_session_start:
+            del self.app_session_start[app_lower]
+            
+    def get_process_session_duration(self, app_name: str) -> float:
+        """Return how long an app has been running in current session (seconds)."""
+        app_lower = app_name.lower()
+        if app_lower in self.app_session_start:
+            return time.monotonic() - self.app_session_start[app_lower]
+        return 0.0
+        
+    def get_first_seen_time(self, app_name: str) -> Optional[str]:
+        return self.process_start_times.get(app_name.lower())
+
+    def log_process_kill(self, app_name: str, reason: str, used_seconds: int, 
+                         limit_seconds: int, device_uptime_str: str, lock):
+        """Log when a process is killed."""
+        timestamp = datetime.now().isoformat()
+        kill_entry = {
+            "app_name": app_name,
+            "reason": reason,
+            "timestamp": timestamp,
+            "used_seconds": used_seconds,
+            "limit_seconds": limit_seconds,
+            "device_uptime": device_uptime_str
+        }
+        
+        with lock:
+            self.kill_history.append(kill_entry)
+            # Keep only last 100 entries
+            if len(self.kill_history) > 100:
+                self.kill_history = self.kill_history[-100:]
+        
+        self.logger.info(f"Process killed: {app_name} (reason: {reason}, used: {used_seconds}s/{limit_seconds}s)")
+        
+    def get_kill_history(self, lock) -> List[Dict]:
+        """Return recent kill history."""
+        with lock:
+            return list(self.kill_history)
+            
+    def clear_kill_history(self, lock):
+        """Clear kill history."""
+        with lock:
+            self.kill_history.clear()
+            
+    def clear_daily_stats(self):
+        """Clear daily session stats."""
+        self.app_session_start.clear()
+        # Clear process_start_times (new day).
+        self.process_start_times.clear()
+
+    @staticmethod
+    def is_screen_locked() -> bool:
+        """Check if screen is currently locked using WTS API.
+        
+        This method is robust for Service Context (Session 0).
+        It checks the active console session's state:
+        - WTSActive (0): User is logged in and screen is UNLOCKED
+        - WTSConnected (1): User is logged in but DISCONNECTED (Locked/Switch User)
+        - WTSConnectQuery (2): Session is in process of connecting
+        - WTSShadow (3): Shadowing session
+        - WTSDisconnected (4): User is logged out
+        - WTSIdle (5): Idle
+        - WTSListen (6): Listening
+        - WTSReset (7): Reset
+        - WTSDown (8): Down
+        - WTSInit (9): Init
+        
+        Returns:
+            True if the session is NOT active (i.e. locked, disconnected, or on login screen)
+        """
+        try:
+            import ctypes
+            from ctypes import wintypes
+            
+            # WTS Constants
+            WTS_CURRENT_SERVER_HANDLE = 0
+            WTS_CURRENT_SESSION_LOGON_TIME = 0
+            WTSConnectState = 8  # WTSInfoClass for connection state
+            
+            # Connection States
+            WTSActive = 0
+            WTSConnected = 1
+            WTSConnectQuery = 2
+            WTSShadow = 3
+            WTSDisconnected = 4
+            WTSIdle = 5
+            WTSListen = 6
+            WTSReset = 7
+            WTSDown = 8
+            WTSInit = 9
+
+            kernel32 = ctypes.windll.kernel32
+            wtsapi32 = ctypes.windll.wtsapi32
+            
+            # Get the physical console session ID
+            session_id = kernel32.WTSGetActiveConsoleSessionId()
+            if session_id == 0xFFFFFFFF:
+                # No console session attached - effectively locked/headless
+                return True
+                
+            # Query the connection state of that session
+            ppBuffer = ctypes.c_void_p()
+            pBytes = ctypes.c_ulong()
+            
+            if wtsapi32.WTSQuerySessionInformationW(
+                WTS_CURRENT_SERVER_HANDLE,
+                session_id,
+                WTSConnectState,
+                ctypes.byref(ppBuffer),
+                ctypes.byref(pBytes)
+            ):
+                try:
+                    # Dereference the pointer to get the state/int value
+                    # The buffer contains a C int (4 bytes)
+                    state = ctypes.cast(ppBuffer, ctypes.POINTER(ctypes.c_int)).contents.value
+                    
+                    # WTSActive (0) is the ONLY state where the user is actually using the desktop
+                    if state == WTSActive:
+                        return False
+                    else:
+                        # WTSConnected(1) = Locked/SwitchUser
+                        # WTSDisconnected(4) = Logged out
+                        return True
+                finally:
+                    wtsapi32.WTSFreeMemory(ppBuffer)
+            
+            # Detection failed: fallback for lock enforcement accuracy (non-service / session 0).
+            return SessionTracker._is_screen_locked_fallback()
+            
+        except Exception as e:
+            # Fallback
+            return SessionTracker._is_screen_locked_fallback()
+
+    @staticmethod
+    def _is_screen_locked_fallback() -> bool:
+        """Legacy fallback check using OpenInputDesktop."""
+        import ctypes
+        try:
+            user32 = ctypes.windll.user32
+            # DESKTOP_SWITCHDESKTOP = 0x0100
+            hDesktop = user32.OpenInputDesktop(0, False, 0x0100)
+            if hDesktop == 0:
+                return True
+            user32.CloseDesktop(hDesktop)
+            return False
+        except:
+            return False

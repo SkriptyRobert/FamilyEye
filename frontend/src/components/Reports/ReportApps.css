@@ -1,0 +1,214 @@
+/* =============================================
+   REPORTS - APPS & CHARTS
+   Extracted from Reports.css
+   ============================================= */
+
+.weekly-chart {
+    grid-column: span 2;
+    min-height: 280px;
+}
+
+.apps-card {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+}
+
+.apps-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.apps-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* App Item */
+.app-item {
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.app-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border-color);
+    transform: translateX(4px);
+}
+
+/* App Row with icon */
+.app-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.app-icon-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.app-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.app-item .app-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.app-duration {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(99, 102, 241, 0.3);
+    padding: 2px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+/* App Progress Bar */
+.app-bar-container {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.app-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Limit Indicator Row */
+.app-limit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.app-limit-bar-container {
+    flex: 1;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.app-limit-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    transition: width 0.3s ease;
+}
+
+.app-limit-bar.warning {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.app-limit-bar.critical,
+.app-limit-bar.exceeded {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.app-limit-text {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.app-limit-text.warning {
+    color: #f59e0b;
+}
+
+.app-limit-text.critical,
+.app-limit-text.exceeded {
+    color: #ef4444;
+}
+
+/* No apps state */
+.no-apps {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--text-secondary);
+    padding: 20px;
+    gap: 8px;
+}
+
+.no-apps-icon {
+    font-size: 32px;
+    opacity: 0.5;
+}
+
+/* Top App Card enhancements */
+.top-app-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.top-app-icon {
+    font-size: 28px;
+}
+
+/* Clickable App Item in Reports */
+.clickable-app-report {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-app-report:hover {
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.app-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chevron-icon {
+    font-size: 20px;
+    color: var(--text-secondary);
+    opacity: 0.3;
+    transition: all 0.2s ease;
+    line-height: 1;
+    font-weight: 300;
+    margin-left: 4px;
+}
+
+.clickable-app-report:hover .chevron-icon {
+    opacity: 1;
+    color: var(--accent-color);
+    transform: translateX(4px);
+}

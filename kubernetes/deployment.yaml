@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: familyeye-server
+  labels:
+    app: familyeye-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: familyeye-server
+  template:
+    metadata:
+      labels:
+        app: familyeye-server
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/SkriptyRobert/Parential-Control_Enterprise/familyeye-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8443
+          env:
+            - name: BACKEND_HOST
+              value: "0.0.0.0"
+            - name: BACKEND_PORT
+              value: "8443"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: familyeye-server-secret
+                  key: database-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: familyeye-server-secret
+                  key: secret-key
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+# Example Secret - replace with your values or use external secret manager
+# kubectl create secret generic familyeye-server-secret \
+#   --from-literal=database-url='postgresql://user:pass@postgres-service:5432/familyeye' \
+#   --from-literal=secret-key='your-secret-key'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: familyeye-server-secret
+type: Opaque
+stringData:
+  database-url: "postgresql://familyeye:changeme@postgres-service:5432/familyeye"
+  secret-key: "change-me-in-production"

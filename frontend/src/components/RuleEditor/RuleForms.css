@@ -1,0 +1,211 @@
+/* ======================
+   RULE FORMS & INPUTS
+   Extracted from RuleEditor.css
+   ====================== */
+
+.rule-form {
+    margin: 24px 0;
+    padding: 28px;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    /* IMPORTANT: Space between form groups */
+    /* Static form - no hover effects */
+    transform: none !important;
+    transition: none !important;
+}
+
+.rule-form:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* Space between label and input */
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    display: block;
+}
+
+.form-group small {
+    font-size: 0.8rem;
+    color: var(--text-tertiary, rgba(148, 163, 184, 0.8));
+    margin-top: -4px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.input {
+    padding: 14px 16px;
+    border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
+    border-radius: 12px;
+    font-size: 15px;
+    background: #f1f5f9;
+    /* Light gray background */
+    color: #1e293b;
+    /* Dark text */
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.input::placeholder {
+    color: #64748b;
+    /* Visible gray placeholder */
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: #e2e8f0;
+    /* Slightly darker on focus */
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.button {
+    padding: 14px 28px;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.button:hover {
+    filter: brightness(1.08);
+}
+
+.button-secondary {
+    background: var(--text-secondary);
+}
+
+.button-success {
+    background: #10b981;
+}
+
+/* Tag Buttons for App Selection */
+.tag-button {
+    padding: 8px 14px;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-color);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tag-button:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.tag-button.selected,
+.tag-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Suggested Apps Section */
+.suggested-apps {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Multi-App Selection Chips */
+.selected-apps-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.app-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--accent-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    gap: 6px;
+}
+
+.app-chip svg {
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.app-chip svg:hover {
+    opacity: 1;
+}
+
+/* Schedule Target Selector */
+.schedule-target-selector {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.radio-option:hover {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.radio-option.selected {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.radio-option input[type="radio"] {
+    display: none;
+}

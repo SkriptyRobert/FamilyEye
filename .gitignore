@@ -1,0 +1,115 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+*.log
+*.spec
+dist/
+build/
+output/
+site/
+clients/windows/agent/dist/
+clients/windows/agent/build/
+installer/agent/dist/
+installer/agent/build/
+installer/agent/output/
+
+# Database (Critical Security)
+*.db
+*.sqlite
+*.sqlite3
+parental_control.db
+
+# Node modules & Frontend
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+screenshot*.png
+
+# OS specific checks
+.DS_Store
+Thumbs.db
+
+# Dev scripts and temporary files (keep locally, not in production release)
+dev/
+*.tmp
+*.temp
+
+# Runtime data - Windows Agent
+clients/windows/agent/report_queue.json
+clients/windows/agent/usage_cache.json
+clients/windows/agent/config.json
+clients/windows/config.json
+
+# Runtime data - Backend
+backend/uploads/
+backend/app.log
+uploads/
+
+# Android build logs and temporary files
+clients/android/.kotlin/
+clients/android/build_log*.txt
+clients/android/build_*.txt
+clients/android/compile_*.txt
+*.apk
+
+# Derived/resolved documentation
+*.resolved
+
+# Test installer (not for production)
+installer/agent/test.iss
+
+# Windows shortcuts
+*.lnk
+
+# IDE and workspace (Cursor, agent rules; llms.txt in repo root is kept)
+.agent/
+.agent/rules
+.agentrules
+.cursor/
+.cursor/rules
+.cursorrules
+*.cursorrules
+
+# Temporary Build & Test Logs
+clients/android/build_error*.txt
+clients/android/gradle_error*.txt
+clients/android/*_log.txt
+clients/android/*_logs.txt
+clients/android/device_log.txt
+clients/android/test_log.txt
+clients/android/build_log*.txt
+clients/android/build_*.txt
+clients/android/compile_*.txt
+clients/android/debug_logs.txt
+clients/android/accessibility_logs.txt
+clients/android/familyeye_logs.txt
+clients/android/raw_logs.txt
+clients/android/full_logs.txt
+clients/android/physical_device_log.txt
+clients/android/tests/manual/*_log*.txt
+
+# Database WAL files
+*.db-shm
+*.db-wal
+
+# PyInstaller build artifacts
+installer/agent/build_child/
+*.toc
+*.pkg
+*.pyz
+warn-*.txt
+xref-*.html
+
+# Local-only outputs (if recreated)
+android_load/
+android_audit.log
+android_audit_continuous.log

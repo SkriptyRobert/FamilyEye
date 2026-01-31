@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 
+    Dynamic backend URL support:
+    - Backend can run on ANY IP address
+    - URL is provided via QR code or manual input during pairing
+    - Self-signed certificates are trusted for all connections in debug builds
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <!-- System certificates -->
+            <certificates src="system" />
+            <!-- User-installed certificates (allows self-signed certs installed by user) -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

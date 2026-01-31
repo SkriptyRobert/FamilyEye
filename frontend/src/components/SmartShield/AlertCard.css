@@ -1,0 +1,184 @@
+/* =============================================================================
+   Alert Card Styles - Extracted from SmartShield.css
+   ============================================================================= */
+
+.alerts-section {
+    flex: 1;
+}
+
+.alerts-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Alert Card - Modern Design */
+.shield-alert-card {
+    display: flex;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.shield-alert-card:hover {
+    transform: translateY(-2px);
+    background: var(--bg-secondary);
+    box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent-color);
+}
+
+.alert-severity-stripe {
+    width: 4px;
+    flex-shrink: 0;
+}
+
+.alert-card-content {
+    flex: 1;
+    padding: 20px;
+    padding-left: 48px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.alert-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.alert-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.alert-meta {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-app-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(128, 128, 128, 0.1);
+    padding: 6px 12px;
+    border-radius: 8px;
+}
+
+.alert-timestamp {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.alert-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.alert-keyword-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.alert-keyword-badge {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(128, 128, 128, 0.2);
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+.alert-detected-text-container {
+    background: rgba(128, 128, 128, 0.05);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--accent-color);
+}
+
+.alert-detected-text {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-style: italic;
+    margin: 0;
+}
+
+.alert-detected-text.truncated {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.expand-text-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.expand-text-btn:hover {
+    color: var(--text-primary);
+}
+
+.shield-proof-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 10px;
+    color: var(--accent-color);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+}
+
+.shield-proof-btn:hover {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}

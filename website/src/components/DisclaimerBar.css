@@ -1,0 +1,26 @@
+.disclaimer-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) var(--space-8);
+  text-align: center;
+}
+
+.disclaimer-bar-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  .disclaimer-bar {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .disclaimer-bar-text {
+    font-size: 0.75rem;
+  }
+}

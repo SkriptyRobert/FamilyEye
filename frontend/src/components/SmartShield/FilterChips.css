@@ -1,0 +1,41 @@
+/* =============================================================================
+   Filter Chips - Extracted from SmartShield.css
+   ============================================================================= */
+
+.filter-chips-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.filter-icon {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.filter-chip {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.filter-chip:hover {
+    background: var(--bg-primary);
+    border-color: var(--chip-color, var(--text-secondary));
+    color: var(--chip-color, var(--text-primary));
+}
+
+.filter-chip.active {
+    background: var(--chip-bg, rgba(99, 102, 241, 0.15));
+    border-color: var(--chip-color, var(--accent-color));
+    color: var(--chip-color, var(--accent-color));
+}

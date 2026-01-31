@@ -1,0 +1,18 @@
+{
+  "backend_url": "https://192.168.0.145:8000",
+  "device_id": "windows-Robert-PC-c10f184f",
+  "api_key": "9e0ccea4-e683-4261-ba4b-d81304902680",
+  "polling_interval": 30,
+  "reporting_interval": 60,
+  "cache_duration": 300,
+  "ssl_verify": false,
+  "sync_max_age_seconds": 3600,
+  "max_queue_size": 50,
+  "window_enum_cache_ms": 200,
+  "shutdown_warning_countdown": 60,
+  "monitor_interval": 5,
+  "log_level": "DEBUG",
+  "log_rotation_enabled": true,
+  "log_rotation_when": "midnight",
+  "log_rotation_backup_count": 5
+}

@@ -1,0 +1,75 @@
+{
+    "_description": "Default Smart Shield keywords seeded to new devices upon pairing. Categories: self-harm, drugs, bullying, adult.",
+    "keywords": [
+        {
+            "keyword": "sebevražda",
+            "category": "self-harm",
+            "severity": "critical"
+        },
+        {
+            "keyword": "zabít se",
+            "category": "self-harm",
+            "severity": "critical"
+        },
+        {
+            "keyword": "podřezat",
+            "category": "self-harm",
+            "severity": "critical"
+        },
+        {
+            "keyword": "drogy",
+            "category": "drugs",
+            "severity": "high"
+        },
+        {
+            "keyword": "pervitin",
+            "category": "drugs",
+            "severity": "high"
+        },
+        {
+            "keyword": "kokain",
+            "category": "drugs",
+            "severity": "high"
+        },
+        {
+            "keyword": "tráva",
+            "category": "drugs",
+            "severity": "medium"
+        },
+        {
+            "keyword": "šikana",
+            "category": "bullying",
+            "severity": "high"
+        },
+        {
+            "keyword": "chcípni",
+            "category": "bullying",
+            "severity": "high"
+        },
+        {
+            "keyword": "jsi nula",
+            "category": "bullying",
+            "severity": "medium"
+        },
+        {
+            "keyword": "nenávidím tě",
+            "category": "bullying",
+            "severity": "medium"
+        },
+        {
+            "keyword": "porno",
+            "category": "adult",
+            "severity": "high"
+        },
+        {
+            "keyword": "xxx",
+            "category": "adult",
+            "severity": "high"
+        },
+        {
+            "keyword": "onlyfans",
+            "category": "adult",
+            "severity": "medium"
+        }
+    ]
+}

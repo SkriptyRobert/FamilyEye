@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-familyeye}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-familyeye_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-familyeye}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-familyeye} -d ${POSTGRES_DB:-familyeye}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    # Pull pre-built image from GHCR (no local build).
+    # Default tag is 'latest' (overridable via FAMILYEYE_TAG in .env).
+    image: ghcr.io/skriptyrobert/familyeye/familyeye-server:${FAMILYEYE_TAG:-latest}
+    ports:
+      - "8443:8443"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-familyeye}:${POSTGRES_PASSWORD:-familyeye_secret}@postgres:5432/${POSTGRES_DB:-familyeye}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      BACKEND_HOST: "0.0.0.0"
+      BACKEND_PORT: "8443"
+      # Public URL so UI shows correct address (set in .env on server, e.g. BACKEND_URL=https://<server-ip>:8443)
+      BACKEND_URL: ${BACKEND_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Persist screenshots across container restarts (GET /api/files/screenshots/... would 404 otherwise)
+      - server_uploads:/app/backend/uploads
+
+volumes:
+  postgres_data:
+  server_uploads:

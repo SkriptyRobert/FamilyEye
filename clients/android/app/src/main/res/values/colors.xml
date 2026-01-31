@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#6366F1</color>
+    <color name="primary_variant">#4F46E5</color>
+    <color name="secondary">#10B981</color>
+    <color name="secondary_variant">#059669</color>
+    <color name="background">#0F172A</color>
+    <color name="surface">#1E293B</color>
+    <color name="error">#EF4444</color>
+    <color name="warning">#F59E0B</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="on_background">#F1F5F9</color>
+    <color name="on_surface">#E2E8F0</color>
+    <color name="on_error">#FFFFFF</color>
+    
+    <!-- Block overlay colors -->
+    <color name="block_overlay_background">#F0111827</color>
+    <color name="block_overlay_card">#1F2937</color>
+</resources>

@@ -1,0 +1,258 @@
+/* ============================================
+   STATUS OVERVIEW - Mobile-First Responsive Design
+   ============================================ */
+
+.status-overview {
+    padding: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-width: 0;
+    /* Add padding for bottom nav on mobile */
+    padding-bottom: 80px;
+}
+
+@media (min-width: 1024px) {
+    .status-overview {
+        padding: 24px;
+        padding-bottom: 24px;
+    }
+}
+
+/* ============================================
+   FRESHNESS INDICATOR
+   ============================================ */
+
+.freshness-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    border-radius: 20px;
+    background: rgba(var(--bg-secondary-rgb), 0.8);
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+    width: fit-content;
+    transition: all 0.2s ease;
+}
+
+.freshness-indicator:hover {
+    background: rgba(var(--bg-secondary-rgb), 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.freshness-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.freshness-indicator.green .freshness-dot {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.freshness-indicator.yellow .freshness-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.freshness-indicator.orange .freshness-dot {
+    background: #f97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+}
+
+.freshness-indicator.gray .freshness-dot {
+    background: #9ca3af;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+.freshness-text {
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   DEVICE TYPE FILTER
+   ============================================ */
+
+.device-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.filter-btn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+/* ============================================
+   GLOBAL STATS BAR
+   ============================================ */
+
+.global-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.global-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--bg-secondary), rgba(var(--bg-secondary-rgb), 0.8));
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    min-width: 0;
+}
+
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   DEVICE LIST
+   ============================================ */
+
+.device-list {
+    display: grid;
+    /* Use auto-fit to expand cards to fill space, and increase min width to avoid narrow cards */
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+    /* Na PC: karty nemeni vysku podle souseda – rozbalena je vysoka, sbalena nizka (jako na mobilu) */
+    align-items: start;
+}
+
+@media (max-width: 1023px) {
+    .device-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   STATES (Loading, Error, Empty)
+   ============================================ */
+
+.loading-state,
+.error-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    min-height: 400px;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(var(--accent-color-rgb), 0.1);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.error-icon {
+    color: #ef4444;
+    margin-bottom: 16px;
+}
+
+.empty-icon {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.retry-button {
+    margin-top: 16px;
+    padding: 8px 24px;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.retry-button:hover {
+    opacity: 0.9;
+}
+
+.error-timestamp {
+    display: block;
+    margin-top: 12px;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

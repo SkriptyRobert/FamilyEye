@@ -1,0 +1,99 @@
+site_name: Smart Shield Dokumentace
+site_description: Kompletní dokumentace pro Smart Shield - rodičovská kontrola s Device Owner ochranou
+site_author: FamilyEye Team
+site_url: https://familyeye.github.io
+docs_dir: .
+
+repo_name: Parential-Control_Enterprise
+repo_url: https://github.com/familyeye/Parential-Control_Enterprise
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Přepnout na tmavý režim
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Přepnout na světlý režim
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: INDEX.md
+  - Tutorials:
+    - Getting Started: tutorials/getting-started.md
+    - First Setup: tutorials/first-setup.md
+  - How-To Guides:
+    - Troubleshoot USB: how-to/troubleshoot-usb.md
+    - Restore Access: how-to/restore-access.md
+    - Change PIN: how-to/change-pin.md
+    - Unblock App: how-to/unblock-app.md
+  - Reference:
+    - Feature Matrix: reference/feature-matrix.md
+    - API Documentation: reference/api-docs.md
+    - Error Codes: reference/error-codes.md
+    - Testing: reference/testing.md
+  - Architecture:
+    - System Design: architecture/system-design.md
+    - Security Model: architecture/security-model.md
+    - Time Sync Diagram: TIME_SYNC_DIAGRAM.md
+  - Pro vyvojare:
+    - Backend: BACKEND.md
+    - Frontend: FRONTEND.md
+    - Architektura: ARCHITECTURE.md
+    - API prehled: API.md
+    - Databaze: DATABASE.md
+    - Nasazeni: DEPLOYMENT.md
+    - Vyvoj: DEVELOPMENT.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/familyeye/Parential-Control_Enterprise
+  version:
+    provider: mike

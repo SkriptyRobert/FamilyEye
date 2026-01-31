@@ -1,0 +1,195 @@
+/* =============================================
+   DEVICE ACTIONS
+   Extracted from DeviceCard.css
+   ============================================= */
+
+/* Limit Quick Actions */
+.limit-quick-actions {
+    display: flex;
+    gap: var(--space-2, 8px);
+    margin-top: var(--space-2, 8px);
+}
+
+.limit-action-btn {
+    padding: var(--space-1, 4px) var(--space-3, 12px);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-secondary, #ffffff);
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms);
+}
+
+.limit-action-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary, #f1f5f9);
+}
+
+.limit-action-btn:disabled,
+.limit-action-btn.pending {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.limit-action-btn.subtract {
+    color: var(--color-error, #ef4444);
+}
+
+.limit-action-btn.add,
+.limit-action-btn.add-more {
+    color: var(--color-success, #10b981);
+}
+
+.limit-action-feedback {
+    margin-top: var(--space-2, 8px);
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    border-radius: var(--radius-sm, 6px);
+}
+
+.limit-action-feedback.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success, #10b981);
+}
+
+.limit-action-feedback.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error, #ef4444);
+}
+
+/* App Quick Actions */
+.app-quick-actions {
+    display: flex;
+    gap: var(--space-1, 4px);
+}
+
+.app-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-secondary, #ffffff);
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms);
+}
+
+.app-action-btn.block:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--color-error, #ef4444);
+    color: var(--color-error, #ef4444);
+}
+
+.app-action-btn.limit:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: var(--accent-color, #6366f1);
+    color: var(--accent-color, #6366f1);
+}
+
+.app-action-btn.hide:hover:not(:disabled) {
+    background: rgba(100, 116, 139, 0.1);
+    border-color: var(--text-secondary, #64748b);
+    color: var(--text-secondary, #64748b);
+}
+
+.app-action-btn:disabled,
+.app-action-btn.pending {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.app-has-rule-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--color-success, #10b981);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-full, 9999px);
+}
+
+.app-action-feedback {
+    width: 100%;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    border-radius: var(--radius-sm, 6px);
+    margin-top: var(--space-1, 4px);
+}
+
+.app-action-feedback.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success, #10b981);
+}
+
+.app-action-feedback.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error, #ef4444);
+}
+
+/* Extended action buttons (Full Width) */
+.actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+}
+
+.action-btn-full {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3, 12px);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-medium, 500);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: var(--bg-secondary, #ffffff);
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms);
+}
+
+.action-btn-full:hover:not(:disabled) {
+    background: var(--bg-tertiary, #f1f5f9);
+}
+
+.action-btn-full:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn-full.unlock:hover:not(:disabled) {
+    border-color: var(--color-success, #10b981);
+    color: var(--color-success, #10b981);
+}
+
+.action-btn-full.reset-pin:hover:not(:disabled) {
+    border-color: var(--color-warning, #f59e0b);
+    color: var(--color-warning, #f59e0b);
+}
+
+.action-btn-full.resume:hover:not(:disabled) {
+    border-color: var(--accent-color, #6366f1);
+    color: var(--accent-color, #6366f1);
+}
+
+.show-all-apps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1, 4px);
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--accent-color, #6366f1);
+    background: transparent;
+    border: 1px solid var(--accent-color, #6366f1);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: all var(--transition-fast, 150ms);
+}
+
+.show-all-apps-btn:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
