@@ -42,12 +42,12 @@ Be respectful. We are here to build a useful tool for families.
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
-| **Backend tests** | Push/PR touching `backend/**` | `pytest` in `backend/tests/` |
-| **Frontend tests** | Push/PR touching `frontend/**` | `npm test` in `frontend/` |
-| **Android tests** | Push/PR touching `clients/android/**` | `./gradlew test`; on main branches also builds APK (artifact) |
-| **Build Server (Docker)** | Push/PR touching `backend/**`, `frontend/**`, `docker/**` | Builds frontend, builds Docker image, pushes to GHCR (`familyeye-server`) |
-| **Build Windows Agent** | Push/PR touching `installer/agent/**`, `clients/windows/**` | Builds Windows installer (artifact) |
-| **Create Release** | Push of tag `v*` (e.g. `v2.4.0`) | Runs backend, frontend, and Android unit tests; builds APK and Windows installer; creates GitHub Release and attaches artifacts |
+| **Backend tests** | Push/PR (any branch) touching `backend/**` | `pytest` in `backend/tests/` |
+| **Frontend tests** | Push/PR (any branch) touching `frontend/**` | `npm test` in `frontend/` |
+| **Android tests** | Push/PR (any branch) touching `clients/android/**` | `./gradlew test`; on success builds APK (artifact) |
+| **Build Server (Docker)** | Push/PR to main touching `backend/**`, `frontend/**`, `docker/**` | Builds frontend, builds Docker image, pushes to GHCR (`familyeye-server`) |
+| **Build Windows Agent** | Push/PR to main touching `installer/agent/**`, `clients/windows/**` | Builds Windows installer (artifact) |
+| **Create Release** | Push of tag `v*` (e.g. `v2.4.0`) | Runs backend, frontend, and Android unit tests; builds APK and Windows installer from `setup_agent.iss`; creates GitHub Release and attaches artifacts |
 
 Release is created **only after all unit tests pass**. No manual approval step by default (optional: use a GitHub Environment with required reviewers if you want gating).
 
@@ -58,6 +58,21 @@ Release is created **only after all unit tests pass**. No manual approval step b
 - **Android:** From `clients/android/`: `./gradlew test` (or run tests from Android Studio).
 
 See `docs/reference/testing.md` for detailed test descriptions and critical tests before release.
+
+### Releasing a new version
+
+Version is defined in the root file `VERSION`. All components (backend, frontend, Android, installers, website) read or are updated from it.
+
+1. **Bump version:** From repo root run  
+   `python scripts/bump_version.py 2.5.0`  
+   or use `patch` / `minor` / `major` to auto-increment (e.g. `python scripts/bump_version.py patch`).  
+   This updates `VERSION`, `versionCode` in Android, `app-config.json`, `frontend/package.json`, `website/package.json`, and the installer `.iss` files.
+2. **Update CHANGELOG:** Edit `CHANGELOG.md`: add a section `## [X.Y.Z] - YYYY-MM-DD` and list changes (or use a tool that generates it from commits).
+3. **Commit and push:** e.g. `git add -A && git commit -m "chore: release 2.5.0" && git push origin main`.
+4. **Tag and push tag:** `git tag v2.5.0` (on the release commit), then `git push origin v2.5.0`.
+5. **GitHub Release:** The workflow `Create Release` runs on push of tag `v*`: it runs tests, builds Android APK and Windows installer (using `setup_agent.iss` and version from `VERSION`), and creates a GitHub Release with the artifacts. Users download from the [Releases](https://github.com/SkriptyRobert/Parential-Control_Enterprise/releases) page.
+
+Always bump and commit the new version **before** creating the tag so the tagged commit contains the updated version everywhere.
 
 ### Docker image and deployment
 
