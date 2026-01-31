@@ -234,8 +234,8 @@ const AndroidDeviceCard = ({
                                 <h4 className="section-title">
                                     <Smartphone size={16} /> Top 5 používaných aplikací dnes
                                 </h4>
-                                <button className="show-all-apps-btn" onClick={() => onShowAllApps(device.id)}>
-                                    <DynamicIcon name="clipboardList" size={14} /> Všechny ({topApps.length})
+                                <button className="show-all-apps-btn" onClick={() => onShowAllApps(device.id)} title="Zobrazit všechny aplikace a statistiky">
+                                    <DynamicIcon name="clipboardList" size={14} /> Všechny aplikace ({topApps.length})
                                 </button>
                             </div>
                             <div className="apps-list">
