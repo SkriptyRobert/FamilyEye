@@ -4,6 +4,43 @@
   padding: 2rem;
 }
 
+.device-owner-setup-mobile {
+  padding: 1rem 1.25rem;
+}
+
+.device-owner-setup-mobile .setup-header h2 {
+  font-size: 1.25rem;
+}
+
+.device-owner-setup-mobile .mobile-lead {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.device-owner-setup-mobile .mobile-do-instructions {
+  text-align: left;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.device-owner-setup-mobile .mobile-do-instructions p {
+  margin: 0 0 1rem;
+}
+
+.device-owner-setup-mobile .mobile-do-instructions ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.device-owner-setup-mobile .mobile-do-instructions li {
+  margin-bottom: 0.5rem;
+}
+
+.device-owner-setup-mobile .mobile-do-instructions strong {
+  color: var(--text-primary);
+}
+
 .setup-header {
   text-align: center;
   margin-bottom: 2rem;
