@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Shield, Menu, X, LayoutGrid, LayoutDashboard, Image, Download, BookOpen } from 'lucide-react'
 import { DOCS_URL, RELEASES_URL, GITHUB_REPO } from '../utils/links'
+import { img } from '../utils/assets'
 import './Hero.css'
 
 const navItems = [
@@ -23,10 +24,10 @@ export default function Hero() {
   const closeDrawer = () => setDrawerOpen(false)
 
   return (
-    <header className="hero">
+    <header className="hero" style={{ '--hero-bg-image': `url(${img('images/hero-family.jpg')})` }}>
       <nav className="hero-nav">
         <a href="#" className="hero-logo">
-          <img src="/images/logo.png" alt="FamilyEye" className="hero-logo-img" />
+          <img src={img('images/logo.png')} alt="FamilyEye" className="hero-logo-img" />
           <span className="hero-logo-text">FamilyEye</span>
         </a>
         <div className="hero-links">

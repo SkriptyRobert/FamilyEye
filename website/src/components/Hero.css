@@ -11,7 +11,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/images/hero-family.jpg') center / cover no-repeat;
+  background: var(--hero-bg-image, url('/images/hero-family.jpg')) center / cover no-repeat;
   opacity: 0.35;
   pointer-events: none;
 }

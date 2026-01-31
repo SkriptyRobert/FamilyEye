@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react'
 import LoginPreview from './LoginPreview'
+import { img } from '../utils/assets'
 import './Screenshots.css'
 
 /**
  * Pole karet karuselu. Pro dual-detail (dva obrazky vedle sebe v zoomu) pridat sources: [url1, url2].
- * Pro video: mediaType: 'video', videoSrc: '/images/demo.mp4'.
+ * Pro video: mediaType: 'video', videoSrc: 'images/demo.mp4'. Cesty bez lomitka – img() pridá base pro GH Pages.
  */
 const screenshots = [
   {
     id: 'smart-shield',
-    src: '/images/smart_shield_proof_1.png',
-    sources: ['/images/smart_shield_proof_1.png', '/images/smart_shield_proof_2.png'],
+    src: 'images/smart_shield_proof_1.png',
+    sources: ['images/smart_shield_proof_1.png', 'images/smart_shield_proof_2.png'],
     alt: 'Smart Shield – důkaz funkce',
     title: 'Smart Shield',
     desc: 'Detekce rizikového obsahu v reálném čase a důkazní snímky. Dva pohledy vedle sebe.',
@@ -19,7 +20,7 @@ const screenshots = [
   },
   {
     id: 'instalace-android',
-    src: '/images/installation_android.png',
+    src: 'images/installation_android.png',
     alt: 'Instalace Android – uvítací obrazovka',
     title: 'Instalace Android',
     desc: 'Průvodce nastavením: rodičovský PIN, oprávnění a aktivace monitoringu. Začít nastavení.',
@@ -28,7 +29,7 @@ const screenshots = [
   },
   {
     id: 'dashboard',
-    src: '/images/dashboard.png',
+    src: 'images/dashboard.png',
     alt: 'FamilyEye dashboard',
     title: 'Dashboard',
     desc: 'Přehled zařízení, stav rodiny, čas u obrazovky a rychlé akce.',
@@ -37,7 +38,7 @@ const screenshots = [
   },
   {
     id: 'mobile-prehled',
-    src: '/images/mobile-dashboard.png',
+    src: 'images/mobile-dashboard.png',
     alt: 'Přehled v mobilní aplikaci',
     title: 'Přehled (mobil)',
     desc: 'Tento týden, graf používání a aplikace – stejné údaje jako na webu.',
@@ -46,7 +47,7 @@ const screenshots = [
   },
   {
     id: 'mobile-statistiky',
-    src: '/images/mobile-stats.png',
+    src: 'images/mobile-stats.png',
     alt: 'Statistiky v mobilu',
     title: 'Statistiky (mobil)',
     desc: 'Celkový čas dnes, nejvíce používané aplikace a chytrý přehled anomálií.',
@@ -55,7 +56,7 @@ const screenshots = [
   },
   {
     id: 'mobile-smart-shield',
-    src: '/images/mobile-smart-shield.png',
+    src: 'images/mobile-smart-shield.png',
     alt: 'Smart Shield v mobilní aplikaci',
     title: 'Smart Shield (mobil)',
     desc: 'Detekce rizikového obsahu a důkazy v reálném čase na telefonu.',
@@ -64,9 +65,9 @@ const screenshots = [
   },
   {
     id: 'mobile-menu',
-    src: '/images/mobile-menu.png',
+    src: 'images/mobile-menu.png',
     alt: 'Boční menu (hamburger) v mobilní aplikaci',
-    fallbackSrc: '/images/mobile-smart-shield.png',
+    fallbackSrc: 'images/mobile-smart-shield.png',
     title: 'Menu (mobil)',
     desc: 'Boční navigace – Přehled, Zařízení, Smart Shield, Pravidla, Statistiky, Přidat. Stejné sekce jako v aplikaci.',
     useLoginFallback: false,
@@ -74,9 +75,9 @@ const screenshots = [
   },
   {
     id: 'pravidla',
-    src: '/images/rules.png',
+    src: 'images/rules.png',
     alt: 'Pravidla a limity',
-    fallbackSrc: '/images/dashboard.png',
+    fallbackSrc: 'images/dashboard.png',
     title: 'Pravidla',
     desc: 'Časové limity, rozvrhy a pravidla pro aplikace a zařízení.',
     useLoginFallback: false,
@@ -84,9 +85,9 @@ const screenshots = [
   },
   {
     id: 'statistiky',
-    src: '/images/statistics.png',
+    src: 'images/statistics.png',
     alt: 'Statistiky používání',
-    fallbackSrc: '/images/dashboard.png',
+    fallbackSrc: 'images/dashboard.png',
     title: 'Statistiky',
     desc: 'Grafy a reporty o používání aplikací a času u obrazovky.',
     useLoginFallback: false,
@@ -94,7 +95,7 @@ const screenshots = [
   },
   {
     id: 'statistiky-prehled',
-    src: '/images/statistics_overview.png',
+    src: 'images/statistics_overview.png',
     alt: 'Statistiky – přehled',
     title: 'Statistiky (přehled)',
     desc: 'Přehled času u obrazovky a aplikací podle zařízení. Celkový čas dnes a trendy.',
@@ -103,7 +104,7 @@ const screenshots = [
   },
   {
     id: 'statistiky-detail',
-    src: '/images/statistics_detail.png',
+    src: 'images/statistics_detail.png',
     alt: 'Statistiky – detail',
     title: 'Statistiky (detail)',
     desc: 'Detailní pohled na používání aplikací, časové úseky a reporty pro rodiče.',
@@ -112,8 +113,8 @@ const screenshots = [
   },
   {
     id: 'parovani',
-    src: '/images/pairing_1.png',
-    sources: ['/images/pairing_1.png', '/images/pairing_2.png'],
+    src: 'images/pairing_1.png',
+    sources: ['images/pairing_1.png', 'images/pairing_2.png'],
     alt: 'Párování zařízení',
     title: 'Párování',
     desc: 'Připojení nového zařízení přes QR kód nebo manuální vstup. Dva pohledy vedle sebe.',
@@ -122,7 +123,7 @@ const screenshots = [
   },
   {
     id: 'prihlaseni',
-    src: '/images/login.png',
+    src: 'images/login.png',
     alt: 'Přihlášení do FamilyEye',
     title: 'Přihlášení',
     desc: 'E-mail a heslo; dashboard v prohlížeči odkudkoliv.',
@@ -145,7 +146,7 @@ export default function Screenshots() {
   const isPausedRef = useRef(false)
   isPausedRef.current = isPaused
 
-  const getSrc = (s) => (s.fallbackSrc && failedIds.has(s.id) ? s.fallbackSrc : s.src)
+  const getSrc = (s) => img(s.fallbackSrc && failedIds.has(s.id) ? s.fallbackSrc : s.src)
   const onImageError = (s) => {
     if (s.useLoginFallback) setLoginImageFailed(true)
     if (s.fallbackSrc) setFailedIds((prev) => new Set(prev).add(s.id))
@@ -223,7 +224,7 @@ export default function Screenshots() {
               data-index={i}
               className="screenshot-card"
               onMouseEnter={() => setHovered(
-                showZoom(s) ? { ...s, src: getSrc(s), fallback: false } : { title: s.title, fallback: true }
+                showZoom(s) ? { ...s, src: getSrc(s), sources: s.sources?.map(img), fallback: false } : { title: s.title, fallback: true }
               )}
             >
               <div className="screenshot-img-wrap">
@@ -231,8 +232,8 @@ export default function Screenshots() {
                   <LoginPreview />
                 ) : s.mediaType === 'video' && s.videoSrc ? (
                   <video
-                    src={s.videoSrc}
-                    poster={s.src}
+                    src={img(s.videoSrc)}
+                    poster={getSrc(s)}
                     className="screenshot-img"
                     muted
                     loop
@@ -290,7 +291,7 @@ export default function Screenshots() {
               ))
             ) : hovered.mediaType === 'video' && hovered.videoSrc ? (
               <video
-                src={hovered.videoSrc}
+                src={img(hovered.videoSrc)}
                 poster={hovered.src}
                 className="screenshot-zoom-img"
                 muted

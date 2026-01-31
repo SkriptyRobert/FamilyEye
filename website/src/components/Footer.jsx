@@ -1,5 +1,6 @@
 import React from 'react'
 import { DOCS_URL, GITHUB_REPO, RELEASES_URL } from '../utils/links'
+import { img } from '../utils/assets'
 import './Footer.css'
 
 const VERSION = typeof import.meta.env.VITE_APP_VERSION !== 'undefined' ? import.meta.env.VITE_APP_VERSION : '2.4.0'
@@ -9,7 +10,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <img src="/images/logo.png" alt="FamilyEye" className="footer-logo" />
+          <img src={img('images/logo.png')} alt="FamilyEye" className="footer-logo" />
           <span className="footer-name">FamilyEye</span>
           <span className="footer-version">v{VERSION}</span>
         </div>

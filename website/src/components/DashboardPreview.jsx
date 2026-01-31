@@ -1,4 +1,5 @@
 import React from 'react'
+import { img } from '../utils/assets'
 import './DashboardPreview.css'
 
 export default function DashboardPreview() {
@@ -14,7 +15,7 @@ export default function DashboardPreview() {
         <div className="dashboard-block">
           <div className="dashboard-image-frame">
             <img
-              src="/images/dashboard.png"
+              src={img('images/dashboard.png')}
               alt="FamilyEye Dashboard – přehled zařízení a rodičovská kontrola"
               loading="lazy"
             />
@@ -25,19 +26,19 @@ export default function DashboardPreview() {
         <div className="responsive-showcase">
           <div className="responsive-phone-wrap">
             <div className="device-frame device-phone">
-              <img src="/images/mobile-dashboard.png" alt="Přehled v mobilní aplikaci" />
+              <img src={img('images/mobile-dashboard.png')} alt="Přehled v mobilní aplikaci" />
             </div>
             <span className="device-label">Přehled</span>
           </div>
           <div className="responsive-phone-wrap">
             <div className="device-frame device-phone">
-              <img src="/images/mobile-stats.png" alt="Statistiky v mobilu" />
+              <img src={img('images/mobile-stats.png')} alt="Statistiky v mobilu" />
             </div>
             <span className="device-label">Statistiky</span>
           </div>
           <div className="responsive-phone-wrap">
             <div className="device-frame device-phone">
-              <img src="/images/mobile-smart-shield.png" alt="Smart Shield v mobilu" />
+              <img src={img('images/mobile-smart-shield.png')} alt="Smart Shield v mobilu" />
             </div>
             <span className="device-label">Smart Shield</span>
           </div>
