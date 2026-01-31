@@ -2,12 +2,10 @@ name: Android Tests
 
 on:
   push:
-    branches: [ main, master, android-fix-process ]
     paths:
       - 'clients/android/**'
       - '.github/workflows/android.yml'
   pull_request:
-    branches: [ main, master, android-fix-process ]
     paths:
       - 'clients/android/**'
       - '.github/workflows/android.yml'

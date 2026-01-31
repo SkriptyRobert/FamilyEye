@@ -47,7 +47,7 @@ jobs:
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           Push-Location installer/agent
-          & $iscc setup_agent_2.4.0.iss
+          & $iscc setup_agent.iss
           Pop-Location
 
       - name: Upload Windows installer artifact

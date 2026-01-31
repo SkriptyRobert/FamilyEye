@@ -2,12 +2,10 @@ name: Frontend Tests
 
 on:
   push:
-    branches: [ main, master, android-fix-process ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
   pull_request:
-    branches: [ main, master, android-fix-process ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
