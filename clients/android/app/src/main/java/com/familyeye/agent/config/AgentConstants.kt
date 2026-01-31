@@ -23,6 +23,17 @@ object AgentConstants {
     const val USAGE_TRACK_INTERVAL_MS = 5_000L  // 5 seconds
 
     /**
+     * Interval when screen is off; longer to avoid waking the process often (battery-friendly).
+     */
+    const val USAGE_TRACK_INTERVAL_SCREEN_OFF_MS = 60_000L  // 60 seconds
+
+    /**
+     * Interval for flushing in-memory usage buffer to DB (milliseconds).
+     * Reduces disk writes while screen is on.
+     */
+    const val USAGE_FLUSH_INTERVAL_MS = 60_000L  // 60 seconds
+
+    /**
      * Interval for syncing usage logs to backend (milliseconds).
      * Also serves as heartbeat interval.
      */

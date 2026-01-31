@@ -500,8 +500,12 @@ adb shell dpm set-device-owner com.familyeye.agent/.receiver.FamilyEyeDeviceAdmi
 - WatchdogService (separate process)
 - ResurrectionJobService (JobScheduler)
 - ProcessGuardianWorker (WorkManager)
-- AlarmWatchdog (AlarmManager)
+- AlarmWatchdog (AlarmManager, smart watchdog – viz níže)
 - KeepAliveActivity (Activity-based)
+
+**Screen state (battery-friendly)**:
+- Při zapnutí displeje (`onScreenOn()`): naplánuje se AlarmWatchdog heartbeat, sync a WebSocket.
+- Při zhasnutí displeje (`onScreenOff()`): heartbeat se zruší – agent nebudí systém (snížení varování „Často budí systém“ a spotřeby baterie).
 
 ### AppDetectorService (`service/AppDetectorService.kt`)
 
@@ -781,10 +785,11 @@ Viz [architecture/security-model.md](./architecture/security-model.md) pro detai
 - Backup recovery mechanismus
 - Naplánováno každých 30 minut
 
-### 4. AlarmWatchdog
-- AlarmManager heartbeat
-- Každou minutu kontroluje stav
-- Spustí RestartReceiver pokud služba neběží
+### 4. AlarmWatchdog (smart watchdog)
+- AlarmManager heartbeat – plánuje se **jen při zapnutém displeji**.
+- RestartReceiver při každém spuštění znovu naplánuje heartbeat **pouze pokud je displej zapnutý** (`PowerManager.isInteractive`). Při zhasnutém displeji se heartbeat neplánuje, takže systém není buden z Doze.
+- Při zhasnutí displeje FamilyEyeService volá `AlarmWatchdog.cancel()`; při zapnutí displeje volá `AlarmWatchdog.scheduleHeartbeat()`. Cíl: snížit varování „Často budí systém“ a spotřebu baterie. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
+- Spustí RestartReceiver; ten spustí službu a podle stavu displeje případně naplánuje další heartbeat.
 
 ### 5. KeepAliveActivity
 - Activity-based restart

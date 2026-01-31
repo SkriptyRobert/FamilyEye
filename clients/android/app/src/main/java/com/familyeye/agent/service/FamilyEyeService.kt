@@ -195,12 +195,11 @@ class FamilyEyeService : Service(), ScreenStateListener {
 
     override fun onScreenOn() {
         Timber.i("Screen ON - triggering immediate sync and WebSocket reconnect")
+        AlarmWatchdog.scheduleHeartbeat(applicationContext)
         serviceScope.launch {
             try {
-                // Force WebSocket reconnect
                 webSocketClient.stop()
                 webSocketClient.start()
-                // Force immediate sync
                 reporter.forceSync()
             } catch (e: Exception) {
                 Timber.e(e, "Error during screen-on sync")
@@ -209,7 +208,8 @@ class FamilyEyeService : Service(), ScreenStateListener {
     }
 
     override fun onScreenOff() {
-        Timber.d("Screen OFF - monitoring continues in background")
+        Timber.d("Screen OFF - cancelling heartbeat alarm (battery-friendly)")
+        AlarmWatchdog.cancel(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

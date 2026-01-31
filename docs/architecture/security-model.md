@@ -116,33 +116,23 @@ WorkManager.getInstance(this).enqueueUniquePeriodicWork(
 
 **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/ProcessGuardianWorker.kt`
 
-### Vrstva 4: AlarmWatchdog (AlarmManager Heartbeat)
+### Vrstva 4: AlarmWatchdog (AlarmManager Heartbeat, smart watchdog)
 
 **Jak funguje:**
-- AlarmManager heartbeat každou minutu
-- Pokud aplikace neodpovídá, spustí `RestartReceiver`
-- `RestartReceiver` spustí `KeepAliveActivity`
-- `KeepAliveActivity` spustí službu
+- AlarmManager heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji agent nebudí systém (snížení varování „Často budí systém“ a spotřeby baterie).
+- RestartReceiver po spuštění naplánuje další heartbeat **pouze pokud je displej zapnutý** (`PowerManager.isInteractive`). Při zhasnutém displeji heartbeat neplánuje.
+- FamilyEyeService: při SCREEN_OFF volá `AlarmWatchdog.cancel()`, při SCREEN_ON volá `AlarmWatchdog.scheduleHeartbeat()`.
+- Pokud aplikace neodpovídá, spustí `RestartReceiver`; ten spustí službu a podle stavu displeje případně naplánuje další heartbeat. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
+- `RestartReceiver` spustí službu; `KeepAliveActivity` je poslední záchrana.
 
 **Technický detail:**
-```kotlin
-val triggerTime = System.currentTimeMillis() + HEARTBEAT_INTERVAL_MS // 60 seconds
-
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    if (alarmManager.canScheduleExactAlarms()) {
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            triggerTime,
-            pendingIntent
-        )
-    }
-}
-```
+- Heartbeat se plánuje v `AlarmWatchdog.scheduleHeartbeat()` (voláno z `FamilyEyeService.onScreenOn()` a z `RestartReceiver` jen když `powerManager.isInteractive == true`).
+- Při zhasnutí displeje `FamilyEyeService.onScreenOff()` volá `AlarmWatchdog.cancel()`.
 
 **Proč to funguje:**
 - AlarmManager je systémová služba
-- `setExactAndAllowWhileIdle()` funguje i v Doze módu
-- Přežije app kill
+- Při zapnutém displeji Doze stejně neběží; při zhasnutém nebudíme zařízení zbytečně
+- Přežije app kill; obnova zůstává na JobScheduler, WorkManager a onTaskRemoved
 
 **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/AlarmWatchdog.kt`
 

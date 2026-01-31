@@ -11,6 +11,9 @@ interface UsageLogDao {
     @Insert
     suspend fun insert(log: UsageLogEntity): Long
 
+    @Insert
+    suspend fun insertAll(logs: List<UsageLogEntity>)
+
     @Query("SELECT * FROM usage_logs WHERE isSync = 0 ORDER BY timestamp ASC LIMIT :limit")
     suspend fun getUnsyncedLogs(limit: Int = 100): List<UsageLogEntity>
 

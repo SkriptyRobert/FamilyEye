@@ -89,21 +89,29 @@ class UsageTracker @Inject constructor(
         context.getSystemService(Context.POWER_SERVICE) as PowerManager
     }
 
+    // In-memory buffer for usage logs; flushed every USAGE_FLUSH_INTERVAL_MS or on screen off (battery-friendly)
+    private val usageBuffer = mutableListOf<UsageLogEntity>()
+    private var lastFlushTime: Long = 0L
+
     fun start() {
         trackerScope.launch {
-            // DISABLED: Reconciliation causes inflated usage stats
-            // reconcileWithSystemStats()
-            // Instead, just reset lastCheckTime to NOW on fresh start
-            // This prevents phantom usage from accumulating
             Timber.i("UsageTracker: Starting fresh tracking (no reconciliation)")
-            
+            lastFlushTime = secureTimeProvider.getSecureCurrentTimeMillis()
             while (isActive) {
                 try {
                     trackUsage()
+                    if (isScreenOn()) {
+                        val now = secureTimeProvider.getSecureCurrentTimeMillis()
+                        if (now - lastFlushTime >= AgentConstants.USAGE_FLUSH_INTERVAL_MS) {
+                            flushBuffer()
+                            lastFlushTime = now
+                        }
+                    }
                 } catch (e: Exception) {
                     Timber.e(e, "Error in UsageTracker")
                 }
-                delay(AgentConstants.USAGE_TRACK_INTERVAL_MS)
+                val delayMs = if (isScreenOn()) AgentConstants.USAGE_TRACK_INTERVAL_MS else AgentConstants.USAGE_TRACK_INTERVAL_SCREEN_OFF_MS
+                delay(delayMs)
             }
         }
     }
@@ -183,9 +191,10 @@ class UsageTracker @Inject constructor(
             return
         }
 
-        // Skip tracking if screen is off (no phantom usage)
+        // Skip tracking if screen is off (no phantom usage); flush buffer before sleep
         if (!isScreenOn()) {
-            Timber.v("TrackUsage: Screen OFF, updating lastCheckTime only")
+            Timber.v("TrackUsage: Screen OFF, flushing buffer and updating lastCheckTime")
+            flushBuffer()
             lastCheckTime = currentTime
             return
         }
@@ -251,21 +260,16 @@ class UsageTracker @Inject constructor(
     }
 
     private suspend fun logUsage(packageName: String, durationSeconds: Int) {
-        // Use cached app name resolution
         val appName = AppInfoResolver.getAppName(context, packageName)
         Timber.d("Tracked: $appName ($packageName) for ${durationSeconds}s")
-        
-        // Use secure time for timestamp
         val secureTimestamp = secureTimeProvider.getSecureCurrentTimeMillis()
-        
-        usageLogDao.insert(
-            UsageLogEntity(
-                appName = appName,
-                packageName = packageName,
-                durationSeconds = durationSeconds,
-                timestamp = secureTimestamp
-            )
+        val entity = UsageLogEntity(
+            appName = appName,
+            packageName = packageName,
+            durationSeconds = durationSeconds,
+            timestamp = secureTimestamp
         )
+        synchronized(usageBuffer) { usageBuffer.add(entity) }
 
         // Enforce Rules Strategy:
         // 1. Check UNIVERSAL rules (Blacklist, Lock, Schedule) -> via EnforcementService
@@ -331,30 +335,36 @@ class UsageTracker @Inject constructor(
         }
     }
 
-    /**
-     * Check if the screen is currently on.
-     */
-    private fun isScreenOn(): Boolean {
-        return powerManager.isInteractive
+    private fun isScreenOn(): Boolean = powerManager.isInteractive
+
+    private suspend fun flushBuffer() {
+        val toInsert = synchronized(usageBuffer) {
+            if (usageBuffer.isEmpty()) return
+            usageBuffer.toList().also { usageBuffer.clear() }
+        }
+        if (toInsert.isNotEmpty()) {
+            usageLogDao.insertAll(toInsert)
+            Timber.v("UsageTracker: Flushed ${toInsert.size} usage entries to DB")
+        }
     }
 
     suspend fun getUsageToday(packageName: String): Int {
         val startOfDay = secureTimeProvider.getSecureStartOfDay()
         val localUsage = usageLogDao.getUsageDurationForPackage(packageName, startOfDay) ?: 0
-        
-        // Combine with remote baseline (Source of Truth for historic usage)
+        val bufferSum = synchronized(usageBuffer) {
+            usageBuffer.filter { it.packageName == packageName }.sumOf { it.durationSeconds }
+        }
         val appName = AppInfoResolver.getAppName(context, packageName)
         val remoteUsage = usageRepository.getRemoteAppUsage(appName)
-        
-        // maxOf(local, remote): usage only grows; remote=baseline to last sync, local covers offline delta.
-        return maxOf(localUsage, remoteUsage)
+        return maxOf(localUsage + bufferSum, remoteUsage)
     }
 
     suspend fun getTotalUsageToday(): Int {
         val startOfDay = secureTimeProvider.getSecureStartOfDay()
         val localTotal = usageLogDao.getTotalUsageToday(startOfDay).firstOrNull() ?: 0
+        val bufferSum = synchronized(usageBuffer) { usageBuffer.sumOf { it.durationSeconds } }
         val remoteTotal = usageRepository.getRemoteDailyUsage()
-        return maxOf(localTotal, remoteTotal)
+        return maxOf(localTotal + bufferSum, remoteTotal)
     }
 
     /**

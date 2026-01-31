@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import com.familyeye.agent.service.FamilyEyeService
 import timber.log.Timber
 
@@ -75,12 +76,16 @@ class RestartReceiver : BroadcastReceiver() {
                 }
             }
             
-            // RE-SCHEDULE THE HEARTBEAT
-            // This creates the infinite loop. Even if the service starts, we want the next alarm ready.
-            try {
-                com.familyeye.agent.service.AlarmWatchdog.scheduleHeartbeat(context)
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to reschedule heartbeat from receiver")
+            // Re-schedule heartbeat only when screen is on (smart watchdog: do not wake device when screen off)
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            if (powerManager?.isInteractive == true) {
+                try {
+                    com.familyeye.agent.service.AlarmWatchdog.scheduleHeartbeat(context)
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to reschedule heartbeat from receiver")
+                }
+            } else {
+                Timber.v("RestartReceiver: Screen off, not rescheduling heartbeat (battery-friendly)")
             }
         }
     }

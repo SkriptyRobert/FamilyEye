@@ -95,7 +95,7 @@ Po spuštění `FamilyEyeService.onCreate()` se provede:
 6. **Monitoring Tasks** - Spuštění sledovacích úloh
 7. **Screen State Receiver** - Registrace receiveru pro screen on/off
 8. **Watchdog Monitoring** - Vzájemné monitorování watchdogu
-9. **Alarm Heartbeat** - Agresivní persistence pomocí AlarmManager
+9. **Alarm Heartbeat** - Plánuje se při zapnutí displeje; při zhasnutí se zruší (smart watchdog, šetrnost k baterii)
 
 **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/FamilyEyeService.kt:onCreate()`
 
@@ -143,8 +143,8 @@ flowchart TD
    - Přežije app kill
    - **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/ProcessGuardianWorker.kt`
 
-4. **AlarmWatchdog** (AlarmManager)
-   - Heartbeat každou minutu
+4. **AlarmWatchdog** (AlarmManager, smart watchdog)
+   - Heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji RestartReceiver heartbeat neplánuje; FamilyEyeService při SCREEN_OFF volá `AlarmWatchdog.cancel()`, při SCREEN_ON volá `scheduleHeartbeat()`. Cíl: snížit „Často budí systém“ a spotřebu baterie. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
    - Pokud aplikace neodpovídá, spustí `RestartReceiver`
    - **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/AlarmWatchdog.kt`
 

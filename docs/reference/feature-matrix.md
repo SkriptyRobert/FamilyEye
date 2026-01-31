@@ -198,6 +198,8 @@ Výchozí klíčová slova jsou definována v `backend/app/config/smart_shield_d
 | Content scanning | Skenování obsahu pro klíčová slova | Medium |
 | Screenshot capture | Pořízení screenshotu při detekci | High |
 
+**Šetrnost k baterii:** Při zhasnutém displeji agent nebudí systém (smart watchdog), usage buffer se zapisuje na disk méně často; při zapnutí displeje se agent okamžitě aktivuje a provede sync.
+
 ## Technické reference
 
 ### Backend soubory
