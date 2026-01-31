@@ -39,7 +39,7 @@ class WatchdogService : Service() {
 
         val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
             .setOngoing(true)
-            .setSmallIcon(android.R.drawable.ic_secure)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("FamilyEye")
             .setContentText("Monitorování aktivní")
             // Priority LOW ensures it shows up but isn't annoying
