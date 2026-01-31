@@ -71,6 +71,7 @@ data class AgentReportRequest(
     @Json(name = "running_processes") val runningProcesses: List<String>? = null,
     @Json(name = "device_uptime_seconds") val deviceUptimeSeconds: Int? = null, // Added based on plan
     @Json(name = "device_usage_today_seconds") val deviceUsageTodaySeconds: Int? = null,
+    @Json(name = "timezone_offset_seconds") val timezoneOffsetSeconds: Int? = null,
     @Json(name = "battery_level") val batteryLevel: Int? = null, // Added based on plan
     @Json(name = "android_version") val androidVersion: String? = null, // Added based on plan
     @Json(name = "screen_on") val screenOn: Boolean? = null, // Added based on plan
