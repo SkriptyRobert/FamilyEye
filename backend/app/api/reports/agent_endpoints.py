@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict
 from datetime import datetime, timedelta, timezone
-from datetime import datetime, timedelta, timezone
 import logging
 import json
 
@@ -36,20 +35,21 @@ async def agent_report_usage(
     # Update last_seen timestamp
     now_utc = datetime.now(timezone.utc)
     device.last_seen = now_utc
-    
-    # Calculate timezone offset
-    if request.client_timestamp:
+
+    # Device timezone: agent can send offset directly (preferred) or we infer from client_timestamp
+    if request.timezone_offset_seconds is not None:
+        device.timezone_offset = request.timezone_offset_seconds
+        logger.debug(f"Updated timezone offset for device {device.id}: {device.timezone_offset}s")
+    elif request.client_timestamp:
         client_ts = request.client_timestamp
         server_naive = now_utc.replace(tzinfo=None)
         if client_ts.tzinfo is not None:
             client_ts = client_ts.replace(tzinfo=None)
-             
         diff = client_ts - server_naive
         offset_seconds = int(diff.total_seconds())
-        
         if abs(device.timezone_offset - offset_seconds) > 60:
             device.timezone_offset = offset_seconds
-            logger.debug(f"Updated timezone offset for device {device.id}: {offset_seconds}s")
+            logger.debug(f"Updated timezone offset for device {device.id}: {offset_seconds}s (from client_timestamp)")
 
     # Track first report of the day
     offset_seconds = device.timezone_offset or 0
