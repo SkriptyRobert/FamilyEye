@@ -150,6 +150,14 @@
   color: var(--text-secondary);
 }
 
+.device-owner-hint {
+  margin: 0;
+  padding: 8px 0 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 /* Actions */
 .card-actions {
   display: grid;
