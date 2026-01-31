@@ -57,6 +57,7 @@ import {
     CircleDot,
     Shield,
     Scroll,
+    LayoutGrid,
 } from 'lucide-react'
 
 // Map of icon names to components
@@ -162,6 +163,12 @@ const iconMap = {
 
     // Rules
     scroll: Scroll,
+
+    // List / All apps
+    'clipboard-list': LayoutGrid,
+    clipboardList: LayoutGrid,
+    'layout-grid': LayoutGrid,
+    'all-apps': LayoutGrid,
 }
 
 /**
