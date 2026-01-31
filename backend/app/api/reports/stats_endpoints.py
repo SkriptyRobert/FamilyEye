@@ -49,16 +49,16 @@ async def get_usage_by_hour(
     """Get usage data grouped by date and hour for heatmap visualization."""
     days = min(days, 14)
     
-    cache_key = f"usage_by_hour:{device_id}:{days}"
+    device = verify_device_ownership(device_id, current_user.id, db)
+    offset_seconds = device.timezone_offset or 0
+    cache_key = f"usage_by_hour:{device_id}:{days}:{offset_seconds}"
     cached = stats_cache.get(cache_key)
     if cached is not None:
         return cached
-    
-    verify_device_ownership(device_id, current_user.id, db)
-    
+
     now_utc = datetime.now(timezone.utc)
     start_date = now_utc - timedelta(days=days)
-    
+
     results = db.query(
         date_expr(db, UsageLog.timestamp).label('date'),
         hour_expr(db, UsageLog.timestamp).label('hour'),
@@ -71,12 +71,18 @@ async def get_usage_by_hour(
         hour_expr(db, UsageLog.timestamp)
     ).all()
 
-    heatmap_data = [{
-        "date": str(row.date),
-        "hour": int(row.hour),
-        "duration_seconds": int(row.total_seconds or 0),
-        "duration_minutes": round((row.total_seconds or 0) / 60, 1)
-    } for row in results]
+    heatmap_data = []
+    for row in results:
+        utc_dt = datetime.strptime(
+            f"{row.date} {int(row.hour):02d}:00:00", "%Y-%m-%d %H:%M:%S"
+        ).replace(tzinfo=timezone.utc)
+        local_dt = utc_dt + timedelta(seconds=offset_seconds)
+        heatmap_data.append({
+            "date": local_dt.strftime("%Y-%m-%d"),
+            "hour": local_dt.hour,
+            "duration_seconds": int(row.total_seconds or 0),
+            "duration_minutes": round((row.total_seconds or 0) / 60, 1)
+        })
     
     response = {
         "device_id": device_id,
@@ -250,12 +256,12 @@ async def get_app_details(
     """Get detailed analysis of a specific application's usage."""
     days = min(days, 30)
     
-    cache_key = f"app_details:{device_id}:{app_name}:{days}"
+    device = verify_device_ownership(device_id, current_user.id, db)
+    offset_seconds = device.timezone_offset or 0
+    cache_key = f"app_details:{device_id}:{app_name}:{days}:{offset_seconds}"
     cached = stats_cache.get(cache_key)
     if cached is not None:
         return cached
-    
-    verify_device_ownership(device_id, current_user.id, db)
     
     now_utc = datetime.now(timezone.utc)
     start_date = now_utc - timedelta(days=days)
@@ -269,8 +275,10 @@ async def get_app_details(
     sessions_count = int(total_stats.sessions_count or 0)
     avg_session = int(total_seconds / sessions_count) if sessions_count > 0 else 0
     
-    # Hourly distribution
-    usage_by_hour = stats_service.get_hourly_distribution(db, device_id, app_names, start_str)
+    # Hourly distribution (device local time)
+    usage_by_hour = stats_service.get_hourly_distribution(
+        db, device_id, app_names, start_str, offset_seconds
+    )
     
     # Daily breakdown
     usage_by_day = []
