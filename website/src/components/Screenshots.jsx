@@ -3,16 +3,26 @@ import LoginPreview from './LoginPreview'
 import './Screenshots.css'
 
 /**
- * Flow: instalace -> dashboard -> pravidla -> statistiky -> Smart Shield -> parovani -> prihlaseni -> stazeni.
- * Pro video: mediaType: 'video', videoSrc: '/images/demo.mp4'. GIF pouzijte jako obycejny obrazek (src: '.gif').
+ * Pole karet karuselu. Pro dual-detail (dva obrazky vedle sebe v zoomu) pridat sources: [url1, url2].
+ * Pro video: mediaType: 'video', videoSrc: '/images/demo.mp4'.
  */
 const screenshots = [
   {
-    id: 'instalace',
-    src: '/images/installation_page.png',
-    alt: 'Instalace serveru a agentů',
-    title: 'Instalace (Win / Android)',
-    desc: 'Jednoduchá instalace serveru a agentů na Windows a Android. One-click nebo Docker.',
+    id: 'smart-shield',
+    src: '/images/smart_shield_proof_1.png',
+    sources: ['/images/smart_shield_proof_1.png', '/images/smart_shield_proof_2.png'],
+    alt: 'Smart Shield – důkaz funkce',
+    title: 'Smart Shield',
+    desc: 'Detekce rizikového obsahu v reálném čase a důkazní snímky. Dva pohledy vedle sebe.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
+    id: 'instalace-android',
+    src: '/images/installation_android.png',
+    alt: 'Instalace Android – uvítací obrazovka',
+    title: 'Instalace Android',
+    desc: 'Průvodce nastavením: rodičovský PIN, oprávnění a aktivace monitoringu. Začít nastavení.',
     useLoginFallback: false,
     mediaType: 'image',
   },
@@ -83,21 +93,30 @@ const screenshots = [
     mediaType: 'image',
   },
   {
-    id: 'smart-shield',
-    src: '/images/smart_shield.png',
-    alt: 'Smart Shield – detekce obsahu',
-    fallbackSrc: '/images/dashboard.png',
-    title: 'Smart Shield',
-    desc: 'Detekce rizikového obsahu v reálném čase a důkazní snímky.',
+    id: 'statistiky-prehled',
+    src: '/images/statistics_overview.png',
+    alt: 'Statistiky – přehled',
+    title: 'Statistiky (přehled)',
+    desc: 'Přehled času u obrazovky a aplikací podle zařízení. Celkový čas dnes a trendy.',
+    useLoginFallback: false,
+    mediaType: 'image',
+  },
+  {
+    id: 'statistiky-detail',
+    src: '/images/statistics_detail.png',
+    alt: 'Statistiky – detail',
+    title: 'Statistiky (detail)',
+    desc: 'Detailní pohled na používání aplikací, časové úseky a reporty pro rodiče.',
     useLoginFallback: false,
     mediaType: 'image',
   },
   {
     id: 'parovani',
-    src: '/images/pairing_screen.png',
+    src: '/images/pairing_1.png',
+    sources: ['/images/pairing_1.png', '/images/pairing_2.png'],
     alt: 'Párování zařízení',
     title: 'Párování',
-    desc: 'Připojení nového zařízení přes QR kód nebo manuální vstup.',
+    desc: 'Připojení nového zařízení přes QR kód nebo manuální vstup. Dva pohledy vedle sebe.',
     useLoginFallback: false,
     mediaType: 'image',
   },
@@ -110,26 +129,21 @@ const screenshots = [
     useLoginFallback: true,
     mediaType: 'image',
   },
-  {
-    id: 'stazeni',
-    src: '/images/downloads_section.png',
-    alt: 'Stažení',
-    title: 'Stažení',
-    desc: 'Agent pro Windows a APK pro Android z releases.',
-    useLoginFallback: false,
-    mediaType: 'image',
-  },
 ]
 
-const CLOSE_DELAY_MS = 0
+/** Rychlost plynulého posuvu v pixelech za sekundu (jako titulkový pás). */
+const SCROLL_PX_PER_SEC = 55
+const AUTO_SCROLL_TICK_MS = 50
 
 export default function Screenshots() {
   const [loginImageFailed, setLoginImageFailed] = useState(false)
   const [failedIds, setFailedIds] = useState(() => new Set())
   const [hovered, setHovered] = useState(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const closeTimer = useRef(null)
+  const [isPaused, setIsPaused] = useState(false)
   const scrollRef = useRef(null)
+  const isPausedRef = useRef(false)
+  isPausedRef.current = isPaused
 
   const getSrc = (s) => (s.fallbackSrc && failedIds.has(s.id) ? s.fallbackSrc : s.src)
   const onImageError = (s) => {
@@ -138,14 +152,6 @@ export default function Screenshots() {
   }
 
   const showZoom = (s) => !(s.useLoginFallback && loginImageFailed)
-
-  const scheduleClose = () => {
-    closeTimer.current = setTimeout(() => setHovered(null), CLOSE_DELAY_MS)
-  }
-  const cancelClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current)
-    closeTimer.current = null
-  }
 
   const scrollToIndex = (i) => {
     const el = scrollRef.current
@@ -180,20 +186,34 @@ export default function Screenshots() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const step = (SCROLL_PX_PER_SEC * AUTO_SCROLL_TICK_MS) / 1000
+    const id = setInterval(() => {
+      if (isPausedRef.current) return
+      const maxScroll = el.scrollWidth - el.clientWidth
+      if (maxScroll <= 0) return
+      el.scrollLeft += step
+      if (el.scrollLeft >= maxScroll - 1) el.scrollLeft = 0
+    }, AUTO_SCROLL_TICK_MS)
+    return () => clearInterval(id)
+  }, [])
+
   return (
     <section
       id="screenshots"
       className="screenshots"
-      onMouseLeave={() => { cancelClose(); setHovered(null) }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => { setHovered(null); setIsPaused(false) }}
+      onClick={() => setIsPaused(true)}
     >
       <div className="screenshots-inner">
         <h2 className="screenshots-title">FamilyEye v praxi</h2>
-        <p className="screenshots-intro">
-        </p>
 
         <div
           ref={scrollRef}
-          className="screenshots-carousel"
+          className={`screenshots-carousel${!isPaused ? ' screenshots-carousel--auto-scroll' : ''}`}
           role="region"
           aria-label="Náhledy obrazovek"
         >
@@ -254,15 +274,20 @@ export default function Screenshots() {
 
       {hovered && (
         <div
-          className="screenshot-zoom-panel"
+          className={`screenshot-zoom-panel${hovered.sources?.length >= 2 ? ' screenshot-zoom-panel--multi' : ''}`}
           role="dialog"
           aria-label={`Náhled: ${hovered.title}`}
-          onMouseEnter={cancelClose}
           onMouseLeave={() => setHovered(null)}
         >
-          <div className="screenshot-zoom-frame">
+          <div className={`screenshot-zoom-frame${hovered.sources?.length >= 2 ? ' screenshot-zoom-frame--multi' : ''}`}>
             {hovered.fallback ? (
               <LoginPreview />
+            ) : hovered.sources?.length >= 2 ? (
+              hovered.sources.map((url, idx) => (
+                <div key={idx} className={`screenshot-zoom-multi-cell${idx === 0 ? ' screenshot-zoom-multi-cell--zoomed' : ''}`}>
+                  <img src={url} alt={`${hovered.alt} ${idx + 1}`} className="screenshot-zoom-img" />
+                </div>
+              ))
             ) : hovered.mediaType === 'video' && hovered.videoSrc ? (
               <video
                 src={hovered.videoSrc}
