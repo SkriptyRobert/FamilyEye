@@ -5,6 +5,7 @@
   justify-content: center;
   background: linear-gradient(135deg, var(--accent-color, #6366f1) 0%, #764ba2 100%);
   padding: 20px;
+  overflow-x: hidden;
 }
 
 .login-box {
@@ -15,6 +16,28 @@
   width: 100%;
   max-width: 400px;
   position: relative;
+}
+
+.login-theme-toggle-wrap {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+}
+
+.login-box .theme-toggle {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.login-box .theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .login-box h1 {
@@ -35,7 +58,6 @@
 
 .login-logo-spacer {
   width: 64px;
-  /* Should match the logo width approx */
   height: 64px;
   visibility: hidden;
 }
@@ -56,6 +78,7 @@
 
 .toggle button {
   flex: 1;
+  min-width: 0;
   padding: 10px;
   border: 2px solid var(--border-color, #e2e8f0);
   background: var(--bg-secondary, #ffffff);
@@ -121,4 +144,86 @@ form {
   border-radius: 8px;
   font-size: 14px;
   border: 1px solid var(--error-color, #ef4444);
+}
+
+.login-url-hint {
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  display: block;
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+/* MOBILE: karta s 5% okraji  */
+@media (max-width: 767px) {
+  .login-container {
+    min-height: 100dvh;
+    padding: 5%;
+    padding-top: max(5%, env(safe-area-inset-top));
+    padding-bottom: max(5%, env(safe-area-inset-bottom));
+  }
+
+  .login-box {
+    max-width: none;
+    padding: 24px 20px 28px;
+  }
+
+  .login-theme-toggle-wrap {
+    top: 20px;
+    right: 20px;
+  }
+
+  .login-box .theme-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .login-box h1 {
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+
+  .login-logo {
+    height: 52px;
+  }
+
+  .login-logo-spacer {
+    width: 52px;
+    height: 52px;
+  }
+
+  .login-box h2 {
+    margin-bottom: 18px;
+    font-size: 17px;
+  }
+
+  .toggle {
+    margin-bottom: 18px;
+  }
+
+  .toggle button {
+    padding: 12px 10px;
+    font-size: 15px;
+  }
+
+  form {
+    gap: 14px;
+  }
+
+  .login-url-hint {
+    margin-top: 6px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+  }
+
+  .input {
+    padding: 14px 12px;
+  }
+
+  .button {
+    padding: 14px 24px;
+    margin-top: 6px;
+    min-height: 48px;
+  }
 }
