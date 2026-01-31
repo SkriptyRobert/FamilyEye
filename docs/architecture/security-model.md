@@ -92,7 +92,7 @@ val jobInfo = JobInfo.Builder(JOB_ID, ComponentName(context, ResurrectionJobServ
 
 **Jak funguje:**
 - WorkManager je backup recovery mechanismus
-- Naplánováno každých 30 minut
+- Naplánováno každých 15 minut (`AgentConstants.GUARDIAN_WORKER_INTERVAL_MIN`)
 - Přežije app kill
 - Pokud služba neběží, WorkManager ji spustí
 
@@ -119,7 +119,7 @@ WorkManager.getInstance(this).enqueueUniquePeriodicWork(
 ### Vrstva 4: AlarmWatchdog (AlarmManager Heartbeat, smart watchdog)
 
 **Jak funguje:**
-- AlarmManager heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji agent nebudí systém (snížení varování „Často budí systém“ a spotřeby baterie).
+- Interval heartbeat: **2 minuty** (120 s) při zapnutém displeji (`AlarmWatchdog.HEARTBEAT_INTERVAL_MS`). AlarmManager heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji agent nebudí systém (snížení varování „Často budí systém“ a spotřeby baterie).
 - RestartReceiver po spuštění naplánuje další heartbeat **pouze pokud je displej zapnutý** (`PowerManager.isInteractive`). Při zhasnutém displeji heartbeat neplánuje.
 - FamilyEyeService: při SCREEN_OFF volá `AlarmWatchdog.cancel()`, při SCREEN_ON volá `AlarmWatchdog.scheduleHeartbeat()`.
 - Pokud aplikace neodpovídá, spustí `RestartReceiver`; ten spustí službu a podle stavu displeje případně naplánuje další heartbeat. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.

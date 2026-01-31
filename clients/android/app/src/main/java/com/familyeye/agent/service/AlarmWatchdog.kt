@@ -9,14 +9,13 @@ import com.familyeye.agent.receiver.RestartReceiver
 import timber.log.Timber
 
 /**
- * Aggressive Watchdog using AlarmManager.
- * Schedules a "Heartbeat" that fires every minute (or as fast as OS allows).
- * This acts as an external pulse: if the app is alive, it just resets the timer.
- * If the app is dead, this alarm will wake up the system and trigger RestartReceiver.
+ * Watchdog using AlarmManager.
+ * Schedules a "Heartbeat" every 2 minutes when screen is on (screen-off case: alarm is not scheduled).
+ * If the app is alive, it just resets the timer. If dead, the alarm wakes the system and triggers RestartReceiver.
  */
 object AlarmWatchdog {
 
-    private const val HEARTBEAT_INTERVAL_MS = 60_000L // 1 minute
+    private const val HEARTBEAT_INTERVAL_MS = 120_000L // 2 minutes (battery-friendly when screen on)
     private const val REQUEST_CODE = 777
 
     fun scheduleHeartbeat(context: Context) {

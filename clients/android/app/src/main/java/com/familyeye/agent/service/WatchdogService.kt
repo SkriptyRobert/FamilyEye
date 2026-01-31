@@ -25,7 +25,7 @@ class WatchdogService : Service() {
 
     private fun startForegroundService() {
         val channelId = "familyeye_watchdog_v2" // Changed ID to force update
-        val channelName = "Security Watchdog"
+        val channelName = "FamilyEye Watchdog"
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             // ERROR FIX: Use IMPORTANCE_LOW (2) so it appears in status bar but doesn't ding
@@ -40,8 +40,8 @@ class WatchdogService : Service() {
         val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
             .setOngoing(true)
             .setSmallIcon(android.R.drawable.ic_secure)
-            .setContentTitle("FamilyEye Security")
-            .setContentText("Active Device Protection")
+            .setContentTitle("FamilyEye")
+            .setContentText("Monitorování aktivní")
             // Priority LOW ensures it shows up but isn't annoying
             .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
             .setCategory(androidx.core.app.NotificationCompat.CATEGORY_SERVICE)

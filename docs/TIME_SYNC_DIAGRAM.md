@@ -15,7 +15,7 @@ sequenceDiagram
     Backend-->>Agent: rules + server_time (UTC)
     Agent->>Agent: Calculate offset (Server - Local)
     
-    Note over Agent,Backend: USAGE REPORTING (each 60s)
+    Note over Agent,Backend: USAGE REPORTING (periodic)
     Agent->>Backend: POST /api/reports/agent/report
     Backend-->>Agent: OK + commands
     
@@ -23,6 +23,8 @@ sequenceDiagram
     Frontend->>Backend: GET /api/reports/device/{id}/summary
     Backend-->>Frontend: today_usage, apps_with_limits
 ```
+
+**Interval reportování:** Na Androidu sync 60 s při zapnutém displeji; na Windows dle `reporting_interval` (typ. 300 s).
 
 ## Schedule Rule Processing
 

@@ -139,12 +139,12 @@ flowchart TD
 
 3. **ProcessGuardianWorker** (WorkManager)
    - Backup recovery mechanismus
-   - Naplánováno každých 30 minut
+   - Naplánováno každých 15 minut (`GUARDIAN_WORKER_INTERVAL_MIN`)
    - Přežije app kill
    - **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/ProcessGuardianWorker.kt`
 
 4. **AlarmWatchdog** (AlarmManager, smart watchdog)
-   - Heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji RestartReceiver heartbeat neplánuje; FamilyEyeService při SCREEN_OFF volá `AlarmWatchdog.cancel()`, při SCREEN_ON volá `scheduleHeartbeat()`. Cíl: snížit „Často budí systém“ a spotřebu baterie. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
+   - Interval heartbeat: 2 minuty při zapnutém displeji. Heartbeat se plánuje **jen při zapnutém displeji**. Při zhasnutém displeji RestartReceiver heartbeat neplánuje; FamilyEyeService při SCREEN_OFF volá `AlarmWatchdog.cancel()`, při SCREEN_ON volá `scheduleHeartbeat()`. Cíl: snížit „Často budí systém“ a spotřebu baterie. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
    - Pokud aplikace neodpovídá, spustí `RestartReceiver`
    - **Zdroj**: `clients/android/app/src/main/java/com/familyeye/agent/service/AlarmWatchdog.kt`
 

@@ -136,13 +136,13 @@ private val IGNORED_PACKAGES = setOf(
 
 #### Rate limiting
 
-**Konstanta:** `SCAN_INTERVAL_MS = 2000L` (2 sekundy)
+**Konstanta:** `CONTENT_SCAN_INTERVAL_MS = 1_000L` (1 sekunda)
 
-**Chování:** Smart Shield skenuje obsah maximálně jednou za 2 sekundy, i když se obsah mění častěji.
+**Chování:** Smart Shield skenuje obsah maximálně jednou za sekundu, i když se obsah mění častěji.
 
 **Důvod:** Šetření baterie a CPU.
 
-**Zdroj:** `ContentScanner.kt:processScreen()`
+**Zdroj:** `AgentConstants.CONTENT_SCAN_INTERVAL_MS`, `ContentScanner.kt`
 
 #### Node limit pro Chrome DOM
 
@@ -198,7 +198,7 @@ Výchozí klíčová slova jsou definována v `backend/app/config/smart_shield_d
 | Content scanning | Skenování obsahu pro klíčová slova | Medium |
 | Screenshot capture | Pořízení screenshotu při detekci | High |
 
-**Šetrnost k baterii:** Při zhasnutém displeji agent nebudí systém (smart watchdog), usage buffer se zapisuje na disk méně často; při zapnutí displeje se agent okamžitě aktivuje a provede sync.
+**Šetrnost k baterii:** Při zapnutém displeji: heartbeat 2 minuty (AlarmWatchdog), sync 60 s (Reporter), usage track 10 s (UsageTracker). Při zhasnutém displeji agent nebudí systém (heartbeat zrušen), usage buffer se zapisuje méně často (60 s) a flush při zhasnutí; při zapnutí displeje se agent okamžitě aktivuje a provede sync. Zdroj: `AgentConstants.kt`, `AlarmWatchdog.kt`, `Reporter.kt`, `UsageTracker.kt`.
 
 ## Technické reference
 

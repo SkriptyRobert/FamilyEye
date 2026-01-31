@@ -39,8 +39,7 @@ screenshot*.png
 Thumbs.db
 
 # Dev scripts and temporary files (keep locally, not in production release)
-# Note: /dev/ directory is kept in repo for reference but contains development files
-# /dev/
+dev/
 *.tmp
 *.temp
 
@@ -56,6 +55,7 @@ backend/app.log
 uploads/
 
 # Android build logs and temporary files
+clients/android/.kotlin/
 clients/android/build_log*.txt
 clients/android/build_*.txt
 clients/android/compile_*.txt
@@ -109,14 +109,7 @@ installer/agent/build_child/
 warn-*.txt
 xref-*.html
 
-# Dev test/audit scripts and outputs (local only)
-dev/audit_android_logs.bat
-dev/audit_android_logs_continuous.bat
-dev/audit_android_logcat_live.bat
-dev/audit_backend_logs.bat
-dev/measure_android_load.bat
-dev/measure_android_load_reset.bat
-dev/survey_android_usage.bat
+# Local-only outputs (if recreated)
 android_load/
 android_audit.log
 android_audit_continuous.log

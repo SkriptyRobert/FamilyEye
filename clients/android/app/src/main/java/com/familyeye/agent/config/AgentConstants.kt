@@ -17,10 +17,10 @@ object AgentConstants {
     const val RULE_FETCH_INTERVAL_MS = 30_000L  // 30 seconds
 
     /**
-     * Interval for tracking app usage (milliseconds).
+     * Interval for tracking app usage when screen is on (milliseconds).
      * Lower values = more accurate tracking, higher battery usage.
      */
-    const val USAGE_TRACK_INTERVAL_MS = 5_000L  // 5 seconds
+    const val USAGE_TRACK_INTERVAL_MS = 10_000L  // 10 seconds (battery-friendly)
 
     /**
      * Interval when screen is off; longer to avoid waking the process often (battery-friendly).
@@ -38,6 +38,12 @@ object AgentConstants {
      * Also serves as heartbeat interval.
      */
     const val SYNC_INTERVAL_MS = 30_000L  // 30 seconds
+
+    /**
+     * Interval for syncing when screen is on (milliseconds).
+     * Battery-friendly; used instead of SYNC_INTERVAL_MS when display is interactive.
+     */
+    const val SYNC_INTERVAL_SCREEN_ON_MS = 60_000L  // 60 seconds
 
     /**
      * Interval for syncing when battery is low (milliseconds).

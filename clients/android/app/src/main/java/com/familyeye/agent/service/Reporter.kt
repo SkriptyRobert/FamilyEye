@@ -63,6 +63,11 @@ class Reporter @Inject constructor(
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    // Screen state for battery-friendly sync interval (screen on -> longer interval)
+    private val powerManager by lazy {
+        context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+    }
     
     // Sync state
     @Volatile
@@ -89,13 +94,14 @@ class Reporter @Inject constructor(
     }
 
     /**
-     * Phase 4 Optimization: Adaptive sync interval based on battery and data saver mode.
-     * Returns longer interval when battery is low to conserve power.
+     * Adaptive sync interval: screen on -> 60s (battery-friendly); else battery/data-saver aware.
      */
     private suspend fun getSyncInterval(): Long {
+        if (powerManager?.isInteractive == true) {
+            return AgentConstants.SYNC_INTERVAL_SCREEN_ON_MS
+        }
         val batteryLevel = getBatteryLevel()
         val isDataSaver = configRepository.dataSaverEnabled.first()
-        
         return when {
             batteryLevel < AgentConstants.BATTERY_LOW_THRESHOLD -> {
                 Timber.v("Battery low ($batteryLevel%) - using extended sync interval")

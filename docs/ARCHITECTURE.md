@@ -166,8 +166,8 @@ Agent → Uloží config.json
 ### 3. Monitorování
 
 ```
-Agent → Monitor Loop (každých 5s)
-Agent → Reporter Loop (každých 60s)
+Agent → Monitor/Usage (Windows: dle konfigurace; Android: 10 s při zapnutém displeji)
+Agent → Reporter/Sync (Android: 60 s při zapnutém displeji; Windows: reporting_interval typ. 300 s)
 Agent → POST /api/reports/agent/report → Backend
 Backend → Uloží UsageLog → Database
 ```

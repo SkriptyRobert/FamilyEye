@@ -168,7 +168,7 @@ Párování vytvoří zařízení v databázi a vrátí `device_id` a `api_key`,
 - Error handling a retry
 
 **Reportování**:
-- Interval: 60 sekund (konfigurovatelné)
+- Interval: dle konfigurace (`reporting_interval`, typicky 300 s)
 - Formát: JSON s usage_logs
 - Endpoint: `POST /api/reports/agent/report`
 
@@ -618,7 +618,8 @@ adb shell dpm set-device-owner com.familyeye.agent/.receiver.FamilyEyeDeviceAdmi
 - Error handling a retry
 
 **Reportování**:
-- Interval: 60 sekund (konfigurovatelné)
+- Interval sync: 60 s při zapnutém displeji (`AgentConstants.SYNC_INTERVAL_SCREEN_ON_MS`), jinak adaptivní
+- Usage track: 10 s při zapnutém displeji (`USAGE_TRACK_INTERVAL_MS`), 60 s při zhasnutém
 - Formát: JSON s usage_logs
 - Endpoint: `POST /api/reports/agent/report`
 
@@ -783,10 +784,10 @@ Viz [architecture/security-model.md](./architecture/security-model.md) pro detai
 ### 3. ProcessGuardianWorker
 - WorkManager (systémová služba)
 - Backup recovery mechanismus
-- Naplánováno každých 30 minut
+- Naplánováno každých 15 minut (`AgentConstants.GUARDIAN_WORKER_INTERVAL_MIN`)
 
 ### 4. AlarmWatchdog (smart watchdog)
-- AlarmManager heartbeat – plánuje se **jen při zapnutém displeji**.
+- AlarmManager heartbeat – interval **2 minuty** (120 s) při zapnutém displeji; plánuje se **jen při zapnutém displeji**.
 - RestartReceiver při každém spuštění znovu naplánuje heartbeat **pouze pokud je displej zapnutý** (`PowerManager.isInteractive`). Při zhasnutém displeji se heartbeat neplánuje, takže systém není buden z Doze.
 - Při zhasnutí displeje FamilyEyeService volá `AlarmWatchdog.cancel()`; při zapnutí displeje volá `AlarmWatchdog.scheduleHeartbeat()`. Cíl: snížit varování „Často budí systém“ a spotřebu baterie. Self-revive (JobScheduler, WorkManager, onTaskRemoved) zůstává beze změny.
 - Spustí RestartReceiver; ten spustí službu a podle stavu displeje případně naplánuje další heartbeat.
