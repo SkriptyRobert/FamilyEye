@@ -9,6 +9,8 @@ import './DeviceOwnerSetup.css'
 /**
  * Device Owner Setup Wizard (Real WebADB Implementation)
  */
+const MOBILE_BREAKPOINT = 768
+
 const DeviceOwnerSetup = ({ deviceId, onComplete, onCancel }) => {
   const [step, setStep] = useState(1)
   const [adb, setAdb] = useState(null)
@@ -16,6 +18,15 @@ const DeviceOwnerSetup = ({ deviceId, onComplete, onCancel }) => {
   const [error, setError] = useState(null)
   const [status, setStatus] = useState('idle')
   const [commandOutput, setCommandOutput] = useState('') // Terminal output log
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
+    const update = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', update)
+    update()
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   // Constants
   const PACKAGE_NAME = 'com.familyeye.agent'
@@ -145,7 +156,7 @@ const DeviceOwnerSetup = ({ deviceId, onComplete, onCancel }) => {
       } else {
         // Verify if it failed
         if (fullOutput.includes("accounts")) {
-          throw new Error("Na zařízení jsou stále přihlášené účty! Musíte odebrat Google/Xiaomi účty.");
+          throw new Error("Na zařízení jsou stále přihlášené účty! Dočasně odhlaste Google/Xiaomi účty; po aktivaci je můžete znovu přidat.");
         }
         if (fullOutput.includes("Exception") || fullOutput.includes("Error")) {
           throw new Error(fullOutput);
@@ -161,7 +172,7 @@ const DeviceOwnerSetup = ({ deviceId, onComplete, onCancel }) => {
       setCommandOutput(prev => prev + `\n[ERROR] ${msg}\n`);
 
       if (msg.includes("Account") || msg.includes("Not allowed")) {
-        setError("Chyba: Na zařízení je stále přihlášen Google účet. Musíte odebrat VŠECHNY účty.");
+        setError("Chyba: Na zařízení je stále přihlášen Google účet. Dočasně odhlaste všechny účty; po aktivaci je můžete znovu přidat.");
       } else if (msg.includes("SecurityException") || msg.includes("Permission denied") || msg.includes("MANAGE_DEVICE_ADMINS")) {
         setError("Xiaomi/HyperOS detekováno! Musíte v 'Možnosti pro vývojáře' zapnout volbu 'Ladění USB (Bezpečnostní nastavení)'. Po zapnutí příkaz zkuste znovu.");
       } else if (msg.includes("Timeout")) {
@@ -174,6 +185,29 @@ const DeviceOwnerSetup = ({ deviceId, onComplete, onCancel }) => {
       setLoading(false);
     }
   };
+
+  if (isMobile) {
+    return (
+      <div className="device-owner-setup device-owner-setup-mobile">
+        <div className="setup-header">
+          <Computer className="step-icon-small" size={48} style={{ marginBottom: '1rem', color: 'var(--accent-color)' }} />
+          <h2>Aktivace Device Owner</h2>
+          <p className="mobile-lead">Průvodce aktivace vyžaduje počítač s USB.</p>
+        </div>
+        <div className="mobile-do-instructions">
+          <p>Na telefonu nebo tabletu nelze aktivovat Device Owner (chybí WebUSB a připojení telefonu kabelem).</p>
+          <ol>
+            <li>Otevřete tento dashboard na <strong>počítači</strong> (notebook, PC).</li>
+            <li>Připojte dětský Android telefon k počítači <strong>USB kabelem</strong>.</li>
+            <li>V záložce Zařízení u daného zařízení klikněte na <strong>Aktivovat DO</strong> a postupujte podle průvodce.</li>
+          </ol>
+        </div>
+        <div className="step-actions" style={{ marginTop: '1.5rem' }}>
+          <button type="button" onClick={onCancel} className="btn-primary">Zavřít</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="device-owner-setup">
@@ -262,9 +296,9 @@ const PreparationStep = ({ onNext }) => (
         <div className="instruction-number">3</div>
         <div className="instruction-icon-wrapper"><Trash2 size={18} /></div>
         <div className="instruction-content">
-          <span className="instruction-title">Odstranění uživatelských účtů</span>
+          <span className="instruction-title">Dočasné odhlášení účtů</span>
           <p className="instruction-detail">
-            V <em>Nastavení {'>'} Účty</em> odstraňte <strong>všechny</strong> přihlášené účty (Google, Xiaomi atd.).
+            V <em>Nastavení {'>'} Účty</em> dočasně odhlaste <strong>všechny</strong> přihlášené účty (Google, Xiaomi atd.). Po aktivaci Device Owner je můžete znovu přidat.
           </p>
         </div>
       </div>
