@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.familyeye.agent.BuildConfig
 import com.familyeye.agent.ui.OemSetupViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -108,7 +109,7 @@ fun ChildDashboardScreen(
             Spacer(modifier = Modifier.weight(1.2f)) // Bottom balance
             
             Text(
-                text = "v2.4.0",
+                text = "v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.padding(bottom = 8.dp)

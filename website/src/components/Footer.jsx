@@ -2,7 +2,7 @@ import React from 'react'
 import { DOCS_URL, GITHUB_REPO, RELEASES_URL } from '../utils/links'
 import './Footer.css'
 
-const VERSION = '2.4.0'
+const VERSION = typeof import.meta.env.VITE_APP_VERSION !== 'undefined' ? import.meta.env.VITE_APP_VERSION : '2.4.0'
 
 export default function Footer() {
   return (

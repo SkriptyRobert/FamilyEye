@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val versionFile = rootProject.file("../../VERSION")
+val versionNameFromFile = if (versionFile.exists()) versionFile.readText().trim() else "2.4.0"
+
 android {
     namespace = "com.familyeye.agent"
     compileSdk = 35
@@ -14,8 +17,8 @@ android {
         applicationId = "com.familyeye.agent"
         minSdk = 29  // Android 10
         targetSdk = 35  // Android 15
-        versionCode = 24
-        versionName = "2.4.0"
+        versionCode = 24  // bumped by scripts/bump_version.py
+        versionName = versionNameFromFile
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

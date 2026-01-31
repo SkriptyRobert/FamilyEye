@@ -54,13 +54,26 @@ if not root_logger.handlers:
 
 logger = logging.getLogger(__name__)
 
+
+def _read_version() -> str:
+    """Read version from repo root VERSION file."""
+    try:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        version_file = repo_root / "VERSION"
+        if version_file.exists():
+            return version_file.read_text(encoding="utf-8").strip()
+    except Exception as e:
+        logger.warning(f"Failed to read VERSION file: {e}")
+    return "2.4.0"
+
+
 # Initialize database
 init_db()
 
 app = FastAPI(
     title="FamilyEye API",
     description="Backend API for FamilyEye parental control system",
-    version="2.4.0"
+    version=_read_version()
 )
 
 # CORS middleware

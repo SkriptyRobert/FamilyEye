@@ -156,7 +156,7 @@ const Dashboard = ({ onLogout, darkMode, setDarkMode }) => {
           )}
         </div>
         <div className="status-footer-right">
-          <span><Eye size={12} style={{ marginRight: '4px' }} /> FamilyEye · v2.4.0 | Developed by BertSoftware</span>
+          <span><Eye size={12} style={{ marginRight: '4px' }} /> FamilyEye · v{serverInfo?.version ?? '-'} | Developed by BertSoftware</span>
         </div>
       </footer>
 
