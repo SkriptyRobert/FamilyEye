@@ -37,7 +37,20 @@ export default function Contributors() {
             .then((data) => {
                 if (!Array.isArray(data)) throw new Error('Invalid data format')
 
-                const users = data.filter(u => u.type === 'User').slice(0, 30)
+                const excludeLogins = [
+                    'cursoragent', 'cursor-agent', 'cursor_agent', 'cursor',
+                    'github-actions[bot]', 'dependabot[bot]', 'renovate[bot]'
+                ]
+                const isExcluded = (u) => {
+                    const login = (u.login || '').toLowerCase()
+                    if (excludeLogins.some(ex => login.includes(ex) || ex.includes(login))) return true
+                    const name = (u.login || '') + (u.name || '')
+                    if (/cursor\s*agent|agent\s*cursor/i.test(name)) return true
+                    return false
+                }
+                const users = data
+                    .filter(u => u.type === 'User' && !isExcluded(u))
+                    .slice(0, 30)
                 // Duplicate list for seamless infinite scroll
                 setContributors([...users, ...users])
                 setLoading(false)
