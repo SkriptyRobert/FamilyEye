@@ -14,7 +14,7 @@ const version = (() => {
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GH_PAGES === '1' ? '/Parential-Control_Enterprise/' : '/',
+  base: process.env.GH_PAGES === '1' ? '/FamilyEye/' : '/',
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(version)
   },
