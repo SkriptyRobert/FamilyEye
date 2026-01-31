@@ -116,7 +116,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <div style={{ position: 'absolute', top: '30px', right: '30px' }}>
+        <div className="login-theme-toggle-wrap">
           <button
             type="button"
             onClick={() => setDarkMode(!darkMode)}
@@ -178,7 +178,7 @@ const Login = ({ onLogin, darkMode, setDarkMode }) => {
               📋
             </button>
           </div>
-          <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '5px', marginBottom: '15px' }}>
+          <small className="login-url-hint">
             URL serveru. Pro připojení dalších zařízení použijte <strong style={{ color: '#667eea' }}>{backendUrl}</strong>
           </small>
           <input
