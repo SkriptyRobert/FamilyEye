@@ -1,11 +1,11 @@
 site_name: Smart Shield Dokumentace
 site_description: Kompletní dokumentace pro Smart Shield - rodičovská kontrola s Device Owner ochranou
 site_author: FamilyEye Team
-site_url: https://familyeye.github.io
+site_url: https://skriptyrobert.github.io/FamilyEye/docs/
 docs_dir: .
 
-repo_name: Parential-Control_Enterprise
-repo_url: https://github.com/familyeye/Parential-Control_Enterprise
+repo_name: FamilyEye
+repo_url: https://github.com/SkriptyRobert/FamilyEye
 edit_uri: edit/main/docs/
 
 theme:
@@ -94,6 +94,6 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/familyeye/Parential-Control_Enterprise
+      link: https://github.com/SkriptyRobert/FamilyEye
   version:
     provider: mike
