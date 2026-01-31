@@ -202,10 +202,14 @@ const DevicePairing = () => {
                     <div className="requirements-box">
                         <h4>Co budete potřebovat:</h4>
                         <ul>
-                            <li><Check size={14} style={{ marginRight: '6px', color: 'var(--success-color)' }} /> Přístup k dětskému počítači</li>
-                            <li><Check size={14} style={{ marginRight: '6px', color: 'var(--success-color)' }} /> Administrátorská práva na dětském PC</li>
-                            <li><Check size={14} style={{ marginRight: '6px', color: 'var(--success-color)' }} /> Připojení k síti</li>
+                            <li><Check size={14} /><span>Přístup k dětskému zařízení (počítač nebo telefon)</span></li>
+                            <li><Check size={14} /><span>Připojení k síti</span></li>
+                            <li><Check size={14} /><span>Windows: administrátorská práva na PC</span></li>
+                            <li><Check size={14} /><span>Android: stažení aplikace (QR kód nebo web) a povolení instalace z neznámých zdrojů</span></li>
                         </ul>
+                        <p className="device-owner-note">
+                            <strong>Device Owner (Android):</strong> Plná ochrana – aplikaci nelze odinstalovat. Aktivace: po spárování v záložce Zařízení u daného zařízení otevřete „Device Owner Setup“ (doporučeno továrně resetované zařízení).
+                        </p>
                     </div>
 
                     {error && <div className="error-message">{error}</div>}
@@ -224,7 +228,7 @@ const DevicePairing = () => {
             {step === 2 && (
                 <div className="pairing-step">
                     <div className="step-icon"><LinkIcon size={48} /></div>
-                    <h2>Nainstalujte agenta na dětský počítač</h2>
+                    <h2>Nainstalujte agenta na zařízení dítěte</h2>
 
                     <div className="pairing-info-cards">
                         {/* Server adresa */}
@@ -252,7 +256,7 @@ const DevicePairing = () => {
                     {/* QR kód */}
                     {pairingData.qrCode && (
                         <div className="qr-section">
-                            <p>Nebo naskenujte QR kód z dětského zařízení:</p>
+                            <p>Z Android zařízení naskenujte QR kód:</p>
                             <img
                                 src={pairingData.qrCode}
                                 alt="QR kód pro párování"
