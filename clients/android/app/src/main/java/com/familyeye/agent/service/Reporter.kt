@@ -246,6 +246,7 @@ class Reporter @Inject constructor(
             apiKey = apiKey,
             usageLogs = reportItems,
             clientTimestamp = isoFormat.format(Date(secureTimeProvider.getSecureCurrentTimeMillis())),
+            timezoneOffsetSeconds = TimeZone.getDefault().getOffset(secureTimeProvider.getSecureCurrentTimeMillis()) / 1000,
             protectionLevel = deviceOwnerEnforcer.getProtectionLevel()
         )
 
