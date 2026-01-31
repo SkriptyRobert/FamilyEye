@@ -204,6 +204,7 @@ class AgentReportRequest(BaseModel):
     api_key: str
     usage_logs: List[AgentUsageLogCreate]
     client_timestamp: Optional[datetime] = None  # Optional client timestamp (system time)
+    timezone_offset_seconds: Optional[int] = None  # Device offset from UTC (e.g. +3600 for UTC+1)
     running_processes: Optional[List[str]] = None  # NEW: list of currently running apps
     device_uptime_seconds: Optional[int] = None    # NEW: Total system uptime
     device_usage_today_seconds: Optional[int] = None # NEW: Agent-tracked daily active time
