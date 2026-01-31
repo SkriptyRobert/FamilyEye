@@ -15,6 +15,7 @@
     cursor: pointer;
     transition: all var(--transition-slow, 300ms);
     position: relative;
+    min-width: 0;
 }
 
 .device-card:hover {
@@ -324,6 +325,8 @@
         -webkit-overflow-scrolling: touch;
         scroll-snap-type: x mandatory;
         padding-bottom: var(--space-1, 4px);
+        padding-right: var(--space-2, 8px);
+        min-width: 0;
     }
 
     .limit-chips>* {
