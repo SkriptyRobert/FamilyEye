@@ -27,25 +27,14 @@ clients/windows/agent/
 
 ## Instalace
 
-### Manuální
+Detailní návod k instalaci a párování naleznete v samostatných tutoriálech:
 
-```bash
-cd clients/windows
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m agent.main
-```
+- [Instalace Windows Agenta](../tutorials/windows-agent.md)
+- [Instalace Android Agenta](../tutorials/android-agent.md)
 
-### Párování
+### Kompatibilita
 
-Párování se provádí přes frontend dashboard nebo přímo přes API endpoint `/api/devices/pairing/pair`.
-
-Pro manuální párování použijte:
-- Frontend: Otevřete dashboard a použijte QR kód nebo manuální token
-- API: POST request na `/api/devices/pairing/pair` s pairing tokenem, device_name, device_type, mac_address a device_id
-
-Párování vytvoří zařízení v databázi a vrátí `device_id` a `api_key`, které se uloží do `config.json`.
+Agent je kompatibilní s Windows 10 a Windows 11. Vyžaduje administrátorská práva pro instalaci služby.
 
 ## Konfigurace
 

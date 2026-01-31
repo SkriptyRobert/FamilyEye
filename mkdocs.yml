@@ -69,6 +69,9 @@ nav:
   - Tutorials:
     - Getting Started: tutorials/getting-started.md
     - First Setup: tutorials/first-setup.md
+    - Server Installation: tutorials/server-installation.md
+    - Windows Agent Installation: tutorials/windows-agent.md
+    - Android Agent Installation: tutorials/android-agent.md
   - How-To Guides:
     - Troubleshoot USB: how-to/troubleshoot-usb.md
     - Restore Access: how-to/restore-access.md
