@@ -1,0 +1,106 @@
+.contributors {
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 0;
+    overflow: hidden;
+}
+
+.contributors-inner {
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: 0 var(--space-8);
+}
+
+.contributors-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.contributors-marquee {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    mask-image: linear-gradient(to right,
+            transparent,
+            black 20px,
+            black calc(100% - 20px),
+            transparent);
+}
+
+.contributors-track {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: max-content;
+    /* Animace: posun doleva */
+    animation: scroll 40s linear infinite;
+}
+
+.contributors-track:hover {
+    animation-play-state: paused;
+}
+
+.contributor-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.contributor-item:hover {
+    transform: scale(1.1);
+    z-index: 2;
+}
+
+.contributor-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-card);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: var(--bg-secondary);
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .contributors-inner {
+        padding: 0 var(--space-4);
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .contributors-label {
+        font-size: 0.8rem;
+    }
+
+    .contributors-marquee {
+        width: 100%;
+        mask-image: linear-gradient(to right,
+                transparent,
+                black 10px,
+                black calc(100% - 10px),
+                transparent);
+    }
+
+    .contributor-avatar {
+        width: 32px;
+        height: 32px;
+    }
+}

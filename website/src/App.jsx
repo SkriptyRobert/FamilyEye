@@ -7,6 +7,7 @@ const Features = lazy(() => import('./components/Features'))
 const DashboardPreview = lazy(() => import('./components/DashboardPreview'))
 const Screenshots = lazy(() => import('./components/Screenshots'))
 const CTA = lazy(() => import('./components/CTA'))
+const Contributors = lazy(() => import('./components/Contributors'))
 
 function App() {
   return (
@@ -18,10 +19,12 @@ function App() {
         <DashboardPreview />
         <Screenshots />
         <CTA />
+        <Contributors />
       </Suspense>
       <Footer />
     </>
   )
 }
+
 
 export default App
