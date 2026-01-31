@@ -11,7 +11,7 @@ function App() {
   const [needsSetup, setNeedsSetup] = useState(false)
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode')
-    return saved !== null ? saved === 'true' : true // Default to dark mode
+    return saved !== null ? saved === 'true' : false // Default light mode for consistent look on all devices
   })
 
   useEffect(() => {
