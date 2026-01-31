@@ -108,3 +108,15 @@ installer/agent/build_child/
 *.pyz
 warn-*.txt
 xref-*.html
+
+# Dev test/audit scripts and outputs (local only)
+dev/audit_android_logs.bat
+dev/audit_android_logs_continuous.bat
+dev/audit_android_logcat_live.bat
+dev/audit_backend_logs.bat
+dev/measure_android_load.bat
+dev/measure_android_load_reset.bat
+dev/survey_android_usage.bat
+android_load/
+android_audit.log
+android_audit_continuous.log
