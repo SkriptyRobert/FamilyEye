@@ -7,6 +7,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  overflow-x: hidden;
 }
 
 /* ============================================
@@ -93,6 +94,7 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  min-width: 0;
 }
 
 .title-logo {
@@ -119,6 +121,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.header-right .theme-toggle,
+.header-right .logout-button,
+.header-right .notification-dropdown {
+  flex-shrink: 0;
 }
 
 .theme-toggle {
@@ -166,6 +175,13 @@
 
 .logout-text {
   display: none;
+}
+
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
 }
 
 /* ============================================
@@ -315,6 +331,8 @@
 
 .dashboard-content {
   flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-bottom: 80px;
   /* Space for mobile bottom nav */
