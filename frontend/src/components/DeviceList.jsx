@@ -166,6 +166,12 @@ const DeviceList = ({ onSelectDevice }) => {
                   </span>
                 </div>
 
+                {typeInfo.id === 'android' && !device.is_device_owner && (
+                  <p className="device-owner-hint">
+                    Device Owner = plná ochrana (aplikaci nelze odinstalovat). Kliknutím na „Aktivovat DO“ otevřete průvodce (USB kabel).
+                  </p>
+                )}
+
                 <div className="card-actions">
                   <button
                     onClick={(e) => {
@@ -202,7 +208,7 @@ const DeviceList = ({ onSelectDevice }) => {
                             setDeviceOwnerSetupDevice(device)
                           }}
                           className="card-btn edit"
-                          title="Aktivovat Device Owner"
+                          title="Plná ochrana: aplikaci nelze odinstalovat. Otevře průvodce aktivace (USB)."
                           style={{ color: 'var(--color-primary, #3b82f6)', borderColor: 'var(--color-primary, #3b82f6)' }}
                         >
                           <Shield size={14} style={{ marginRight: '6px' }} /> Aktivovat DO
