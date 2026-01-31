@@ -643,7 +643,7 @@ class FamilyEyeService : Service(), ScreenStateListener {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.service_notification_title))
             .setContentText(getString(R.string.service_notification_text))
-            .setSmallIcon(R.mipmap.ic_launcher) // TODO: Use dedicated persistent icon
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
