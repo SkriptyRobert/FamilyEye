@@ -7,20 +7,25 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from ..models import UsageLog, ShieldAlert, Device, Rule, ShieldKeyword
 from ..api.reports.device_endpoints import set_running_processes_cache
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-def delete_file_safely(relative_path: str):
-    """Delete a file given its relative path from backend root."""
+
+def delete_file_safely(relative_path: str) -> bool:
+    """Delete a file. relative_path is from parent of uploads (e.g. uploads/screenshots/...). Ensures path stays under UPLOAD_DIR."""
     try:
-        # Assuming backend root is CWD
-        current_dir = os.getcwd()
-        # Prevent directory traversal
         if ".." in relative_path:
             logger.warning(f"Attempted directory traversal in delete: {relative_path}")
             return False
-
-        full_path = os.path.join(current_dir, relative_path)
+        uploads_dir = settings.UPLOAD_DIR
+        uploads_parent = os.path.dirname(uploads_dir)
+        full_path = os.path.join(uploads_parent, relative_path)
+        real_full = os.path.realpath(full_path)
+        real_base = os.path.realpath(uploads_dir)
+        if not real_full.startswith(real_base + os.sep) and real_full != real_base:
+            logger.warning(f"Path escapes uploads base: {relative_path}")
+            return False
         if os.path.exists(full_path) and os.path.isfile(full_path):
             os.remove(full_path)
             logger.info(f"Deleted file: {full_path}")
