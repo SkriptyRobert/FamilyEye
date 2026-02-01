@@ -88,9 +88,10 @@ Workflow jsou v [.github/workflows/](../.github/workflows/). Testy (backend, fro
 | **Frontend Tests** | [frontend.yml](../.github/workflows/frontend.yml) | Push/PR, změny v `frontend/**` | Node 18, `npm ci`, `npm test -- --run` |
 | **Android Tests** | [android.yml](../.github/workflows/android.yml) | Push/PR, změny v `clients/android/**` | JDK 17, `./gradlew test` |
 | **Build Server (Docker)** | [build-server.yml](../.github/workflows/build-server.yml) | Push/PR do `main`/`android-fix-process`, změny v `backend/**`, `frontend/**`, `docker/**` | Sestaví Docker image, push do GHCR (`familyeye-server`) |
-| **Build Windows Agent** | [build-windows-agent.yml](../.github/workflows/build-windows-agent.yml) | Push/PR do `main`/`android-fix-process`, změny v `installer/agent/**`, `clients/windows/**` | Sestaví Windows instalátor (artifact) |
+| **Build Windows Agent** | [build-windows-agent.yml](../.github/workflows/build-windows-agent.yml) | Push/PR do `main`/`android-fix-process`, změny v `installer/agent/**`, `clients/windows/**` | Sestaví Windows instalátor agenta (artifact) |
+| **Build Windows Server** | [build-windows-server.yml](../.github/workflows/build-windows-server.yml) | Push/PR do `main`/`android-fix-process`, změny v `installer/server/**`, `backend/**`, `frontend/**` | Sestaví Windows instalátor serveru (artifact) |
 | **Deploy Website** | [deploy-website.yml](../.github/workflows/deploy-website.yml) | Push do `main`/`android-fix-process`, změny v `website/**`, `docs/**`, `mkdocs.yml` | Sestaví a nasadí web na GitHub Pages |
-| **Create Release** | [release.yml](../.github/workflows/release.yml) | **Push tagu `v*`** (např. `v2.4.0`) | Spustí unit testy (backend, frontend, android), sestaví APK a Windows instalátor, vytvoří [GitHub Release](https://github.com/SkriptyRobert/FamilyEye/releases) a přiloží artefakty |
+| **Create Release** | [release.yml](../.github/workflows/release.yml) | **Push tagu `v*`** (např. `v2.4.0`) | Spustí unit testy, sestaví APK, Windows agent a Windows server instalátory, vytvoří [GitHub Release](https://github.com/SkriptyRobert/FamilyEye/releases) a přiloží artefakty |
 
 Release se vytvoří až po úspěchu všech testů a buildů. Verze se bere z tagu (např. `v2.4.0`). Postup vydání nové verze je v [CONTRIBUTING.md](../CONTRIBUTING.md#releasing-a-new-version).
 

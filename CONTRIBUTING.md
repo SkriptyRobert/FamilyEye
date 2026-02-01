@@ -46,8 +46,9 @@ Be respectful. We are here to build a useful tool for families.
 | **Frontend tests** | Push/PR (any branch) touching `frontend/**` | `npm test` in `frontend/` |
 | **Android tests** | Push/PR (any branch) touching `clients/android/**` | `./gradlew test`; on success builds APK (artifact) |
 | **Build Server (Docker)** | Push/PR to main touching `backend/**`, `frontend/**`, `docker/**` | Builds frontend, builds Docker image, pushes to GHCR (`familyeye-server`) |
-| **Build Windows Agent** | Push/PR to main touching `installer/agent/**`, `clients/windows/**` | Builds Windows installer (artifact) |
-| **Create Release** | Push of tag `v*` (e.g. `v2.4.0`) | Runs backend, frontend, and Android unit tests; builds APK and Windows installer from `setup_agent.iss`; creates GitHub Release and attaches artifacts |
+| **Build Windows Agent** | Push/PR to main touching `installer/agent/**`, `clients/windows/**` | Builds Windows agent installer (artifact) |
+| **Build Windows Server** | Push/PR to main touching `installer/server/**`, `backend/**`, `frontend/**` | Builds Windows server installer (artifact) |
+| **Create Release** | Push of tag `v*` (e.g. `v2.4.0`) | Runs unit tests; builds APK, Windows agent and Windows server installers; creates GitHub Release and attaches all artifacts |
 
 Release is created **only after all unit tests pass**. No manual approval step by default (optional: use a GitHub Environment with required reviewers if you want gating).
 
