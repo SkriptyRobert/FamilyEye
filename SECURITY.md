@@ -34,6 +34,16 @@ When deploying FamilyEye:
 3. **Secure the database** - Keep `parental_control.db` encrypted or protected
 4. **Keep updated** - Regularly update to the latest version
 
+### Public / Internet-Facing Deployment
+
+When the server is exposed on a public IP (e.g. API scans, bots):
+
+- **Probe paths** - The backend returns 404 for sensitive/probe paths (e.g. `/.env`, `/.git`, `wp-admin`, `phpmyadmin`, `config.json`) instead of serving the SPA.
+- **Security headers** - Responses include `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY`.
+- **Rate limiting** - Public paths (`/`, `/api/health`, `/api/info`, `/api/trust/*`) are rate-limited per IP (60/min). Login 5/min, register 3/min, pairing 10/min. Set `TRUST_PROXY=1` only when behind a trusted reverse proxy (nginx) so client IP is taken from `X-Forwarded-For`; otherwise the app uses the direct connection IP.
+- **API docs** - In production set `DISABLE_DOCS=1` or `BACKEND_ENV=production` to disable `/docs`, `/redoc`, `/openapi.json`.
+- **Reverse proxy** - For public deployment use nginx (or similar) in front: TLS termination with a valid certificate (e.g. Let's Encrypt), stricter rate limits, optional WAF. Do not commit `.env`; set `SECRET_KEY`, `POSTGRES_PASSWORD`, `BACKEND_URL` in environment.
+
 ## Known Security Considerations
 
 ### PIN Storage (Android Agent)
@@ -41,6 +51,9 @@ The Android agent uses SHA-256 for local PIN storage. For enhanced security in f
 
 ### Self-Signed Certificates
 For local network deployments, self-signed certificates are acceptable. For public deployments, use Let's Encrypt or similar CA.
+
+### Logging
+Do not log full tokens, API keys, or passwords. Log only prefixes (e.g. first 8 characters) or omit sensitive fields.
 
 ---
 

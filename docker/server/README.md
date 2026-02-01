@@ -12,13 +12,17 @@
 
 Potřebujete: Docker a Docker Compose.
 
-### **1. Připravit `.env` Jinak nebude správně načtena URL pro registraci, QR párování a bude použita IP z Docker-network!**
+### **1. Připravit `.env` (povinné pro produkci)**
 
 ```bash
 cd docker/server
 cp .env.example .env
-# upravte alespoň BACKEND_URL (veřejná URL serveru)
-# BACKEND_URL=https://<YOUR_SERVER_IP>:8443
+# Pro produkci NASTAVTE:
+# - BACKEND_URL=https://<YOUR_SERVER_IP>:8443
+# - SECRET_KEY=<silné náhodné heslo>
+# - POSTGRES_PASSWORD=<silné heslo pro DB>
+# Nikdy necommitujte .env do repozitáře.
+# Výchozí SECRET_KEY a POSTGRES_PASSWORD v docker-compose jsou pouze pro vývoj; na veřejném serveru je nutné je přepsat.
 ```
 
 ### 2. Stáhnout image a spustit server + PostgreSQL
