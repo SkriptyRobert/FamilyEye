@@ -1,4 +1,5 @@
 /** Sdílené odkazy – jedna změna při změně URL. */
 export const GITHUB_REPO = 'https://github.com/SkriptyRobert/FamilyEye'
-export const RELEASES_URL = `${GITHUB_REPO}/releases`
+/** Latest release – GitHub redirects to the newest release. */
+export const RELEASES_URL = `${GITHUB_REPO}/releases/latest`
 export { default as DOCS_URL } from './docsUrl'

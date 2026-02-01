@@ -59,6 +59,18 @@ Release is created **only after all unit tests pass**. No manual approval step b
 
 See `docs/reference/testing.md` for detailed test descriptions and critical tests before release.
 
+### Conventional Commits (recommended for changelog)
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) so changelogs can be generated from commit history:
+
+- `feat: add X` – new feature (minor bump)
+- `fix: Y` – bug fix (patch bump)
+- `chore: Z` – maintenance (no user-facing change)
+- `docs: ...` – documentation only
+- `BREAKING CHANGE: ...` in footer – major bump
+
+Example: `git commit -m "feat: add Device Owner setup wizard"`. From the repo root you can run `npm run release:changelog` (after `npm install`) to append new entries to `CHANGELOG.md` from commits since the last tag.
+
 ### Releasing a new version
 
 Version is defined in the root file `VERSION`. All components (backend, frontend, Android, installers, website) read or are updated from it.
