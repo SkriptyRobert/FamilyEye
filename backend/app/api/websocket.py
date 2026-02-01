@@ -10,7 +10,11 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-# Rate-limit repeated auth failure logs per device (avoid log flood from retrying clients)
+# Rate-limit repeated WebSocket auth failure logs per device_id.
+# A device with invalid or expired API key may retry very frequently (e.g. every second),
+# which would flood the log with "WS Auth Failed" and "connection closed" lines.
+# We log at most once per device per interval so the issue is still visible without
+# filling the log.
 _ws_auth_fail_last: Dict[str, float] = {}
 _WS_AUTH_FAIL_LOG_INTERVAL = 60.0  # seconds
 
