@@ -2,7 +2,7 @@ name: Build Server (Docker)
 
 on:
   push:
-    branches: [ main, android-fix-process ]
+    branches: [ main, android-fix-process, android-fix-proceses ]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -10,7 +10,7 @@ on:
       - 'docker/**'
       - '.github/workflows/build-server.yml'
   pull_request:
-    branches: [ main, android-fix-process ]
+    branches: [ main, android-fix-process, android-fix-proceses ]
     paths:
       - 'backend/**'
       - 'frontend/**'
