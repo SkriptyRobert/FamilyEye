@@ -21,7 +21,6 @@ cp .env.example .env
 # - BACKEND_URL=https://<YOUR_SERVER_IP>:8443
 # - SECRET_KEY=<silné náhodné heslo>
 # - POSTGRES_PASSWORD=<silné heslo pro DB>
-# Nikdy necommitujte .env do repozitáře.
 # Výchozí SECRET_KEY a POSTGRES_PASSWORD v docker-compose jsou pouze pro vývoj; na veřejném serveru je nutné je přepsat.
 ```
 
