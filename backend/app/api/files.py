@@ -1,5 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status, Request, Query
+
+MAX_SCREENSHOT_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -16,17 +18,8 @@ from ..config import settings
 router = APIRouter()
 security = HTTPBearer(auto_error=False) # Allow manual handling
 
-if os.environ.get('FAMILYEYE_SERVICE_MODE') == '1':
-    # Service Mode -> ProgramData
-    app_data = os.getenv('ProgramData', 'C:\\ProgramData')
-    UPLOAD_DIR = os.path.join(app_data, "FamilyEye", "Server", "uploads")
-elif os.name == 'nt':
-    app_data = os.getenv("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
-    UPLOAD_DIR = os.path.join(app_data, "FamilyEye", "Server", "uploads")
-else:
-    UPLOAD_DIR = "uploads" # Linux/Mac (or Docker) uses relative
-
-SCREENSHOTS_DIR = os.path.join(UPLOAD_DIR, "screenshots")
+# Single source of upload path in config (shared with cleanup_service, main)
+SCREENSHOTS_DIR = os.path.join(settings.UPLOAD_DIR, "screenshots")
 
 # Ensure directories exist
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
@@ -136,12 +129,19 @@ async def get_screenshot(
 
 @router.post("/upload/screenshot")
 async def upload_screenshot(
-    device_id: str, # passed as query or form? Query is easier for client.
+    request: Request,
+    device_id: str,
     api_key: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Upload a screenshot from a device."""
+    """Upload a screenshot from a device. Max size 10 MB."""
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > MAX_SCREENSHOT_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Screenshot too large. Max {MAX_SCREENSHOT_UPLOAD_BYTES // (1024*1024)} MB.",
+        )
     # Verify Device
     device = db.query(Device).filter(
         Device.device_id == device_id,
@@ -176,10 +176,23 @@ async def upload_screenshot(
             detail="Invalid image file format. Only JPG, PNG, WEBP are allowed."
         )
 
-    # Save file
+    # Save file (cap size to prevent DoS if Content-Length was spoofed)
     try:
+        total = 0
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            while True:
+                chunk = await file.read(65536)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_SCREENSHOT_UPLOAD_BYTES:
+                    buffer.close()
+                    os.remove(file_path)
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Screenshot too large. Max {MAX_SCREENSHOT_UPLOAD_BYTES // (1024*1024)} MB.",
+                    )
+                buffer.write(chunk)
     finally:
         file.file.close()
         
