@@ -2,7 +2,7 @@ name: Build Server (Docker)
 
 on:
   push:
-    branches: [ main, master, android-fix-process ]
+    branches: [ main, android-fix-process ]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -10,7 +10,7 @@ on:
       - 'docker/**'
       - '.github/workflows/build-server.yml'
   pull_request:
-    branches: [ main, master, android-fix-process ]
+    branches: [ main, android-fix-process ]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -67,7 +67,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}/familyeye-server
           tags: |
             type=sha,prefix=
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/android-fix-process' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/android-fix-process' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
