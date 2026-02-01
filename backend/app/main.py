@@ -70,10 +70,14 @@ def _read_version() -> str:
 # Initialize database
 init_db()
 
+_disable_docs = os.environ.get("DISABLE_DOCS", "").lower() in ("1", "true", "yes") or os.environ.get("BACKEND_ENV", "").lower() == "production"
 app = FastAPI(
     title="FamilyEye API",
     description="Backend API for FamilyEye parental control system",
-    version=_read_version()
+    version=_read_version(),
+    docs_url=None if _disable_docs else "/docs",
+    redoc_url=None if _disable_docs else "/redoc",
+    openapi_url=None if _disable_docs else "/openapi.json",
 )
 
 # CORS middleware
@@ -84,6 +88,52 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Security headers and rate limit (order: last added runs first on request)
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        return response
+
+def _client_ip(request: Request) -> str:
+    from .request_utils import get_client_ip
+    return get_client_ip(request)
+
+def _is_public_rate_limited_path(url_path: str) -> bool:
+    path = url_path.rstrip("/") or "/"
+    if path in ("/", "/api/health", "/api/info"):
+        return True
+    if path == "/api/trust" or path.startswith("/api/trust/"):
+        return True
+    return False
+
+class PublicRateLimitMiddleware(BaseHTTPMiddleware):
+    """Rate limit public paths (/, /api/health, /api/info, /api/trust/*) per IP."""
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path.rstrip("/") or "/"
+        if not _is_public_rate_limited_path(request.url.path):
+            return await call_next(request)
+        from .rate_limiter import check_rate_limit
+        ip = _client_ip(request)
+        is_allowed, _, retry_after = check_rate_limit(
+            ip, "public", max_requests=60, window_seconds=60
+        )
+        if not is_allowed:
+            return Response(
+                content='{"detail":"Too Many Requests"}',
+                status_code=429,
+                media_type="application/json",
+                headers={"Retry-After": str(retry_after)},
+            )
+        return await call_next(request)
+
+app.add_middleware(PublicRateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Security
 security = HTTPBearer()
@@ -110,7 +160,6 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"SSL initialization skipped: {e}")
 
-    # Start automated cleanup task
     # Start automated cleanup task
     asyncio.create_task(run_daily_cleanup())
 
@@ -168,8 +217,31 @@ async def get_server_info():
 # Import routers
 from .api import auth, devices, rules, reports, websocket, trust, files, shield
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 import os
+
+def _is_blocked_probe_path(full_path: str) -> bool:
+    """Return True for probe/sensitive paths that must get 404, not index.html."""
+    if not full_path:
+        return False
+    normalized = full_path.lstrip("/").lower()
+    if normalized.startswith("."):
+        return True
+    for part in full_path.lstrip("/").split("/"):
+        if part.startswith(".") or ".env" in part or ".git" in part:
+            return True
+    if "wp-admin" in full_path or "backup" in normalized:
+        return True
+    if "/config." in full_path or normalized.startswith("config."):
+        return True
+    blocked_substrings = (
+        "phpmyadmin", ".aws", "web.config", ".htaccess", "crossdomain.xml",
+        "phpinfo", "server-status", "config.json",
+    )
+    for sub in blocked_substrings:
+        if sub in full_path.lower() or sub in normalized:
+            return True
+    return False
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(devices.router, prefix="/api/devices", tags=["devices"])
@@ -180,17 +252,8 @@ app.include_router(trust.router, prefix="/api/trust", tags=["trust"])
 app.include_router(files.router, prefix="/api/files", tags=["files"])
 app.include_router(shield.router, prefix="/api", tags=["shield"]) # Note: Router has "/shield" prefix internaly
 
-# Uploads directory (screenshots served via authenticated /api/files/screenshots endpoint)
-if os.environ.get("FAMILYEYE_SERVICE_MODE") == "1":
-    app_data = os.getenv("ProgramData", "C:\\ProgramData")
-    uploads_path = os.path.join(app_data, "FamilyEye", "Server", "uploads")
-elif os.name == "nt":
-    app_data = os.getenv("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local"))
-    uploads_path = os.path.join(app_data, "FamilyEye", "Server", "uploads")
-else:
-    uploads_path = os.path.join(os.getcwd(), "uploads")
-
-os.makedirs(uploads_path, exist_ok=True)
+# Uploads directory (screenshots via authenticated /api/files/screenshots); single source in config
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 # Screenshots only via /api/files/screenshots/{device_id}/{filename} (auth required).
 
 def _get_android_version() -> str:
@@ -254,23 +317,25 @@ if os.path.exists(frontend_path):
         favicon_path = os.path.join(frontend_path, "favicon.svg")
         if os.path.exists(favicon_path):
             return FileResponse(favicon_path, media_type="image/svg+xml")
-        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=404, content={"detail": "Favicon not found"})
+
+    @app.get("/favicon.ico")
+    async def serve_favicon_ico():
+        """Return 302 to favicon.svg so scanners do not get 200 with index.html."""
+        return RedirectResponse(url="/favicon.svg", status_code=302)
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         # Do not intercept /api or /docs
         if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("redoc"):
-            # Move on to other handlers
-            from fastapi.responses import JSONResponse
             return JSONResponse(status_code=404, content={"detail": "Not Found"})
-        
+        # Block probe/sensitive paths: return 404 instead of index.html
+        if _is_blocked_probe_path(full_path):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
         # Check if it's a static file that exists in dist folder
         static_path = os.path.join(frontend_path, full_path)
-        
         if os.path.exists(static_path) and os.path.isfile(static_path):
             return FileResponse(static_path)
-        
         # Serve index.html for all other routes (SPA fallback)
         return FileResponse(os.path.join(frontend_path, "index.html"))
 else:
