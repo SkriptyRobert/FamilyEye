@@ -88,6 +88,7 @@ class Settings:
         _db_dir = _base_dir
         
     _default_db_path = os.path.join(_db_dir, 'parental_control.db')
+    UPLOAD_DIR: str = os.path.join(_db_dir, "uploads")
 
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{_default_db_path}")
     
@@ -125,8 +126,8 @@ class Settings:
     # Do NOT trust localhost unless we explicitly want it.
     BACKEND_URL: str = os.getenv("BACKEND_URL", f"{_protocol}://{_local_ip}:{PORT}")
     
-    # CORS - allow all for standalone/local network mode
-    CORS_ORIGINS: list = [
+    # CORS - allow all for standalone/local network mode; include BACKEND_URL origin for public IP
+    _cors_list = [
         "http://localhost:3000",
         "http://localhost:5173",
         "https://localhost:3000",
@@ -142,7 +143,25 @@ class Settings:
         "https://localhost:8000",
         "http://localhost:8000",
     ]
-    
+    _backend_url_env = os.getenv("BACKEND_URL", "").strip()
+    if _backend_url_env:
+        from urllib.parse import urlparse
+        try:
+            parsed = urlparse(_backend_url_env)
+            if parsed.scheme and parsed.netloc:
+                origin = f"{parsed.scheme}://{parsed.netloc}"
+                if origin not in _cors_list:
+                    _cors_list.append(origin)
+        except Exception:
+            pass
+    _cors_extra = os.getenv("CORS_ORIGINS", "").strip()
+    if _cors_extra:
+        for o in _cors_extra.split(","):
+            o = o.strip()
+            if o and o not in _cors_list:
+                _cors_list.append(o)
+    CORS_ORIGINS: list = _cors_list
+
     # Pairing
     PAIRING_TOKEN_EXPIRE_MINUTES: int = 5
 
