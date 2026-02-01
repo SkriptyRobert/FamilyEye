@@ -65,7 +65,7 @@ plugins:
       minify_html: true
 
 nav:
-  - Home: INDEX.md
+  - Home: index.md
   - Tutorials:
     - Getting Started: tutorials/getting-started.md
     - First Setup: tutorials/first-setup.md
