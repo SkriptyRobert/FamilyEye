@@ -305,24 +305,27 @@ if os.path.exists(installer_path):
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(base_path, "frontend", "dist")
 
+# Favicon routes always registered (CI has no frontend dist; still return 302 so scanners don't get 200)
+@app.get("/favicon.ico")
+async def serve_favicon_ico():
+    """Return 302 to favicon.svg so scanners do not get 200 with index.html."""
+    return RedirectResponse(url="/favicon.svg", status_code=302)
+
+
+@app.get("/favicon.svg")
+async def serve_favicon_svg():
+    favicon_path = os.path.join(frontend_path, "favicon.svg")
+    if os.path.exists(frontend_path) and os.path.exists(favicon_path):
+        return FileResponse(favicon_path, media_type="image/svg+xml")
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+
 if os.path.exists(frontend_path):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
-    
+
     @app.get("/")
     async def serve_root():
         return FileResponse(os.path.join(frontend_path, "index.html"))
-
-    @app.get("/favicon.svg")
-    async def serve_favicon():
-        favicon_path = os.path.join(frontend_path, "favicon.svg")
-        if os.path.exists(favicon_path):
-            return FileResponse(favicon_path, media_type="image/svg+xml")
-        return JSONResponse(status_code=404, content={"detail": "Favicon not found"})
-
-    @app.get("/favicon.ico")
-    async def serve_favicon_ico():
-        """Return 302 to favicon.svg so scanners do not get 200 with index.html."""
-        return RedirectResponse(url="/favicon.svg", status_code=302)
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
