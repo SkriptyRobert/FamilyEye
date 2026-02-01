@@ -10,6 +10,19 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
+# Rate-limit repeated auth failure logs per device (avoid log flood from retrying clients)
+_ws_auth_fail_last: Dict[str, float] = {}
+_WS_AUTH_FAIL_LOG_INTERVAL = 60.0  # seconds
+
+
+def _should_log_auth_fail(device_id: str) -> bool:
+    now = datetime.now(timezone.utc).timestamp()
+    last = _ws_auth_fail_last.get(device_id, 0)
+    if now - last >= _WS_AUTH_FAIL_LOG_INTERVAL:
+        _ws_auth_fail_last[device_id] = now
+        return True
+    return False
+
 router = APIRouter()
 
 
@@ -121,10 +134,11 @@ async def websocket_device_endpoint(
     header_api_key = websocket.headers.get("x-api-key")
     effective_api_key = api_key or header_api_key
     
-    logger.info(f"WS Attempt: device_id={device_id}, api_key={'present' if effective_api_key else 'missing'}")
+    logger.debug(f"WS Attempt: device_id={device_id}, api_key={'present' if effective_api_key else 'missing'}")
     
     if not effective_api_key:
-        logger.warning(f"WS Auth Failed: No API key provided for {device_id}")
+        if _should_log_auth_fail(device_id):
+            logger.warning(f"WS Auth Failed: No API key provided for {device_id}")
         await websocket.close(code=4001, reason="API key required")
         return
     
@@ -137,7 +151,8 @@ async def websocket_device_endpoint(
     ).first()
     
     if not device:
-        logger.warning(f"WS Auth Failed: Invalid credentials for {device_id}")
+        if _should_log_auth_fail(device_id):
+            logger.warning(f"WS Auth Failed: Invalid credentials for {device_id} (rate-limited log)")
         await websocket.close(code=4001, reason="Unauthorized")
         return
 
