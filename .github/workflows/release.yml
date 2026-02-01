@@ -221,9 +221,10 @@ jobs:
           name: Release v${{ steps.version.outputs.version }}
           body: |
             ## Release v${{ steps.version.outputs.version }}
-            - **Android**: install APK from Assets below.
-            - **Windows Agent**: run the agent installer from Assets below.
-            - **Windows Server**: run the server installer from Assets below (desktop/server).
+            **Assets (naming):**
+            - `FamilyEye_${{ steps.version.outputs.version }}.apk` – Android
+            - `FamilyEyeAgent_Setup_${{ steps.version.outputs.version }}.exe` – Windows Agent
+            - `FamilyEyeServer_Setup_${{ steps.version.outputs.version }}.exe` – Windows Server
             - **Docker**: `docker pull ghcr.io/skriptyrobert/familyeye/familyeye-server:${{ github.ref_name }}` or `:latest`
           files: |
             release-apk/*.apk
