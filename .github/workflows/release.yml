@@ -75,6 +75,12 @@ jobs:
           chmod +x clients/android/gradlew
           cd clients/android && ./gradlew assembleDebug --no-daemon --max-workers=2
 
+      - name: Rename APK to FamilyEye_<version>.apk
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          APK_DIR=clients/android/app/build/outputs/apk/debug
+          mv "$APK_DIR/app-debug.apk" "$APK_DIR/FamilyEye_${VERSION}.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

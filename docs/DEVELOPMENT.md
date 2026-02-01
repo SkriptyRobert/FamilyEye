@@ -80,16 +80,19 @@ Parental-Control_Enterprise/
 
 ## CI/CD – GitHub Actions
 
-Workflow jsou v [.github/workflows/](../.github/workflows/). Spouštějí se na push a pull request do větví `main`, `master`, `android-fix-process` při změnách v příslušných cestách.
+Workflow jsou v [.github/workflows/](../.github/workflows/). Testy (backend, frontend, android) běží na **všech větvích** při push/PR a změnách v příslušných cestách. Build Server, Build Windows Agent a Deploy Website jen na větvích `main` a `android-fix-process`.
 
 | Workflow | Soubor | Kdy se spustí | Co dělá |
 |----------|--------|----------------|---------|
-| **Backend Tests** | [backend.yml](../.github/workflows/backend.yml) | Změny v `backend/**` | Python 3.11, `pip install`, `pytest tests/` s coverage, upload do Codecov |
-| **Frontend Tests** | [frontend.yml](../.github/workflows/frontend.yml) | Změny v `frontend/**` | Node 18, `npm ci`, `npm test -- --run --coverage` |
-| **Android Tests** | [android.yml](../.github/workflows/android.yml) | Změny v `clients/android/**` | JDK 17, `./gradlew test`, upload artifactů s test výsledky |
-| **Create Release** | [release.yml](../.github/workflows/release.yml) | Po úspěšném dokončení workflow „Run Tests” na `main`/`master` | Vytvoření GitHub Release s tagem odvozeným od `versionName` z Android `build.gradle.kts` |
+| **Backend Tests** | [backend.yml](../.github/workflows/backend.yml) | Push/PR, změny v `backend/**` | Python 3.11, `pytest tests/` |
+| **Frontend Tests** | [frontend.yml](../.github/workflows/frontend.yml) | Push/PR, změny v `frontend/**` | Node 18, `npm ci`, `npm test -- --run` |
+| **Android Tests** | [android.yml](../.github/workflows/android.yml) | Push/PR, změny v `clients/android/**` | JDK 17, `./gradlew test` |
+| **Build Server (Docker)** | [build-server.yml](../.github/workflows/build-server.yml) | Push/PR do `main`/`android-fix-process`, změny v `backend/**`, `frontend/**`, `docker/**` | Sestaví Docker image, push do GHCR (`familyeye-server`) |
+| **Build Windows Agent** | [build-windows-agent.yml](../.github/workflows/build-windows-agent.yml) | Push/PR do `main`/`android-fix-process`, změny v `installer/agent/**`, `clients/windows/**` | Sestaví Windows instalátor (artifact) |
+| **Deploy Website** | [deploy-website.yml](../.github/workflows/deploy-website.yml) | Push do `main`/`android-fix-process`, změny v `website/**`, `docs/**`, `mkdocs.yml` | Sestaví a nasadí web na GitHub Pages |
+| **Create Release** | [release.yml](../.github/workflows/release.yml) | **Push tagu `v*`** (např. `v2.4.0`) | Spustí unit testy (backend, frontend, android), sestaví APK a Windows instalátor, vytvoří [GitHub Release](https://github.com/SkriptyRobert/FamilyEye/releases) a přiloží artefakty |
 
-**Poznámka**: Release workflow předpokládá workflow s názvem „Run Tests”; pokud máte jeden složený workflow, který volá backend/frontend/android testy, pojmenujte ho takto. V opačném případě upravte `workflow_run.workflows` v `release.yml` podle skutečných názvů workflow.
+Release se vytvoří až po úspěchu všech testů a buildů. Verze se bere z tagu (např. `v2.4.0`). Postup vydání nové verze je v [CONTRIBUTING.md](../CONTRIBUTING.md#releasing-a-new-version).
 
 ## Přidávání funkcí
 

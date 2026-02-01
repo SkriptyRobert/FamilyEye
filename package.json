@@ -3,6 +3,7 @@
   "private": true,
   "description": "FamilyEye – root for release tooling",
   "scripts": {
+    "release": "python scripts/release.py",
     "release:changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
     "release:bump": "python scripts/bump_version.py"
   },

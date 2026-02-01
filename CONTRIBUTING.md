@@ -75,14 +75,21 @@ Example: `git commit -m "feat: add Device Owner setup wizard"`. From the repo ro
 
 Version is defined in the root file `VERSION`. All components (backend, frontend, Android, installers, website) read or are updated from it.
 
-1. **Bump version:** From repo root run  
-   `python scripts/bump_version.py 2.5.0`  
-   or use `patch` / `minor` / `major` to auto-increment (e.g. `python scripts/bump_version.py patch`).  
-   This updates `VERSION`, `versionCode` in Android, `app-config.json`, `frontend/package.json`, `website/package.json`, and the installer `.iss` files.
-2. **Update CHANGELOG:** Edit `CHANGELOG.md`: add a section `## [X.Y.Z] - YYYY-MM-DD` and list changes (or use a tool that generates it from commits).
-3. **Commit and push:** e.g. `git add -A && git commit -m "chore: release 2.5.0" && git push origin main`.
-4. **Tag and push tag:** `git tag v2.5.0` (on the release commit), then `git push origin v2.5.0`.
-5. **GitHub Release:** The workflow `Create Release` runs on push of tag `v*`: it runs tests, builds Android APK and Windows installer (using `setup_agent.iss` and version from `VERSION`), and creates a GitHub Release with the artifacts. Users download from the [Releases](https://github.com/SkriptyRobert/FamilyEye/releases) page.
+**One command (recommended):** From repo root, on branch `main`:
+
+```bash
+npm run release -- patch
+```
+
+Use `patch` (2.4.0 → 2.4.1), `minor` (2.4.0 → 2.5.0), or `major` (2.4.0 → 3.0.0). This will: bump version everywhere, update CHANGELOG from commits (if `npm install` was run in root), commit, create tag, and push `main` + tag. GitHub Actions will then create the [Release](https://github.com/SkriptyRobert/FamilyEye/releases) with APK and Windows installer. Optional: `--no-changelog` to skip changelog, `--dry-run` to only print commands.
+
+**Manual steps** (if you prefer or need a specific version):
+
+1. **Bump version:** `python scripts/bump_version.py 2.5.0` or `patch` / `minor` / `major`.
+2. **Update CHANGELOG:** Edit `CHANGELOG.md` or run `npm run release:changelog`.
+3. **Commit and push:** `git add -A && git commit -m "chore: release 2.5.0" && git push origin main`.
+4. **Tag and push tag:** `git tag v2.5.0`, then `git push origin v2.5.0`.
+5. **GitHub Release:** The workflow runs on push of tag `v*` and creates the release with artifacts.
 
 Always bump and commit the new version **before** creating the tag so the tagged commit contains the updated version everywhere.
 
