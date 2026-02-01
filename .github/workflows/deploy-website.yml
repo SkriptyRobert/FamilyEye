@@ -57,13 +57,18 @@ jobs:
           key: pip-mkdocs-${{ hashFiles('mkdocs.yml') }}
 
       - name: Setup MkDocs
-        run: pip install mkdocs-material mkdocs-minify-plugin
+        run: pip install mkdocs-material mkdocs-minify-plugin pymdown-extensions
 
       - name: Build MkDocs
-        run: mkdocs build --config-file mkdocs.yml --site-dir site
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          mkdocs build --config-file mkdocs.yml --site-dir site
+          ls -la site/ || true
 
       - name: Verify MkDocs output
-        run: test -f site/index.html || (echo "MkDocs did not produce site/index.html" && exit 1)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          test -f site/index.html || (echo "MkDocs did not produce site/index.html" && ls -la site/ 2>/dev/null || true && exit 1)
 
       - name: Merge website and docs for deploy
         run: |
