@@ -5,7 +5,7 @@
   <img src="docs/assets/hero-family.jpg" alt="FamilyEye - Secure Your Family's Digital Future" width="100%" style="border-radius: 10px;" />
   <br><br>
   
-  > **Inteligentní ochrana pro Vaši rodinu v digitálním světě**
+  > **Ochrana pro Vaši rodinu v digitálním světě**
 
   [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
   [![Images: Public Domain](https://img.shields.io/badge/Images-Public%20Domain-lightgrey.svg)](LICENSE_IMAGES)
