@@ -62,6 +62,9 @@ jobs:
       - name: Build MkDocs
         run: mkdocs build --config-file mkdocs.yml --site-dir site
 
+      - name: Verify MkDocs output
+        run: test -f site/index.html || (echo "MkDocs did not produce site/index.html" && exit 1)
+
       - name: Merge website and docs for deploy
         run: |
           mkdir -p deploy
