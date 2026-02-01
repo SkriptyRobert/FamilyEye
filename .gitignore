@@ -113,3 +113,6 @@ xref-*.html
 android_load/
 android_audit.log
 android_audit_continuous.log
+
+# Audit logs (may contain IPs, tokens; do not commit)
+audit/
