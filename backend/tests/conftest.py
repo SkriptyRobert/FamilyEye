@@ -1,6 +1,8 @@
 """
 Shared pytest fixtures for backend tests.
 """
+import os
+import tempfile
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -11,22 +13,34 @@ from app.models import User, Device, Rule, UsageLog, PairingToken
 
 
 @pytest.fixture(scope="function")
-def db_session() -> Generator[Session, None, None]:
-    """
-    Create a fresh database session for each test.
-    Uses in-memory SQLite for fast test execution.
-    """
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+def db_engine():
+    """Engine with temp file so TestClient (other thread) can open a new connection to same DB."""
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    engine = create_engine(
+        f"sqlite:///{path}",
+        connect_args={"check_same_thread": False},
+    )
     Base.metadata.create_all(engine)
-    
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = TestingSessionLocal()
-    
+    try:
+        yield engine
+    finally:
+        Base.metadata.drop_all(engine)
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+@pytest.fixture(scope="function")
+def db_session(db_engine) -> Generator[Session, None, None]:
+    """Create a fresh database session for each test. Data committed here is visible to get_db in request thread."""
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+    session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(engine)
 
 
 @pytest.fixture

@@ -2,10 +2,9 @@
 Tests for rules API endpoints.
 """
 import pytest
-from httpx import ASGITransport, AsyncClient
-from fastapi import Depends
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone, timedelta
-import asyncio
 
 from app.main import app
 from app.database import get_db
@@ -13,46 +12,25 @@ from app.models import User, Device, Rule, UsageLog
 
 
 @pytest.fixture
-def client(db_session):
-    """Create test client with database override."""
-    # Override get_db dependency before creating client
+def client(db_engine, db_session):
+    """Create test client. get_db yields a new session to same DB so request thread sees test data."""
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+
     def override_get_db():
+        session = SessionLocal()
         try:
-            yield db_session
+            yield session
         finally:
-            pass
-    
+            session.close()
+
     app.dependency_overrides[get_db] = override_get_db
-    
-    # Create async client
-    transport = ASGITransport(app=app)
-    ac = AsyncClient(transport=transport, base_url="http://test")
-    
-    yield ac
-    
-    # Clean up
-    asyncio.run(ac.aclose())
+    with TestClient(app, base_url="http://test") as tc:
+        yield tc
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
-def auth_headers(test_user, client):
-    """Get auth headers for authenticated requests."""
-    # Create token (simplified - in real app use proper auth)
-    response = client.post(
-        "/api/auth/login",
-        data={"username": test_user.email, "password": "test_password"}
-    )
-    if response.status_code == 200:
-        token = response.json().get("access_token")
-        return {"Authorization": f"Bearer {token}"}
-    return {}
-
-
-@pytest.mark.asyncio
-async def test_agent_fetch_rules_success(client, db_session, test_user, test_device):
+def test_agent_fetch_rules_success(client, db_session, test_user, test_device):
     """Test agent can fetch rules for device."""
-    # Create a rule
     rule = Rule(
         device_id=test_device.id,
         rule_type="time_limit",
@@ -63,17 +41,16 @@ async def test_agent_fetch_rules_success(client, db_session, test_user, test_dev
     db_session.add(rule)
     db_session.commit()
 
-    # Create usage log for daily_usage calculation
     usage_log = UsageLog(
         device_id=test_device.id,
         app_name="YouTube",
-        duration=300,  # 5 minutes
+        duration=300,
         timestamp=datetime.now(timezone.utc)
     )
     db_session.add(usage_log)
     db_session.commit()
 
-    response = await client.post(
+    response = client.post(
         "/api/rules/agent/fetch",
         json={
             "device_id": test_device.device_id,
@@ -90,10 +67,9 @@ async def test_agent_fetch_rules_success(client, db_session, test_user, test_dev
     assert data["daily_usage"] >= 0
 
 
-@pytest.mark.asyncio
-async def test_agent_fetch_rules_invalid_api_key(client, db_session, test_device):
+def test_agent_fetch_rules_invalid_api_key(client, db_session, test_device):
     """Test agent fetch fails with invalid API key."""
-    response = await client.post(
+    response = client.post(
         "/api/rules/agent/fetch",
         json={
             "device_id": test_device.device_id,
@@ -104,22 +80,20 @@ async def test_agent_fetch_rules_invalid_api_key(client, db_session, test_device
     assert response.status_code == 401
 
 
-@pytest.mark.asyncio
-async def test_agent_fetch_rules_calculates_daily_usage(client, db_session, test_user, test_device):
+def test_agent_fetch_rules_calculates_daily_usage(client, db_session, test_user, test_device):
     """Test daily_usage is calculated correctly."""
-    # Add multiple usage logs
     now = datetime.now(timezone.utc)
     for i in range(5):
         usage_log = UsageLog(
             device_id=test_device.id,
             app_name="YouTube",
-            duration=60,  # 1 minute each
+            duration=60,
             timestamp=now - timedelta(minutes=i)
         )
         db_session.add(usage_log)
     db_session.commit()
 
-    response = await client.post(
+    response = client.post(
         "/api/rules/agent/fetch",
         json={
             "device_id": test_device.device_id,
@@ -129,7 +103,6 @@ async def test_agent_fetch_rules_calculates_daily_usage(client, db_session, test
 
     assert response.status_code == 200
     data = response.json()
-    # Should calculate based on unique minutes
     assert data["daily_usage"] >= 0
     assert "YouTube" in data["usage_by_app"]
-    assert data["usage_by_app"]["YouTube"] >= 300  # 5 * 60 seconds
+    assert data["usage_by_app"]["YouTube"] >= 300
