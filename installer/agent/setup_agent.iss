@@ -301,7 +301,7 @@ var
 begin
   Result := False;
   
-  ; Generate random suffix for ID
+  // Generate random suffix for ID
   RandomPart := '';
   for i := 1 to 6 do RandomPart := RandomPart + Chr(Ord('a') + Random(26));
   DeviceID := 'win-' + GetPCName + '-' + RandomPart;
