@@ -28,7 +28,7 @@ def test_calculate_day_usage_minutes(db_session, test_device):
         device_id=test_device.id,
         app_name="YouTube",
         duration=60,
-        timestamp=now.replace(minute=now.minute + 1)
+        timestamp=now + timedelta(minutes=1)
     )
     db_session.add(log2)
     db_session.commit()
