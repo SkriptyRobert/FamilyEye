@@ -314,7 +314,7 @@ begin
     WinHttpReq.Open('POST', URL, False);
     WinHttpReq.SetRequestHeader('Content-Type', 'application/json');
     WinHttpReq.SetTimeouts(5000, 5000, 5000, 5000);
-    try WinHttpReq.Option[4] := 13056; except end; ; Ignore SSL
+    try WinHttpReq.Option[4] := 13056; except end; // Ignore SSL
     
     WinHttpReq.Send(PostData);
     
