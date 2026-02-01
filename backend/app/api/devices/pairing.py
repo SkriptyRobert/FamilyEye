@@ -1,5 +1,5 @@
 """Device pairing endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from ...database import get_db
 from ...models import Device, User, PairingToken
@@ -11,6 +11,8 @@ from ...services.pairing_service import (
     create_device_from_pairing
 )
 from ...config import settings
+from ...rate_limiter import check_rate_limit
+from ...request_utils import get_client_ip
 
 router = APIRouter()
 
@@ -57,10 +59,19 @@ async def get_pairing_qr_code(
 
 @router.post("/pair", response_model=PairingResponse)
 async def pair_device(
+    request: Request,
     pairing_data: PairingRequest,
     db: Session = Depends(get_db)
 ):
-    """Pair a new device using pairing token."""
+    """Pair a new device using pairing token. Rate limited to 10/min per IP."""
+    ip = get_client_ip(request)
+    is_allowed, _, retry_after = check_rate_limit(ip, "pair", max_requests=10, window_seconds=60)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many pairing attempts. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
     try:
         device = create_device_from_pairing(
             token=pairing_data.token,

@@ -89,11 +89,9 @@ def get_current_parent(
 
 
 def _get_client_ip(request: Request) -> str:
-    """Get client IP from request, handling proxies."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    """Get client IP. Respects TRUST_PROXY env (see request_utils.get_client_ip)."""
+    from ..request_utils import get_client_ip
+    return get_client_ip(request)
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
