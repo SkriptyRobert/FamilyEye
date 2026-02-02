@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.4.1] - 2026-02-02
 
+### Added
+
+- **Security Hardening:** Implemented protection against automated scanning and endpoint probing to secure the backend infrastructure.
+- **Automated SSL Management:** Enhanced built-in SSL infrastructure for automatic certificate generation and simplified secure deployment.
+
 ### Fixed
 
-- Android: Improved agent process immortality and recovery mechanisms (accessibility service stability, usage tracking reliability).
-- Security: Synchronized English and Czech security policies; added `certs/` to `.gitignore`.
-- Security: Implemented probe path protection and automated SSL certificate management improvements.
+- **Android Agent Resilience:** Significantly improved process immortality and reliability of background monitoring services (Accessibility and Usage Tracking).
+- **Security Policy Synchronization:** Unified security reporting and best practices across all supported languages.
 
 ## [2.4.0] - 2025-01-29
 
