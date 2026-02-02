@@ -1,4 +1,4 @@
-#define MyAppVersion "2.4.0"
+#define MyAppVersion "2.4.1"
 ; Version above is overwritten by scripts/bump_version.py from root VERSION file.
 
 [Setup]
