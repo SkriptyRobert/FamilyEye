@@ -17,24 +17,23 @@
 ---
 
 ## ⚡ Blesková Instalace & Nastavení
-**Zapomeňte na složité konfigurace. Vše je připraveno pro okamžité použití.**
+**Vše je připraveno pro okamžité použití.** Veškerý provoz je **šifrovaný by default**.
 
 - 🐳 **Server (Docker):** Jediný příkaz `docker-compose up` a váš server běží.
-- 🏢 **Server (Windows):** One-click instalátor pro domácí PC. Může běžet samostatně nebo spolu s agentem. Veškerý provoz je **šifrovaný by default**.
+- 🏢 **Server (Windows):** One-click instalátor pro domácí PC. Může běžet samostatně nebo spolu s agentem.
 - 💻 **Agent Windows:** Jednoduchý instalátor, který za vás nastaví účet, oprávnění i služby.
-- 📱 **Agent Android:**
-  - **Bez ztráty dat!** Není potřeba tovární nastavení.
-  - **Snadné párování:** Stačí naskenovat QR kód.
+- 📱 **Agent Android:** Apk instalace bez nutnosti továrního nastavení a jakékoliv ztráty dat. Stačí na chvílí odhlásit google účet aktivovat Device Owner a následně účet zpět.
+-**Snadné párování:** Stačí naskenovat QR kód.
   - **Plná ochrana (Device Owner):** Nastavení na 3 klinkutí přes **WebUSB/WebADB**. Připojíte kabel, kliknete a máte hotovo.
 
 ---
 
-## 🌟 Proč FamilyEye? Game Changer Features!
+## Proč FamilyEye? Game Changer Features!
 
-### 🛡️ Smart Shield & Detekce Slov (i Vlastních!)
+### 🛡️ Smart Shield / Detekce Slov (včetně Vlastních!)
 **Nečekejte na problém, předcházejte mu.**
-Náš unikátní **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazovky v reálném čase:
-- **Detekce nebezpečných slov** (včetně vašich **vlastních kategorií**!).
+- **Smart Shield** neblokuje jen domény. Analyzuje obsah obrazovky v reálném čase:
+- **Detekce nebezpečných slov** (včetně vašich **vlastních v kategoriích**!).
 - **AI analýza vizuálů** a okamžité pořízení důkazního snímku.
 - Funguje v jakékoliv aplikaci, nejen v prohlížeči.
 
@@ -44,38 +43,38 @@ Pro správu rodiny nepotřebujete instalovat žádnou další aplikaci.
 - **Plně responzivní Web:** Dashboard funguje perfektně na mobilu, tabletu i počítači.
 - **Kdekoliv a kdykoliv:** Stačí otevřít prohlížeč. Žádné otravné aktualizace "Rodičovské aplikace".
 
-### 🔒 Vaše Data v Bezpečí (Ani Čína, ani Amerika)
-Soukromí je pro nás klíčové.
+### 🔒 Data v Bezpečí (Ani Čína, ani Amerika)
 - **Self-hosted:** Celý systém běží na vašem vlastním železe.
-- **Žádné sledování:** Vaše data neputují na cizí servery v Číně ani v USA. Vše zůstává u vás doma.
+- **Žádné sledování:** Data neputují na cizí servery v Číně ani v USA. Vše zůstává u vás doma.
 
 ### 🎮 Kompletní Kontrola a Agenti
 **To není jen o blokování. Je to o zdravých návycích.**
 
 #### ⏰ Pánem Času (Limity a Rozvrhy)
-- **Flexibilní Rozvrhy:** Nastavte přesně, kdy se smí hrát a kdy se spí ("Večerka").
-- **Dávkování Zábavy:** Určete denní limity pro konkrétní aplikace nebo celé kategorie.
-- **Školní Režim:** Během výuky jen povolené aplikace.
+- **Flexibilní Rozvrhy:** Nastavte přesně, kdy se co smí hrát a kdy se spí ("Večerka").
+- **Dávkování Zábavy:** Určete denní limity pro konkrétní aplikace/zařízení.
 
 #### 🔒 Vzdálená Správa v Reálném Čase
-- **Lock Down!** Potřebujete okamžitou pozornost? Uzamkněte zařízení dítěte na jedno kliknutí z vašeho mobilu.
+- **Uzamčení!** Uzamkněte zařízení dítěte na jedno kliknutí z vašeho mobilu.
+- **Vypnutí internetu** Možnost vypnutí internetu zařízení dítěte na jedno kliknutí z vašeho mobilu.
+- **Blokace webových stránek** Možnost blokování webových stránek zařízení dítěte na jedno kliknutí z vašeho mobilu.
 - **Blokování Instalací:** Na Androidu a Windows zabráníte instalaci nežádoucích programů.
-- **Webový Filtr:** Blokování stránek a vynucení bezpečného vyhledávání.
+- **Webový Filtr:** Blokování webových stránek dle vlastního seznamu.
 
 #### 🕵️‍♂️ Co se děje, když se nedíváte?
-- **Detailní Reporting:** Přesné grafy používání aplikací (žádné "jen jsem se díval na hodiny").
-- **Offline? Nevadí:** Agenti nahrávají aktivitu i offline a po připojení vše synchronizují.
-- **Anti-Tamper Ochrana:** Dítě nemůže agenta jen tak odinstalovat nebo vypnout (Device Admin/Owner mód).
+- **Detailní Reporting:** Přesné grafy používání aplikací.
+- **Offline? Nevadí:** Agenti si fungují i offline a po připojení vše synchronizují. Chytře rozpoznává mezi výpadkem sítě a bootem zařízení. 
+- **Anti-Tamper Ochrana:** Dítě nemůže agenta jen tak odinstalovat nebo vypnout (Device Admin/Owner mód). 
 
 ---
 
-## 🚀 Chcete se zapojit? Nebo jste našli chybu?
+## 🚀 Chcete FamilyEye vylepšit? Nebo jste našli chybu?
 
-**Chcete vylepšit funkce nebo opravit bug? Tak to jednoduše udělejte!**
+**Tak to jednoduše udělejte!**
 
 Projekt je navržen tak, aby se do něj mohl zapojit každý – klidně s pomocí **AI**.
 - **Pro AI Agenty:** V kořenu projektu najdete soubor [`llms.txt`](llms.txt).
-- **Jak na to:** Jednoduše načtěte `llms.txt` svému AI agentovi (Claude, ChatGPT, Cursor). Soubor obsahuje kompletní kontext, architekturu a instrukce, takže AI okamžitě pochopí, co a jak upravit.
+- **Jak na to:** Jednoduše načtěte `llms.txt` svému AI agentovi (Claude, ChatGPT, codex,...). Soubor obsahuje kompletní kontext, architekturu a instrukce, takže AI okamžitě pochopí, co a jak upravit a sestavit.
 
 *Vytvářejte, upravujte a pomozte nám dělat digitální svět bezpečnějším!*
 
@@ -83,7 +82,7 @@ Projekt je navržen tak, aby se do něj mohl zapojit každý – klidně s pomoc
 
 ## 🛠️ Technická Dokumentace
 
-**Video návody (instalace, párování):** [Dokumentace → Video návody](https://skriptyrobert.github.io/FamilyEye/docs/tutorials/videos/) – místo pro videa z YouTube/Vimeo (odkazy nebo vložené přehrávače).
+**Video návody (instalace, párování):** [Dokumentace → Video návody](https://skriptyrobert.github.io/FamilyEye/docs/tutorials/videos/) – pro videa z YouTube - to-do.
 
 *Níže naleznete technické detaily, strukturu projektu a návody na instalaci.*
 
@@ -163,9 +162,9 @@ This project's **source code** is licensed under **GNU General Public License v3
 See [LICENSE](LICENSE) file for details.
 
 ### Images License
-Grafický obsah v tomto projektu byl vygenerován pomocí umělé inteligence (Nanobanana / Google Cloud). Tyto obrázky jsou poskytovány jako **volné dílo (Public Domain)**.
+Grafický obsah v tomto projektu byl vygenerován pomocí umělé inteligence (Nanobanana/Google Cloud). Tyto obrázky jsou poskytovány jako **volné dílo (Public Domain)**.
 
-Naše prosba: Ačkoliv to zákon nevyžaduje, ocením, pokud při dalším šíření těchto obrázků uvedete odkaz na tento projekt.
+Prosba: Ačkoliv to zákon nevyžaduje, ocením, pokud při dalším šíření těchto obrázků uvedete odkaz na tento projekt.
 See [LICENSE_IMAGES](LICENSE_IMAGES) file for details.
 
 **Author:** Róbert Pešout (BertSoftware) - robert.pesout@gmail.com

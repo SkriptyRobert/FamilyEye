@@ -53,6 +53,7 @@ clients/windows/config.json
 backend/uploads/
 backend/app.log
 uploads/
+certs/
 
 # Android build logs and temporary files
 clients/android/.kotlin/

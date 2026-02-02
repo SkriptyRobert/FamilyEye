@@ -8,9 +8,9 @@
 
 ## Reporting a Vulnerability
 
-**Please do NOT report security vulnerabilities through public GitHub issues.**
+**Please report bugs via public GitHub Issues.**
 
-If you discover a security vulnerability, please report it by:
+If you discover a security vulnerability, please report it as follows:
 
 1. **Email:** Send details to **robert.pesout@gmail.com** (Róbert Pešout, BertSoftware)
 2. **Include:**
