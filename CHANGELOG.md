@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-02-02
+
+### Fixed
+
+- Android: Improved agent process immortality and recovery mechanisms (accessibility service stability, usage tracking reliability).
+- Security: Synchronized English and Czech security policies; added `certs/` to `.gitignore`.
+- Security: Implemented probe path protection and automated SSL certificate management improvements.
+
 ## [2.4.0] - 2025-01-29
 
 ### Added
