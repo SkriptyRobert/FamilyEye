@@ -180,9 +180,59 @@ jobs:
           name: release-windows-server
           path: installer/server/output/*.exe
 
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [unit-tests-backend, unit-tests-frontend, unit-tests-android]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/server/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/familyeye-server:${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}/familyeye-server:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   create-release:
     runs-on: ubuntu-latest
-    needs: [build-android, build-windows, build-windows-server]
+    needs: [build-android, build-windows, build-windows-server, build-docker]
     permissions:
       contents: write
     steps:
