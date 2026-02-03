@@ -108,6 +108,8 @@
 
 .device-phone img {
   border-radius: 20px;
+  transform: scale(1.1);
+  transform-origin: top center;
 }
 
 .device-label {

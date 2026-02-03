@@ -2,7 +2,7 @@
 
 Krátká videa krok za krokem: instalace serveru, párování zařízení a nastavení agentů.
 
-Videa je vhodné hostovat na **YouTube** nebo **Vimeo** a sem vložit odkaz nebo vložený přehrávač (embed). Soubory videí do repozitáře nedávejte – jsou velké a Git na to není určený.
+
 
 
 ---
