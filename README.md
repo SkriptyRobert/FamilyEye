@@ -75,9 +75,9 @@ Pro správu rodiny nepotřebujete instalovat žádnou další aplikaci.
 
 Projekt je navržen tak, aby se do něj mohl zapojit každý – klidně s pomocí **AI**.
 - **Pro AI Agenty:** V kořenu projektu najdete soubor [`llms.txt`](llms.txt).
-- **Jak na to:** Jednoduše načtěte `llms.txt` svému AI agentovi (Claude, ChatGPT, codex,...). Soubor obsahuje kompletní kontext, architekturu a instrukce, takže AI okamžitě pochopí, co a jak upravit a sestavit.
+- **Jak na to:** Jednoduše načtěte `llms.txt` svému AI agentovi (Claude, ChatGPT, Codex,...). Soubor obsahuje kompletní kontext, architekturu a instrukce, takže AI okamžitě pochopí, co a jak upravit a sestavit.
 
-*Vytvářejte, upravujte a pomozte nám dělat digitální svět bezpečnějším!*
+*Vytvářejte, upravujte a pomozte dělat FamilyEye a digitální svět bezpečnějším!*
 
 ---
 
@@ -138,10 +138,7 @@ Kompletní dokumentace je organizována v adresáři `/docs`.
 - **Reference:** [Feature Matrix](docs/reference/feature-matrix.md), [Error Codes](docs/reference/error-codes.md), [Testing Guide](docs/reference/testing.md)
 - **Diagramy:** [Synchronizace času](docs/TIME_SYNC_DIAGRAM.md)
 
-### 🎓 Návody a Tutoriály
-- **Začínáme:** [Prvotní nastavení](docs/tutorials/first-setup.md), [Průvodce startem](docs/tutorials/getting-started.md)
-- **Řešení problémů:** [USB Debugging](docs/how-to/troubleshoot-usb.md), [Obnovení přístupu](docs/how-to/restore-access.md)
-- **Běžné úkony:** [Změna PINu](docs/how-to/change-pin.md), [Odblokování aplikace](docs/how-to/unblock-app.md)
+
 
 ## 🤝 Contributing
 
