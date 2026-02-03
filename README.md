@@ -23,8 +23,8 @@
 - 🏢 **Server (Windows):** One-click instalátor pro domácí PC. Může běžet samostatně nebo spolu s agentem.
 - 💻 **Agent Windows:** Jednoduchý instalátor, který za vás nastaví účet, oprávnění i služby.
 - 📱 **Agent Android:** Apk instalace bez nutnosti továrního nastavení a jakékoliv ztráty dat. Stačí na chvílí odhlásit google účet aktivovat Device Owner a následně účet zpět.
--**Snadné párování:** Stačí naskenovat QR kód.
-  - **Plná ochrana (Device Owner):** Nastavení na 3 klinkutí přes **WebUSB/WebADB**. Připojíte kabel, kliknete a máte hotovo.
+- **Snadné párování:** Stačí naskenovat QR kód.
+- **Plná ochrana (Device Owner):** Nastavení na 3 kliknutí přes **WebUSB/WebADB**. Připojíte kabel, kliknete a máte hotovo.
 
 ---
 
