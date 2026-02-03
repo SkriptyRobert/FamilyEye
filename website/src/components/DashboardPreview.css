@@ -57,6 +57,9 @@
   height: auto;
   display: block;
   border-radius: 0;
+  transform: scale(1.03);
+  /* Lehký zoom pro lepší čitelnost */
+  transform-origin: top center;
 }
 
 /* Mobile Phone Showcase */
