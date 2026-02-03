@@ -85,10 +85,10 @@ Vyžaduje nainstalovaný Python 3.9+.
    ```bash
    python run_https.py
    ```
-4. Pro instalaci jako služby použijte `service_wrapper.py`:
+4. Pro instalaci jako služby použijte `service.py`:
    ```bash
-   python service_wrapper.py install
-   python service_wrapper.py start
+   python service.py install
+   python service.py start
    ```
 
 ---

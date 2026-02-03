@@ -42,10 +42,14 @@ backend/app/
     ├── insights_service.py  # Smart Insights (focus, wellness, anomálie)
     ├── stats_service.py     # Pomocné výpočty statistik (denní použití, rozsahy)
     └── summary_service.py    # Výpočet souhrnu použití a limitů
+backend/scripts/
+├── __init__.py
+├── init_admin.py        # Vytvoření prvního rodičovského účtu
 ```
 
 V kořeni `backend/` dále leží pomocné skripty:
-- `init_admin.py` - Vytvoření prvního rodičovského účtu (viz sekce Inicializace admina).
+- `run_https.py` - Spuštění HTTPS serveru.
+- `service.py` - Správa Windows služby.
 
 ## Spuštění
 
@@ -65,8 +69,9 @@ python run_https.py
 # Manuální spuštění (bez instalátoru)
 python run_https.py          # HTTPS server (self-signed certy v ./certs nebo ProgramData)
 
-# Windows služba (legacy manuální varianta)
-python service_wrapper.py    # registrace / správa služby přes Python skript
+# Windows služba
+python service.py install    # registrace / správa služby přes Python skript
+python service.py start
 ```
 
 ## Konfigurace
@@ -248,12 +253,12 @@ Výpočet souhrnu použití a limitů pro dashboard.
 
 ## Inicializace admina
 
-Skript **`backend/init_admin.py`** slouží k vytvoření prvního rodičovského (admin) účtu. Vytvoří tabulky, pokud neexistují, a přidá uživatele s rolí `parent`.
+Skript **`backend/scripts/init_admin.py`** slouží k vytvoření prvního rodičovského (admin) účtu. Vytvoří tabulky, pokud neexistují, a přidá uživatele s rolí `parent`.
 
 **Použití**:
 ```bash
 cd backend
-python init_admin.py <email> <password>
+python scripts/init_admin.py <email> <password>
 ```
 
 **Typické použití**:
