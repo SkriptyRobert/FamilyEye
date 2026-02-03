@@ -12,6 +12,7 @@
   [![Status: Open Source](https://img.shields.io/badge/Status-Open%20Source-green)](README.md)
   [![Language: Czech](https://img.shields.io/badge/Lang-Česky-red)](README_CZ.md)
   [![Device Owner: Supported](https://img.shields.io/badge/🤖_Device%20Owner-Supported-purple)](docs/AGENT.md)
+  [![Create Release](https://github.com/SkriptyRobert/FamilyEye/actions/workflows/release.yml/badge.svg)](https://github.com/SkriptyRobert/FamilyEye/actions/workflows/release.yml)
 </div>
 
 ---
