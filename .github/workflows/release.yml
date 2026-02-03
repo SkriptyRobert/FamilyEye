@@ -217,6 +217,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "REPO=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -225,8 +226,8 @@ jobs:
           file: docker/server/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/familyeye-server:${{ steps.version.outputs.version }}
-            ghcr.io/${{ github.repository }}/familyeye-server:latest
+            ghcr.io/${{ env.REPO }}/familyeye-server:${{ steps.version.outputs.version }}
+            ghcr.io/${{ env.REPO }}/familyeye-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
