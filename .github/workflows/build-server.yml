@@ -19,6 +19,7 @@ on:
       - 'installer/server/**'
       - 'docker/**'
       - '.github/workflows/build-server.yml'
+  workflow_dispatch:
 
 jobs:
   build-server:
