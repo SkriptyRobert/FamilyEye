@@ -346,13 +346,8 @@
     display: none;
   }
 
+  /* Hide dots on mobile - too many and look cluttered */
   .screenshots-dots {
-    gap: 6px;
-    margin-top: var(--space-4);
-  }
-
-  .screenshot-dot {
-    width: 8px;
-    height: 8px;
+    display: none;
   }
 }

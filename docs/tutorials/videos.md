@@ -4,21 +4,6 @@ Krátká videa krok za krokem: instalace serveru, párování zařízení a nast
 
 Videa je vhodné hostovat na **YouTube** nebo **Vimeo** a sem vložit odkaz nebo vložený přehrávač (embed). Soubory videí do repozitáře nedávejte – jsou velké a Git na to není určený.
 
----
-
-## Kde přidat videa
-
-1. **YouTube** – vytvořte kanál nebo playlist „FamilyEye návody“, nahrajte videa, získejte odkaz (např. `https://www.youtube.com/watch?v=XXXXX`).
-2. **Vimeo** – vhodné pro bez reklam; získejte odkaz nebo embed kód.
-3. Sem do dokumentace vložte buď **odkaz** (textový), nebo **embed** (přehravač přímo na stránce).
-
-### Příklad vložení videa z YouTube (embed)
-
-Pod každý nadpis níže můžete vložit přehrávač takto (nahraďte `VIDEO_ID` skutečným ID videa z URL `youtube.com/watch?v=VIDEO_ID`):
-
-```html
-<iframe width="560" height="315" src="https://www.youtube.com/embed/VIDEO_ID" title="YouTube video" allowfullscreen></iframe>
-```
 
 ---
 
