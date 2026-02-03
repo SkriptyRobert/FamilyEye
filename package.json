@@ -2,6 +2,7 @@
   "name": "familyeye-monorepo",
   "private": true,
   "description": "FamilyEye – root for release tooling",
+  "version": "2.4.1",
   "scripts": {
     "release": "python scripts/release.py",
     "release:changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",

@@ -115,6 +115,7 @@ def main() -> int:
     set_version_file(new_version)
     set_gradle_version_code(new_version)
     set_app_config_version(new_version)
+    set_package_json_version(REPO_ROOT / "package.json", new_version)
     set_package_json_version(REPO_ROOT / "frontend" / "package.json", new_version)
     set_package_json_version(REPO_ROOT / "website" / "package.json", new_version)
     set_iss_version(REPO_ROOT / "installer" / "agent" / "setup_agent.iss", new_version)
