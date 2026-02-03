@@ -35,7 +35,7 @@ async def update_settings_protection(
             detail="Device not found"
         )
     
-    valid_levels = {"full", "off"}
+    valid_levels = {"full", "partial", "off"}
     if data.settings_protection not in valid_levels:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

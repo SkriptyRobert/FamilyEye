@@ -44,7 +44,7 @@ class Device(Base):
     daily_usage_seconds = Column(Integer, default=0) # Total active time today (from Agent)
     
     # Settings protection for Android devices
-    settings_protection = Column(String, default="full")  # 'full' or 'off'
+    settings_protection = Column(String, default="full")  # 'full', 'partial', or 'off'
     settings_exceptions = Column(String, nullable=True)   # Reserved for future use
     
     # Device Owner status

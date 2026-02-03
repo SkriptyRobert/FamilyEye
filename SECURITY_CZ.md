@@ -21,9 +21,9 @@ Pokud objevíte bezpečnostní zranitelnost, nahlaste ji prosím následovně:
 
 ### Co očekávat
 
-- **Doba odezvy:** Snažíme se odpovědět do 48 hodin
-- **Aktualizace:** Budeme vás informovat o našem postupu
-- **Kredit:** Rádi vás uvedeme v poděkování u opravy (pokud si to přejete)
+- **Doba odezvy:** Snažím se odpovědět do 48 hodin
+- **Aktualizace:** Budu vás informovat o našem postupu
+- **Kredit:** Rád vás uvedu v poděkování u opravy (pokud si to přejete).
 
 ## Bezpečnostní Doporučení
 

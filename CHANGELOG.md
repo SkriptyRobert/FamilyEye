@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-02-03
+
+### Added
+
+- **Partial Settings Protection:** Introduced a new "Partial" protection mode that blocks access to the device Settings app but allows access to the notification shade (SystemUI). This enables children to toggle WiFi/Mobile Data and adjust brightness without compromising security.
+- **Frontend Controls:** Added a new "Partial" option to the device settings protection accordion in the dashboard.
+
+### Changed
+
+- **Protection Logic:** Refined `SelfProtectionHandler` and `EnforcementService` to support granular blocking policies.
+- **Security:** "Recents" (Clear All) access remains blocked in Partial mode to prevent agent termination.
+
 ## [2.4.1] - 2026-02-02
 
 ### Added

@@ -88,15 +88,16 @@ class EnforcementService @Inject constructor(
             )
         }
 
-        // 1.5. CRITICAL: Block SystemUI (Recents/Clear All) when Settings protection is active
-        // This MUST be before Device Lock check to prevent access to Clear All
+        // 1.5. CRITICAL: Block SystemUI (Notification Shade) based on protection level
+        // In FULL mode: Block to prevent any system access
+        // In PARTIAL mode: Allow notification shade for quick settings (WiFi, brightness, etc.)
         if (PackageMatcher.isSystemUI(packageName)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
-            val shouldBlockSystemUI = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSettings(
+            val shouldBlockSystemUI = com.familyeye.agent.policy.SettingsProtectionPolicy.shouldBlockSystemUI(
                 protectionLevel
             )
             if (shouldBlockSystemUI) {
-                Timber.w("CRITICAL: SystemUI blocked (prevents Clear All access)")
+                Timber.w("CRITICAL: SystemUI blocked (FULL protection mode)")
                 return EnforcementResult.Block(BlockType.TAMPERING)
             }
         }

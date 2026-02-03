@@ -372,6 +372,29 @@ export default AndroidDeviceCard
 function ProtectionAccordion({ device, actionPending, onDeviceAction, actionFeedback }) {
     const [isOpen, setIsOpen] = useState(false);
 
+    // Determine status badge style
+    const getBadgeStyle = () => {
+        switch (device.settings_protection) {
+            case 'off':
+                return { background: '#fee2e2', color: '#dc2626' };
+            case 'partial':
+                return { background: '#dbeafe', color: '#1d4ed8' };
+            default: // 'full'
+                return { background: '#dcfce7', color: '#166534' };
+        }
+    };
+
+    const getBadgeText = () => {
+        switch (device.settings_protection) {
+            case 'off':
+                return 'VYPNUTO';
+            case 'partial':
+                return 'ČÁSTEČNÁ';
+            default:
+                return 'AKTIVNÍ';
+        }
+    };
+
     return (
         <div className="detail-section protection-section">
             <div
@@ -382,8 +405,17 @@ function ProtectionAccordion({ device, actionPending, onDeviceAction, actionFeed
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={16} />
                     <span>Ochrana nastavení</span>
-                    <span className={`status-badge ${device.settings_protection === 'off' ? 'warning' : 'success'}`} style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px', background: device.settings_protection === 'off' ? '#fee2e2' : '#dcfce7', color: device.settings_protection === 'off' ? '#dc2626' : '#166534' }}>
-                        {device.settings_protection === 'off' ? 'VYPNUTO' : 'AKTIVNÍ'}
+                    <span
+                        className="status-badge"
+                        style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            marginLeft: '8px',
+                            ...getBadgeStyle()
+                        }}
+                    >
+                        {getBadgeText()}
                     </span>
                 </div>
                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -405,7 +437,24 @@ function ProtectionAccordion({ device, actionPending, onDeviceAction, actionFeed
                             />
                             <div className="option-content">
                                 <strong>Úplná ochrana</strong>
-                                <span>Blokuje celé Nastavení (doporučeno)</span>
+                                <span>Blokuje celé Nastavení i notifikační panel (doporučeno)</span>
+                            </div>
+                        </label>
+
+                        <label
+                            className={`protection-option ${device.settings_protection === 'partial' ? 'active' : ''}`}
+                        >
+                            <input
+                                type="radio"
+                                name={`protection-${device.id}`}
+                                value="partial"
+                                checked={device.settings_protection === 'partial'}
+                                onChange={() => onDeviceAction(device.id, 'set-protection', { level: 'partial' })}
+                                disabled={actionPending[`${device.id}-set-protection`]}
+                            />
+                            <div className="option-content">
+                                <strong>Částečná ochrana</strong>
+                                <span>Blokuje Nastavení, povoluje notifikace (WiFi, jas, data)</span>
                             </div>
                         </label>
 
@@ -436,3 +485,4 @@ function ProtectionAccordion({ device, actionPending, onDeviceAction, actionFeed
         </div>
     );
 }
+

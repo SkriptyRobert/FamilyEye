@@ -1,5 +1,5 @@
 #define MyAppName "FamilyEye Server"
-#define MyAppVersion "2.4.1"
+#define MyAppVersion "2.4.2"
 #define MyAppPublisher "FamilyEye"
 #define MyAppURL "https://github.com/SkriptyRobert/FamilyEye"
 

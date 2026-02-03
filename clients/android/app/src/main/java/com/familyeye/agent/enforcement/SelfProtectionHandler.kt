@@ -71,11 +71,11 @@ class SelfProtectionHandler @Inject constructor(
 
         // Block access to Recents (Clear All) when Settings protection is active.
         // This is the only reliable way without Device Owner to prevent app kill attempts.
+        // NOTE: Recents is blocked in both FULL and PARTIAL modes to prevent Clear All bypass!
         if (PackageMatcher.isSystemUI(packageName) && isRecentsActivity(className)) {
             val protectionLevel = ruleEnforcer.getSettingsProtectionLevel()
-            val shouldBlock = SettingsProtectionPolicy.shouldBlockSettings(
-                protectionLevel
-            )
+            // Block Recents unless protection is completely OFF
+            val shouldBlock = protectionLevel != SettingsProtectionPolicy.ProtectionLevel.OFF
             if (shouldBlock) {
                 Timber.w("Recents blocked: protection=$protectionLevel")
                 return true
