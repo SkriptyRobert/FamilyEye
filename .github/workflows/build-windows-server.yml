@@ -2,14 +2,16 @@ name: Build Windows Server Installer
 
 on:
   push:
-    branches: [ main, android-fix-process ]
+    branches: [ main, develop ]
+    tags-ignore:
+      - 'v*'
     paths:
       - 'installer/server/**'
       - 'backend/**'
       - 'frontend/**'
       - '.github/workflows/build-windows-server.yml'
   pull_request:
-    branches: [ main, android-fix-process ]
+    branches: [ main, develop ]
     paths:
       - 'installer/server/**'
       - 'backend/**'

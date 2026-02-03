@@ -42,11 +42,11 @@ Chovejte se k ostatním s respektem. Cílem je tvořit užitečný nástroj pro 
 
 | Workflow | Kdy se spustí | Co dělá |
 |----------|----------------|---------|
-| **Backend testy** | Push/PR do `backend/**` | `pytest` v `backend/tests/` |
-| **Frontend testy** | Push/PR do `frontend/**` | `npm test` v `frontend/` |
-| **Android testy** | Push/PR do `clients/android/**` | `./gradlew test`; na hlavních větvích také build APK (artefakt) |
-| **Build Server (Docker)** | Push/PR do `backend/**`, `frontend/**`, `docker/**` | Sestaví frontend, Docker image a pushne do GHCR (`familyeye-server`) |
-| **Build Windows Agent** | Push/PR do `installer/agent/**`, `clients/windows/**` | Sestaví Windows instalátor (artefakt) |
+| **Backend testy** | Push/PR do `main` nebo `develop` s úpravou `backend/**` | `pytest` v `backend/tests/` |
+| **Frontend testy** | Push/PR do `main` nebo `develop` s úpravou `frontend/**` | `npm test` v `frontend/` |
+| **Android testy** | Push/PR do `main` nebo `develop` s úpravou `clients/android/**` | `./gradlew test`; na úspěchu build APK (artefakt) |
+| **Build Server (Docker)** | Push do `main` nebo `develop` s úpravou `backend/**`, `frontend/**`, `docker/**` | Sestaví frontend, Docker image a pushne do GHCR (`familyeye-server`) |
+| **Build Windows Agent** | Push do `main` nebo `develop` s úpravou `installer/agent/**`, `clients/windows/**` | Sestaví Windows instalátor (artefakt) |
 | **Create Release** | Push tagu `v*` (např. `v2.4.0`) | Spustí unit testy backendu, frontendu a Androidu; sestaví APK a Windows instalátor; vytvoří GitHub Release a přiloží artefakty |
 
 Release se vytvoří **až po úspěchu všech unit testů**. 

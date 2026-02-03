@@ -2,13 +2,15 @@ name: Build Windows Agent
 
 on:
   push:
-    branches: [ main, android-fix-process ]
+    branches: [ main, develop ]
+    tags-ignore:
+      - 'v*'
     paths:
       - 'installer/agent/**'
       - 'clients/windows/**'
       - '.github/workflows/build-windows-agent.yml'
   pull_request:
-    branches: [ main, android-fix-process ]
+    branches: [ main, develop ]
     paths:
       - 'installer/agent/**'
       - 'clients/windows/**'

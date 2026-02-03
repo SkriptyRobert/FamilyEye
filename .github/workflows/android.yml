@@ -2,6 +2,7 @@ name: Android Tests
 
 on:
   push:
+    branches: [ main, develop ]
     paths:
       - 'clients/android/**'
       - '.github/workflows/android.yml'
