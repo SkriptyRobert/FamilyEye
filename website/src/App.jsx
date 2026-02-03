@@ -6,6 +6,7 @@ import Footer from './components/Footer'
 const Features = lazy(() => import('./components/Features'))
 const DashboardPreview = lazy(() => import('./components/DashboardPreview'))
 const Screenshots = lazy(() => import('./components/Screenshots'))
+const VideoGuide = lazy(() => import('./components/VideoGuide'))
 const CTA = lazy(() => import('./components/CTA'))
 const Contributors = lazy(() => import('./components/Contributors'))
 
@@ -18,6 +19,7 @@ function App() {
         <Features />
         <DashboardPreview />
         <Screenshots />
+        <VideoGuide />
         <CTA />
         <Contributors />
       </Suspense>

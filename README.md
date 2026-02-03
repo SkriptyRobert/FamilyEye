@@ -83,7 +83,10 @@ Projekt je navržen tak, aby se do něj mohl zapojit každý – klidně s pomoc
 
 ## 🛠️ Technická Dokumentace
 
-**Video návody (instalace, párování):** [Dokumentace → Video návody](https://skriptyrobert.github.io/FamilyEye/docs/tutorials/videos/) – pro videa z YouTube - to-do.
+**Video návody (instalace, párování):**
+- [🎬 FamilyEye | Installation & Pairing Guide](https://youtu.be/BrHlermdJI4)
+- [🎬 FamilyEye | Docker Install](https://youtu.be/40gVGDhg9BU)
+- [📄 Dokumentace → Video návody](https://skriptyrobert.github.io/FamilyEye/docs/tutorials/videos/)
 
 *Níže naleznete technické detaily, strukturu projektu a návody na instalaci.*
 

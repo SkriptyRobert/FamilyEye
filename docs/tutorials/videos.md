@@ -24,29 +24,31 @@ Pod každý nadpis níže můžete vložit přehrávač takto (nahraďte `VIDEO_
 
 ## Instalace serveru
 
-*Přidejte odkaz nebo embed videa: např. „Instalace serveru na Windows“ / „Docker – spuštění serveru“.*
+**FamilyEye | Docker Install**
+*Návod na instalaci serveru pomocí Dockeru.*
 
-<!-- Příklad (odkomentujte a nahraďte VIDEO_ID):
-<iframe width="560" height="315" src="https://www.youtube.com/embed/VIDEO_ID" title="Instalace serveru" allowfullscreen></iframe>
--->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/40gVGDhg9BU" title="FamilyEye | Docker Install" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ---
 
 ## Párování zařízení (QR kód, token)
 
-*Přidejte odkaz nebo embed videa: jak přidat zařízení, naskenovat QR kód, zadat token.*
+**FamilyEye | Installation & Pairing Guide**
+*Kompletní průvodce instalací agentů a párováním s dashboardem.*
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/BrHlermdJI4" title="FamilyEye | Installation & Pairing Guide" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 ---
 
 ## Android agent – instalace a Device Owner
 
-*Přidejte odkaz nebo embed videa: instalace APK, aktivace Device Owner (WebUSB/WebADB), první spuštění.*
+(Viz video výše - "Installation & Pairing Guide" obsahuje i část pro Android)
 
 ---
 
 ## Windows agent – instalace a párování
 
-*Přidejte odkaz nebo embed videa: stažení instalátoru, průvodce instalací, zadání URL serveru a párování.*
+(Viz video výše - "Installation & Pairing Guide" obsahuje i část pro Windows)
 
 ---
 
