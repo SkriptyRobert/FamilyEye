@@ -26,7 +26,7 @@ BACKEND:
 - Database: SQLite (default), SQLAlchemy 2.0.23 ORM
 - Authentication: JWT (python-jose), bcrypt (passlib)
 - WebSocket: websockets 12.0
-- HTTP Client: httpx 0.28.1
+- HTTP Client: httpx <0.27 (pinned for Starlette TestClient compatibility)
 - Testing: pytest, pytest-asyncio
 - Python: 3.8+ (production uses 3.10+)
 
@@ -39,6 +39,11 @@ FRONTEND:
 - Icons: lucide-react 0.562.0
 - Testing: Vitest 2.1.9
 - Node.js: 18+
+
+DOCKER:
+- Docker Compose: v2+
+- Base Image: python:3.10-slim (server)
+- Database: PostgreSQL 15+ (production/docker only)
 
 WINDOWS AGENT:
 - Language: Python 3.x
@@ -125,6 +130,11 @@ FamilyEye/
 ├── installer/               # Inno Setup installers
 │   ├── agent/               # Windows Agent installer
 │   └── server/              # Backend installer
+├── docker/                  # Docker configuration
+│   └── server/              # Server Dockerfile & Compose
+│       ├── Dockerfile
+│       ├── docker-compose.yml
+│       └── README.md
 ├── certs/                   # SSL certificates (generated)
 ├── .cursorrules             # Cursor AI instructions
 ├── LICENSE                  # GPLv3
@@ -248,6 +258,12 @@ WINDOWS AGENT:
 - Build: python installer/agent/build_agent.py
 - Installer: "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer/agent/setup_agent_2.4.0.iss"
 - Service: Installed as Windows Service
+
+DOCKER SERVER:
+- Path: docker/server/
+- Dev/Run: docker composite up --build
+- Components: Starts Backend (FastAPI) + Frontend (Nginx/Static) + PostgreSQL
+- Config: Requires .env file (copy from .env.example)
 
 ANDROID AGENT:
 - Build: cd clients/android && ./gradlew.bat assembleDebug (on Windows) or ./gradlew assembleDebug (on Unix)

@@ -161,6 +161,22 @@ def generate_certificates(common_name: str = "FamilyEye", validity_days: int = 3
             except Exception:
                 pass
         
+        # Add Public/External IP from environment variable
+        public_ip = os.getenv("SSL_SAN_IP") or os.getenv("HOST")
+        if public_ip and public_ip != "0.0.0.0":
+            try:
+                # Resolve if it's a domain, or parse if IP
+                try:
+                    # Try as IP first
+                    ip_obj = ipaddress.IPv4Address(public_ip)
+                    if str(ip_obj) != local_ip and str(ip_obj) != "127.0.0.1":
+                        san_list.append(x509.IPAddress(ip_obj))
+                except ValueError:
+                    # It's a domain name
+                    san_list.append(x509.DNSName(public_ip))
+            except Exception as e:
+                logger.warning(f"Could not add public IP/Domain {public_ip} to SAN: {e}")
+        
         server_cert = (
             x509.CertificateBuilder()
             .subject_name(server_subject)
